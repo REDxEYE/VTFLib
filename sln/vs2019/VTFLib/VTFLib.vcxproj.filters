@@ -60,6 +60,12 @@
     <ClCompile Include="..\..\..\VTFLib\VMTWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\VTFLib\VTFBC7.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\thirdparty\bc7enc\bc7enc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\VTFLib\VTFFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -147,6 +153,9 @@
       <Filter>Header Files\Miscellaneous</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\VTFLib\stdafx.h">
+      <Filter>Header Files\Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\VTFLib\VTFBC7.h">
       <Filter>Header Files\Miscellaneous</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\VTFLib\VTFDXTn.h">

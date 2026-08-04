@@ -13,6 +13,7 @@
 #include "VTFFile.h"
 #include "VTFFormat.h"
 #include "VTFDXTn.h"
+#include "VTFBC7.h"
 #include "VTFMathlib.h"
 
 #include "Compressonator.h"
@@ -2618,7 +2619,39 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "Linear I8",			  8,  1,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_LINEAR_I8
 	{ "Linear RGBA16161616", 64,  8, 16, 16, 16, 16, vlFalse,  vlTrue },		// IMAGE_FORMAT_LINEAR_RGBA16161616
 	{ "LE BGRX8888",         32,  4,  8,  8,  8,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_LE_BGRX8888
-	{ "LE BGRA8888",		 32,  4,  8,  8,  8,  8, vlFalse,  vlTrue }*/		// IMAGE_FORMAT_LE_BGRA8888
+	{ "LE BGRA8888",		 32,  4,  8,  8,  8,  8, vlFalse,  vlTrue }*/,		// IMAGE_FORMAT_LE_BGRA8888
+	{ "Reserved39",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 39
+	{ "Reserved40",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 40
+	{ "Reserved41",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 41
+	{ "Reserved42",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 42
+	{ "Reserved43",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 43
+	{ "Reserved44",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 44
+	{ "Reserved45",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 45
+	{ "Reserved46",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 46
+	{ "Reserved47",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 47
+	{ "Reserved48",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 48
+	{ "Reserved49",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 49
+	{ "Reserved50",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 50
+	{ "Reserved51",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 51
+	{ "Reserved52",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 52
+	{ "Reserved53",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 53
+	{ "Reserved54",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 54
+	{ "Reserved55",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 55
+	{ "Reserved56",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 56
+	{ "Reserved57",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 57
+	{ "Reserved58",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 58
+	{ "Reserved59",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 59
+	{ "Reserved60",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 60
+	{ "Reserved61",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 61
+	{ "Reserved62",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 62
+	{ "Reserved63",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 63
+	{ "Reserved64",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 64
+	{ "Reserved65",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 65
+	{ "Reserved66",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 66
+	{ "Reserved67",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 67
+	{ "Reserved68",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 68
+	{ "Reserved69",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 69
+	{ "BC7",				  8,  0,  0,  0,  0,  8,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC7
 };
 
 SVTFImageFormatInfo const &CVTFFile::GetImageFormatInfo(VTFImageFormat ImageFormat)
@@ -2650,6 +2683,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 		return ((uiWidth + 3) / 4) * ((uiHeight + 3) / 4) * 8 * uiDepth;
 	case IMAGE_FORMAT_DXT3:
 	case IMAGE_FORMAT_DXT5:
+	case IMAGE_FORMAT_BC7:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -2927,6 +2961,24 @@ vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, 
 	return vlTrue;
 }
 
+//
+// DecompressBC7()
+// Converts data from the BC7 format to RGBA8888. Uses bcdec.
+//
+vlBool CVTFFile::DecompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight)
+{
+	return VTFLib::BC7::Decompress(lpSource, lpDest, uiWidth, uiHeight);
+}
+
+//
+// CompressBC7()
+// Compresses RGBA8888 image data to the BC7 format. Uses bc7enc.
+//
+vlBool CVTFFile::CompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight)
+{
+	return VTFLib::BC7::Compress(lpSource, lpDest, uiWidth, uiHeight, 1.0f);
+}
+
 typedef vlVoid (*TransformProc)(vlUInt16& R, vlUInt16& G, vlUInt16& B, vlUInt16& A);
 
 vlVoid ToLuminance(vlUInt16& R, vlUInt16& G, vlUInt16& B, vlUInt16& A)
@@ -3115,7 +3167,39 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	 32,  4,  8,  8,  8,  8,	 2,	 1,	 0,	-1,	vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_LINEAR_BGR888},
 	{ 	 16,  2,  5,  5,  5,  0,	 2,	 1,	 0,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_LINEAR_BGRX5551},
 	{	  8,  1,  8,  8,  8,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	ToLuminance,	FromLuminance,	IMAGE_FORMAT_LINEAR_I8},	
-	{	 64,  8, 16, 16, 16, 16,	 0,	 1,	 2,	 3, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_LINEAR_RGBA16161616}*/
+	{	 64,  8, 16, 16, 16, 16,	 0,	 1,	 2,	 3, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_LINEAR_RGBA16161616}*/,
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 39
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 40
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 41
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 42
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 43
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 44
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 45
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 46
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 47
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 48
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 49
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 50
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 51
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 52
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 53
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 54
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 55
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 56
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 57
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 58
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 59
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 60
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 61
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 62
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 63
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 64
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 65
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 66
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 67
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 68
+	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 69
+	{	  8,  0,  0,  0,  0,  8,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC7}
 };
 
 // Get each channels shift and mask (for encoding and decoding).
@@ -3415,6 +3499,9 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 		case IMAGE_FORMAT_DXT5:
 			bResult = CVTFFile::DecompressDXTn(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat);
 			break;
+		case IMAGE_FORMAT_BC7:
+			bResult = CVTFFile::DecompressBC7(lpSource, lpSourceRGBA, uiWidth, uiHeight);
+			break;
 		default:
 			bResult = CVTFFile::Convert(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat, IMAGE_FORMAT_RGBA8888);
 			break;
@@ -3430,6 +3517,9 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 			case IMAGE_FORMAT_DXT3:
 			case IMAGE_FORMAT_DXT5:
 				bResult = CVTFFile::CompressDXTn(lpSourceRGBA, lpDest, uiWidth, uiHeight, DestFormat);
+				break;
+			case IMAGE_FORMAT_BC7:
+				bResult = CVTFFile::CompressBC7(lpSourceRGBA, lpDest, uiWidth, uiHeight);
 				break;
 			default:
 				bResult = CVTFFile::Convert(lpSourceRGBA, lpDest, uiWidth, uiHeight, IMAGE_FORMAT_RGBA8888, DestFormat);

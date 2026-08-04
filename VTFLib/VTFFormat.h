@@ -116,6 +116,7 @@ typedef enum tagVTFImageFormat
 	IMAGE_FORMAT_LE_BGRX8888,				//!<  = Blue, Green, Red, Unused - 32 bpp
 	IMAGE_FORMAT_LE_BGRA8888,				//!<  = Blue, Green, Red, Alpha - 32 bpp
 	*/
+	IMAGE_FORMAT_BC7 = 70,					//!<  = BC7 compressed format - 8 bpp
 	IMAGE_FORMAT_COUNT,
 	IMAGE_FORMAT_NONE = -1
 } VTFImageFormat;

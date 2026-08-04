@@ -680,6 +680,12 @@ namespace VTFLib
 		// DXTn format compression function
 		static vlBool CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat);
 
+		// BC7 format decompression function
+		static vlBool DecompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight);
+
+		// BC7 format compression function
+		static vlBool CompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight);
+
 	public:
 
 		//! Correct and images gamma.

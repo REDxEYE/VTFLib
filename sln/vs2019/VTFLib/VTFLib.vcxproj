@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -66,7 +66,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include;$(SolutionDir)..\..\thirdparty\bcdec;$(SolutionDir)..\..\thirdparty\bc7enc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)VTFLib.dll</OutputFile>
@@ -93,7 +93,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include;$(SolutionDir)..\..\thirdparty\bcdec;$(SolutionDir)..\..\thirdparty\bc7enc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)VTFLib.dll</OutputFile>
@@ -124,7 +124,9 @@
     <ClCompile Include="..\..\..\VTFLib\VMTStringNode.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VMTValueNode.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VMTWrapper.cpp" />
+    <ClCompile Include="..\..\..\VTFLib\VTFBC7.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFFile.cpp" />
+    <ClCompile Include="..\..\..\thirdparty\bc7enc\bc7enc.c" />
     <ClCompile Include="..\..\..\VTFLib\VTFLib.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFMathlib.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFWrapper.cpp" />
@@ -152,6 +154,7 @@
     <ClInclude Include="..\..\..\VTFLib\VMTStringNode.h" />
     <ClInclude Include="..\..\..\VTFLib\VMTValueNode.h" />
     <ClInclude Include="..\..\..\VTFLib\VMTWrapper.h" />
+    <ClInclude Include="..\..\..\VTFLib\VTFBC7.h" />
     <ClInclude Include="..\..\..\VTFLib\VTFDXTn.h" />
     <ClInclude Include="..\..\..\VTFLib\VTFFile.h" />
     <ClInclude Include="..\..\..\VTFLib\VTFFormat.h" />
