@@ -161,7 +161,7 @@ namespace VTFEdit
 			this->lblVTFEditVersion->Name = L"lblVTFEditVersion";
 			this->lblVTFEditVersion->Size = System::Drawing::Size(245, 27);
 			this->lblVTFEditVersion->TabIndex = 1;
-			this->lblVTFEditVersion->Text = L"VTFEdit Reloaded Version: 2.0.0";
+			this->lblVTFEditVersion->Text = L"VTFEdit++ Version: 3.0.0";
 			// 
 			// lnkNemsTools
 			// 
@@ -198,7 +198,7 @@ namespace VTFEdit
 			this->Name = L"CAbout";
 			this->ShowInTaskbar = false;
 			this->StartPosition = System::Windows::Forms::FormStartPosition::CenterParent;
-			this->Text = L"About VTFEdit Reloaded";
+			this->Text = L"About VTFEdit++";
 			this->grpAbout->ResumeLayout(false);
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->picIcon))->EndInit();
 			this->ResumeLayout(false);

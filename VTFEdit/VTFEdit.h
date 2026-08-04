@@ -1883,7 +1883,7 @@ namespace VTFEdit
 			this->Icon = (cli::safe_cast<System::Drawing::Icon^>(resources->GetObject(L"$this.Icon")));
 			this->Menu = this->mnuMain;
 			this->Name = L"CVTFEdit";
-			this->Text = L"VTFEdit Reloaded";
+			this->Text = L"VTFEdit++";
 			this->Closing += gcnew System::ComponentModel::CancelEventHandler(this, &CVTFEdit::CVTFEdit_Closing);
 			this->Load += gcnew System::EventHandler(this, &CVTFEdit::CVTFEdit_Load);
 			this->Move += gcnew System::EventHandler(this, &CVTFEdit::CVTFEdit_Move);
