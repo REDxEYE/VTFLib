@@ -118,12 +118,12 @@ namespace VTFEdit
 			// linkLabel1
 			// 
 			this->linkLabel1->LinkColor = System::Drawing::Color::Black;
-			this->linkLabel1->Location = System::Drawing::Point(418, 139);
+			this->linkLabel1->Location = System::Drawing::Point(280, 139);
 			this->linkLabel1->Name = L"linkLabel1";
-			this->linkLabel1->Size = System::Drawing::Size(84, 29);
+			this->linkLabel1->Size = System::Drawing::Size(400, 29);
 			this->linkLabel1->TabIndex = 8;
 			this->linkLabel1->TabStop = true;
-			this->linkLabel1->Text = L"froggi.es";
+			this->linkLabel1->Text = L"https://ficool2.github.io/HammerPlusPlus-Website";
 			this->linkLabel1->VisitedLinkColor = System::Drawing::Color::Black;
 			this->linkLabel1->LinkClicked += gcnew System::Windows::Forms::LinkLabelLinkClickedEventHandler(this, &CAbout::linkLabel1_LinkClicked);
 			// 
@@ -153,7 +153,7 @@ namespace VTFEdit
 			this->lblAuthor->Name = L"lblAuthor";
 			this->lblAuthor->Size = System::Drawing::Size(346, 61);
 			this->lblAuthor->TabIndex = 2;
-			this->lblAuthor->Text = L"Author: Joshua Ashton, Neil Jedrzejewski && Ryan Gregg";
+			this->lblAuthor->Text = L"Author: ficool2, Joshua Ashton, Neil Jedrzejewski && Ryan Gregg";
 			// 
 			// lblVTFEditVersion
 			// 
