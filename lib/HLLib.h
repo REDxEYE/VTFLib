@@ -60,8 +60,8 @@ typedef hlSingle		hlFloat;
 #define hlFalse			0
 #define hlTrue			1
 
-#define HL_VERSION_NUMBER	((2 << 24) | (4 << 16) | (0 << 8) | 0)
-#define HL_VERSION_STRING	"2.4.0"
+#define HL_VERSION_NUMBER	((2 << 24) | (4 << 16) | (6 << 8) | 0)
+#define HL_VERSION_STRING	"2.4.6"
 
 #define HL_ID_INVALID 0xffffffff
 
