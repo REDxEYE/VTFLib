@@ -33,12 +33,12 @@ CVMTStringNode::CVMTStringNode(const CVMTStringNode &StringNode) : CVMTValueNode
 
 CVMTStringNode::~CVMTStringNode()
 {
-	delete this->cValue;
+	delete []this->cValue;
 }
 
 vlVoid CVMTStringNode::SetValue(const vlChar *cValue)
 {
-	delete this->cValue;
+	delete []this->cValue;
 	this->cValue = new vlChar[strlen(cValue) + 1];
 	strcpy(this->cValue, cValue);
 }
