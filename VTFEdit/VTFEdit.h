@@ -5232,7 +5232,18 @@ namespace VTFEdit
 			array< System::String^>^ lpFiles = static_cast<array< System::String^>^>(e->Data->GetData(System::Windows::Forms::DataFormats::FileDrop));
 			if(lpFiles->Length > 0)
 			{
-				this->Open(lpFiles[0], false);
+				if(lpFiles[0]->ToLower()->EndsWith(".vtf") || lpFiles[0]->ToLower()->EndsWith(".vmt"))
+				{
+					this->Open(lpFiles[0], false);
+				}
+				else
+				{
+					// drop order is not defined by the shell, so sort the frames/faces by name
+					array< System::String ^>^ sFileNames = static_cast<array< System::String ^>^>(lpFiles->Clone());
+					System::Array::Sort(sFileNames, System::StringComparer::OrdinalIgnoreCase);
+
+					this->Import(sFileNames);
+				}
 			}
 		}
 
@@ -5243,13 +5254,11 @@ namespace VTFEdit
 				array< System::String^>^ lpFiles = static_cast<array< System::String^>^>(e->Data->GetData(System::Windows::Forms::DataFormats::FileDrop));
 				if(lpFiles->Length > 0)
 				{
+					// VTF/VMT files are opened and anything else is imported
+					// accept any file (but not directories)
 					if(!System::IO::Directory::Exists(lpFiles[0]))
 					{
-						if(lpFiles[0]->ToLower()->EndsWith(".vmt") ||
-							lpFiles[0]->ToLower()->EndsWith(".vtf"))
-						{
-							e->Effect = System::Windows::Forms::DragDropEffects::All;
-						}
+						e->Effect = System::Windows::Forms::DragDropEffects::All;
 					}
 				}
 			}
