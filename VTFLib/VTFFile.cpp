@@ -13,7 +13,6 @@
 #include "VTFFile.h"
 #include "VTFFormat.h"
 #include "VTFDXTn.h"
-#include "VTFBC7.h"
 #include "VTFMathlib.h"
 
 #include "Compressonator.h"
@@ -410,6 +409,7 @@ static CMP_FORMAT GetCMPFormat( VTFImageFormat imageFormat, bool bDXT5GA )
 	case IMAGE_FORMAT_ATI1N:			return CMP_FORMAT_ATI1N;
 	// Swizzle is technically wrong for below but we reverse it in the shader!
 	case IMAGE_FORMAT_ATI2N:			return CMP_FORMAT_ATI2N;
+	case IMAGE_FORMAT_BC7:				return CMP_FORMAT_BC7;
 
 	default:							return CMP_FORMAT_Unknown;
 	}
@@ -2874,7 +2874,7 @@ vlBool CVTFFile::ConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWi
 //-----------------------------------------------------------------------------------------------------
 // DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat)
 //
-// Converts data from the DXT1 to RGBA8888 format. Data is read from *src
+// Converts data from a block compressed format (DXTn, BC7) to RGBA8888 format. Data is read from *src
 // and written to *dst. Width and height are needed to it knows how much data to process
 //-----------------------------------------------------------------------------------------------------
 vlBool CVTFFile::DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat)
@@ -2925,7 +2925,7 @@ vlBool CVTFFile::ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt ui
 //
 // CompressDXTn()
 // Compress input image data (lpSource) to output image data (lpDest) of format DestFormat
-// where DestFormat is of format DXTn.  Uses NVidia DXT library.
+// where DestFormat is a block compressed format (DXTn, BC7).  Uses Compressonator.
 //
 vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat)
 {
@@ -2940,7 +2940,8 @@ vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, 
 
 	CMP_CompressOptions options = {0};
 	options.dwSize        = sizeof(options);
-	options.fquality      = 1.0f;
+	// BC7 at maximum quality is exhaustive and extremely slow
+	options.fquality      = DestFormat == IMAGE_FORMAT_BC7 ? 0.1f : 1.0f;
 	options.dwnumThreads  = 0;
 	options.bDXT1UseAlpha = DestFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA;
 
@@ -2961,24 +2962,6 @@ vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, 
 	}
 
 	return vlTrue;
-}
-
-//
-// DecompressBC7()
-// Converts data from the BC7 format to RGBA8888. Uses bcdec.
-//
-vlBool CVTFFile::DecompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight)
-{
-	return VTFLib::BC7::Decompress(lpSource, lpDest, uiWidth, uiHeight);
-}
-
-//
-// CompressBC7()
-// Compresses RGBA8888 image data to the BC7 format. Uses bc7enc.
-//
-vlBool CVTFFile::CompressBC7(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight)
-{
-	return VTFLib::BC7::Compress(lpSource, lpDest, uiWidth, uiHeight, 1.0f);
 }
 
 typedef vlVoid (*TransformProc)(vlUInt16& R, vlUInt16& G, vlUInt16& B, vlUInt16& A);
@@ -3499,10 +3482,8 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 		case IMAGE_FORMAT_DXT1_ONEBITALPHA:
 		case IMAGE_FORMAT_DXT3:
 		case IMAGE_FORMAT_DXT5:
-			bResult = CVTFFile::DecompressDXTn(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat);
-			break;
 		case IMAGE_FORMAT_BC7:
-			bResult = CVTFFile::DecompressBC7(lpSource, lpSourceRGBA, uiWidth, uiHeight);
+			bResult = CVTFFile::DecompressDXTn(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat);
 			break;
 		default:
 			bResult = CVTFFile::Convert(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat, IMAGE_FORMAT_RGBA8888);
@@ -3518,10 +3499,8 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 			case IMAGE_FORMAT_DXT1_ONEBITALPHA:
 			case IMAGE_FORMAT_DXT3:
 			case IMAGE_FORMAT_DXT5:
-				bResult = CVTFFile::CompressDXTn(lpSourceRGBA, lpDest, uiWidth, uiHeight, DestFormat);
-				break;
 			case IMAGE_FORMAT_BC7:
-				bResult = CVTFFile::CompressBC7(lpSourceRGBA, lpDest, uiWidth, uiHeight);
+				bResult = CVTFFile::CompressDXTn(lpSourceRGBA, lpDest, uiWidth, uiHeight, DestFormat);
 				break;
 			default:
 				bResult = CVTFFile::Convert(lpSourceRGBA, lpDest, uiWidth, uiHeight, IMAGE_FORMAT_RGBA8888, DestFormat);
