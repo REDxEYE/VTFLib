@@ -2753,7 +2753,7 @@ namespace VTFEdit
 				this->btnAnimate->Enabled = true;
 			}
 
-			if(VTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F)
+			if(VTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F || VTFFile->GetFormat() == IMAGE_FORMAT_BC6H)
 			{
 				this->trkHDRExposure->Enabled = true;
 			}

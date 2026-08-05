@@ -714,7 +714,7 @@ void PrintUsage(const vlChar *lpError, ...)
 		Print("         RGB888_BLUESCREEN, BGR888_BLUESCREEN, ARGB8888, BGRA8888, DXT1,\n");
 		Print("         DXT3, DXT5, BGRX8888, BGR565, BGRX5551, BGRA4444,DXT1_ONEBITALPHA,\n");
 		Print("         BGRA5551, UV88, UVWQ8888, RGBA16161616F, RGBA16161616, UVLX8888,\n");
-		Print("         BC7\n");
+		Print("         BC7, BC6H\n");
 
 		Print("\n");
 		Print("Flags:   POINTSAMPLE, TRILINEAR, CLAMPS, CLAMPT, ANISOTROPIC, HINT_DXT5,\n");

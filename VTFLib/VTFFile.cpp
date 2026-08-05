@@ -413,9 +413,17 @@ static CMP_FORMAT GetCMPFormat( VTFImageFormat imageFormat, bool bDXT5GA )
 	// Swizzle is technically wrong for below but we reverse it in the shader!
 	case IMAGE_FORMAT_ATI2N:			return CMP_FORMAT_ATI2N;
 	case IMAGE_FORMAT_BC7:				return CMP_FORMAT_BC7;
+	case IMAGE_FORMAT_BC6H:				return CMP_FORMAT_BC6H_SF;
 
 	default:							return CMP_FORMAT_Unknown;
 	}
+}
+
+// BC6H stores half floats, so it has to be compressed from (and decompressed to)
+// an uncompressed HDR format rather than the usual RGBA8888
+static VTFImageFormat GetUncompressedFormat( VTFImageFormat CompressedFormat )
+{
+	return CompressedFormat == IMAGE_FORMAT_BC6H ? IMAGE_FORMAT_RGBA16161616F : IMAGE_FORMAT_RGBA8888;
 }
 
 static const char *GetCMPErrorString( CMP_ERROR error )
@@ -2657,7 +2665,8 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "Reserved67",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 67
 	{ "Reserved68",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 68
 	{ "Reserved69",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 69
-	{ "BC7",				  8,  0,  0,  0,  0,  8,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC7
+	{ "BC7",				  8,  0,  0,  0,  0,  8,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC7
+	{ "BC6H",				  8,  0, 16, 16, 16,  0,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC6H
 };
 
 SVTFImageFormatInfo const &CVTFFile::GetImageFormatInfo(VTFImageFormat ImageFormat)
@@ -2690,6 +2699,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 	case IMAGE_FORMAT_DXT3:
 	case IMAGE_FORMAT_DXT5:
 	case IMAGE_FORMAT_BC7:
+	case IMAGE_FORMAT_BC6H:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -2898,12 +2908,14 @@ vlBool CVTFFile::DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt
 	options.dwnumThreads  = 0;
 	options.bDXT1UseAlpha = false;
 
+	vlBool bHDR = GetUncompressedFormat( SourceFormat ) == IMAGE_FORMAT_RGBA16161616F;
+
 	CMP_Texture destTexture = {0};
 	destTexture.dwSize     = sizeof( destTexture );
 	destTexture.dwWidth    = uiWidth;
 	destTexture.dwHeight   = uiHeight;
-	destTexture.dwPitch    = 4 * uiWidth;
-	destTexture.format     = CMP_FORMAT_RGBA_8888;
+	destTexture.dwPitch    = ( bHDR ? 8 : 4 ) * uiWidth;
+	destTexture.format     = bHDR ? CMP_FORMAT_RGBA_16F : CMP_FORMAT_RGBA_8888;
 	destTexture.dwDataSize = destTexture.dwPitch * uiHeight;
 	destTexture.pData      = (CMP_BYTE*) dst;
 
@@ -2933,12 +2945,14 @@ vlBool CVTFFile::ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt ui
 //
 vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat)
 {
+	vlBool bHDR = GetUncompressedFormat( DestFormat ) == IMAGE_FORMAT_RGBA16161616F;
+
 	CMP_Texture srcTexture = {0};
 	srcTexture.dwSize     = sizeof( srcTexture );
 	srcTexture.dwWidth    = uiWidth;
 	srcTexture.dwHeight   = uiHeight;
-	srcTexture.dwPitch    = 4 * uiWidth;
-	srcTexture.format     = CMP_FORMAT_RGBA_8888;
+	srcTexture.dwPitch    = ( bHDR ? 8 : 4 ) * uiWidth;
+	srcTexture.format     = bHDR ? CMP_FORMAT_RGBA_16F : CMP_FORMAT_RGBA_8888;
 	srcTexture.dwDataSize = uiHeight * srcTexture.dwPitch;
 	srcTexture.pData      = (CMP_BYTE*) lpSource;
 
@@ -3188,7 +3202,8 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 67
 	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 68
 	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 69
-	{	  8,  0,  0,  0,  0,  8,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC7}
+	{	  8,  0,  0,  0,  0,  8,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC7},
+	{	  8,  0, 16, 16, 16,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC6H}
 };
 
 // Get each channels shift and mask (for encoding and decoding).
@@ -3468,54 +3483,54 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 	// Do general convertions.
 	if(SourceInfo.bIsCompressed || DestInfo.bIsCompressed)
 	{
-		vlByte *lpSourceRGBA = lpSource;
+		VTFImageFormat SourceIntermediateFormat = SourceInfo.bIsCompressed ? GetUncompressedFormat(SourceFormat) : SourceFormat;
+		VTFImageFormat DestIntermediateFormat = DestInfo.bIsCompressed ? GetUncompressedFormat(DestFormat) : DestFormat;
+
+		vlByte *lpSourceIntermediate = lpSource;
+		vlByte *lpDestIntermediate = lpSource;
 		vlBool bResult = vlTrue;
 
-		// allocate temp data for intermittent conversions
-		if(SourceFormat != IMAGE_FORMAT_RGBA8888)
+		// decompress the source
+		if(SourceInfo.bIsCompressed)
 		{
-			lpSourceRGBA = new vlByte[CVTFFile::ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888)];
-		}
+			lpSourceIntermediate = new vlByte[CVTFFile::ComputeImageSize(uiWidth, uiHeight, 1, SourceIntermediateFormat)];
+			lpDestIntermediate = lpSourceIntermediate;
 
-		// decompress the source or convert it to RGBA for compressing
-		switch(SourceFormat)
-		{
-		case IMAGE_FORMAT_RGBA8888:
-			break;
-		case IMAGE_FORMAT_DXT1:
-		case IMAGE_FORMAT_DXT1_ONEBITALPHA:
-		case IMAGE_FORMAT_DXT3:
-		case IMAGE_FORMAT_DXT5:
-		case IMAGE_FORMAT_BC7:
-			bResult = CVTFFile::DecompressDXTn(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat);
-			break;
-		default:
-			bResult = CVTFFile::Convert(lpSource, lpSourceRGBA, uiWidth, uiHeight, SourceFormat, IMAGE_FORMAT_RGBA8888);
-			break;
+			bResult = CVTFFile::DecompressDXTn(lpSource, lpSourceIntermediate, uiWidth, uiHeight, SourceFormat);
 		}
 
 		if(bResult)
 		{
-			// compress the source or convert it to the dest format if it is not compressed
-			switch(DestFormat)
+			if(DestInfo.bIsCompressed)
 			{
-			case IMAGE_FORMAT_DXT1:
-			case IMAGE_FORMAT_DXT1_ONEBITALPHA:
-			case IMAGE_FORMAT_DXT3:
-			case IMAGE_FORMAT_DXT5:
-			case IMAGE_FORMAT_BC7:
-				bResult = CVTFFile::CompressDXTn(lpSourceRGBA, lpDest, uiWidth, uiHeight, DestFormat);
-				break;
-			default:
-				bResult = CVTFFile::Convert(lpSourceRGBA, lpDest, uiWidth, uiHeight, IMAGE_FORMAT_RGBA8888, DestFormat);
-				break;
+				// get the source into the uncompressed format the destination codec expects
+				if(SourceIntermediateFormat != DestIntermediateFormat)
+				{
+					lpDestIntermediate = new vlByte[CVTFFile::ComputeImageSize(uiWidth, uiHeight, 1, DestIntermediateFormat)];
+
+					bResult = CVTFFile::Convert(lpSourceIntermediate, lpDestIntermediate, uiWidth, uiHeight, SourceIntermediateFormat, DestIntermediateFormat);
+				}
+
+				if(bResult)
+				{
+					bResult = CVTFFile::CompressDXTn(lpDestIntermediate, lpDest, uiWidth, uiHeight, DestFormat);
+				}
+			}
+			else
+			{
+				bResult = CVTFFile::Convert(lpSourceIntermediate, lpDest, uiWidth, uiHeight, SourceIntermediateFormat, DestFormat);
 			}
 		}
 
 		// free temp data
-		if(lpSourceRGBA != lpSource)
+		if(lpDestIntermediate != lpSourceIntermediate)
 		{
-			delete []lpSourceRGBA;
+			delete []lpDestIntermediate;
+		}
+
+		if(lpSourceIntermediate != lpSource)
+		{
+			delete []lpSourceIntermediate;
 		}
 
 		return bResult;
