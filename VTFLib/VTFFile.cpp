@@ -2603,8 +2603,9 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "ATI DST16",			 16,  2,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST16
 	{ "ATI DST24",			 24,  3,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST24
 	{ "nVidia NULL",		 32,  4,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_NV_NULL
-	{ "ATI1N",				  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
-	{ "ATI2N",				  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue }/*,		// IMAGE_FORMAT_ATI2N
+	{ "BC5 (ATI2N)",		  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI2N
+	{ "BC4 (ATI1N)",		  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
+	/*
 	{ "Xbox360 DST16",		 16,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST16
 	{ "Xbox360 DST24",		 24,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST24
 	{ "Xbox360 DST24F",		 24,  0,  0,  0,  0,  0, vlFalse , vlTrue },		// IMAGE_FORMAT_X360_DST24F
@@ -2619,7 +2620,8 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "Linear I8",			  8,  1,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_LINEAR_I8
 	{ "Linear RGBA16161616", 64,  8, 16, 16, 16, 16, vlFalse,  vlTrue },		// IMAGE_FORMAT_LINEAR_RGBA16161616
 	{ "LE BGRX8888",         32,  4,  8,  8,  8,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_LE_BGRX8888
-	{ "LE BGRA8888",		 32,  4,  8,  8,  8,  8, vlFalse,  vlTrue }*/,		// IMAGE_FORMAT_LE_BGRA8888
+	{ "LE BGRA8888",		 32,  4,  8,  8,  8,  8, vlFalse,  vlTrue },		// IMAGE_FORMAT_LE_BGRA8888
+	*/
 	{ "Reserved39",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 39
 	{ "Reserved40",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 40
 	{ "Reserved41",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 41
