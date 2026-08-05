@@ -338,10 +338,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboMipmapFilter->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboMipmapFilter->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboMipmapFilter->Items->AddRange(gcnew cli::array< System::Object^  >(15) {
-				L"Point", L"Box", L"Triangle", L"Quadratic",
-					L"Cubic", L"Catrom", L"Mitchell", L"Gaussian", L"Sine Cardinal", L"Bessel", L"Hanning", L"Hamming", L"Blackman", L"Kaiser", L"NICE"
-			});
+			this->cboMipmapFilter->Items->AddRange(gcnew cli::array< System::Object^  >(2) { L"Box", L"NICE" });
 			this->cboMipmapFilter->Location = System::Drawing::Point(125, 55);
 			this->cboMipmapFilter->Name = L"cboMipmapFilter";
 			this->cboMipmapFilter->Size = System::Drawing::Size(192, 28);
@@ -661,10 +658,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboResizeFilter->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboResizeFilter->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboResizeFilter->Items->AddRange(gcnew cli::array< System::Object^  >(15) {
-				L"Point", L"Box", L"Triangle", L"Quadratic",
-					L"Cubic", L"Catrom", L"Mitchell", L"Gaussian", L"Sine Cardinal", L"Bessel", L"Hanning", L"Hamming", L"Blackman", L"Kaiser", L"NICE"
-			});
+			this->cboResizeFilter->Items->AddRange(gcnew cli::array< System::Object^  >(2) { L"Box", L"NICE" });
 			this->cboResizeFilter->Location = System::Drawing::Point(125, 83);
 			this->cboResizeFilter->Name = L"cboResizeFilter";
 			this->cboResizeFilter->Size = System::Drawing::Size(192, 28);
@@ -1201,15 +1195,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 	{
 		VTFMipmapFilter get()
 		{
-			return (VTFMipmapFilter)this->cboResizeFilter->SelectedIndex;
+			return this->cboResizeFilter->SelectedIndex == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
 		}
 		void set(VTFMipmapFilter ResizeFilter)
 		{
-			int iIndex = Convert::ToInt32(ResizeFilter);
-			if (iIndex >= 0 && iIndex < this->cboResizeFilter->Items->Count)
-			{
-				this->cboResizeFilter->SelectedIndex = iIndex;
-			}
+			this->cboResizeFilter->SelectedIndex = ResizeFilter == MIPMAP_FILTER_NICE ? 1 : 0;
 		}
 	}
 
@@ -1277,15 +1267,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 	{
 		VTFMipmapFilter get()
 		{
-			return (VTFMipmapFilter)this->cboMipmapFilter->SelectedIndex;
+			return this->cboMipmapFilter->SelectedIndex == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
 		}
 		void set(VTFMipmapFilter MipmapFilter)
 		{
-			int iIndex = Convert::ToInt32(MipmapFilter);
-			if (iIndex >= 0 && iIndex < this->cboMipmapFilter->Items->Count)
-			{
-				this->cboMipmapFilter->SelectedIndex = iIndex;
-			}
+			this->cboMipmapFilter->SelectedIndex = MipmapFilter == MIPMAP_FILTER_NICE ? 1 : 0;
 		}
 	}
 
@@ -1636,14 +1622,14 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 
 		this->chkResize->Checked = true;
 		this->cboResizeMethod->SelectedIndex = 0;
-		this->cboResizeFilter->SelectedIndex = 14; // NICE
+		this->cboResizeFilter->SelectedIndex = 1; // NICE
 
 		this->chkResizeClamp->Checked = true;
 		this->cboMaximumWidth->SelectedIndex = 12;
 		this->cboMaximumHeight->SelectedIndex = 12;
 
 		this->chkMipmaps->Checked = true;
-		this->cboMipmapFilter->SelectedIndex = 14; // NICE
+		this->cboMipmapFilter->SelectedIndex = 1; // NICE
 
 		this->cboVersion->SelectedIndex = 0;
 
