@@ -20,6 +20,9 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize.h"
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 using namespace VTFLib;
 
 // Class construction
@@ -658,10 +661,11 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 							vlUShort usWidth  = max(1u, this->Header->Width  >> m);
 							vlUShort usHeight = max(1u, this->Header->Height >> m);
 
-							if (!stbir_resize_uint8_generic(
-								pSource, this->Header->Width, this->Header->Height, 0,
-								temp.data(), usWidth, usHeight, 0,
-								4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, VTFCreateOptions.bSRGB ? STBIR_COLORSPACE_SRGB : STBIR_COLORSPACE_LINEAR, NULL))
+							if (!CVTFFile::Resize(
+								pSource, temp.data(),
+								this->Header->Width, this->Header->Height,
+								usWidth, usHeight,
+								VTFCreateOptions.MipmapFilter, VTFCreateOptions.bSRGB))
 							{
 								throw 0;
 							}
@@ -2426,7 +2430,7 @@ vlBool CVTFFile::GenerateSphereMap()
 				//get point on sphere
 				p.x = s;
 				p.y = t;
-				p.z = sqrt(0.25f - temp);
+				p.z = (vlSingle)sqrt(0.25f - temp);
 				VecScale(&p, 2.0f);
 
 				//ray from infinity (eyepoint) to surface
@@ -3569,9 +3573,165 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
 	return vlFalse;
 }
 
+// Based on https://github.com/Source-SDK-Archives/source-sdk-2004/blob/master/src_mod/public/imageloader.cpp#L1415
+static vlVoid GenerateNiceFilter(vlUInt uiWidthRatio, vlUInt uiHeightRatio, vlUInt uiDiameter, vlSingle *pKernel)
+{
+	vlUInt uiKernelWidth = uiDiameter * uiWidthRatio;
+	vlUInt uiKernelHeight = uiDiameter * uiHeightRatio;
+
+	// This is a NICE filter
+	// sinc pi*x * a box from -3 to 3 * sinc ( pi * x/3)
+	// where x is the pixel # in the destination (shrunken) image.
+	// only problem here is that the NICE filter has a very large kernel
+	// (7x7 x wratio x hratio)
+	vlSingle sDX = 1.0f / (vlSingle)uiWidthRatio;
+	vlSingle sDY = 1.0f / (vlSingle)uiHeightRatio;
+
+	vlSingle sTotal = 0.0f;
+	vlSingle sY = -((vlSingle)uiDiameter - sDY) * 0.5f;
+
+	for(vlUInt i = 0; i < uiKernelHeight; i++)
+	{
+		vlSingle sX = -((vlSingle)uiDiameter - sDX) * 0.5f;
+
+		for(vlUInt j = 0; j < uiKernelWidth; j++)
+		{
+			vlSingle sValue;
+			vlSingle sD = (vlSingle)sqrt(sX * sX + sY * sY);
+
+			if(sD > (vlSingle)uiDiameter * 0.5f)
+			{
+				sValue = 0.0f;
+			}
+			else
+			{
+				vlSingle sT = (vlSingle)M_PI * sD;
+
+				if(sT != 0.0f)
+				{
+					sValue = ((vlSingle)sin(sT) / sT) * (3.0f * (vlSingle)sin(sT / 3.0f) / sT);
+				}
+				else
+				{
+					sValue = 1.0f;
+				}
+
+				sTotal += sValue;
+			}
+
+			pKernel[i * uiKernelWidth + j] = sValue;
+			sX += sDX;
+		}
+
+		sY += sDY;
+	}
+
+	// normalize
+	if(sTotal != 0.0f)
+	{
+		for(vlUInt i = 0; i < uiKernelWidth * uiKernelHeight; i++)
+		{
+			pKernel[i] /= sTotal;
+		}
+	}
+}
+
+static vlBool ResizeNice(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlBool bSRGB)
+{
+	const vlUInt uiDiameter = 6;
+
+	vlUInt uiWidthRatio = uiSourceWidth / uiDestWidth;
+	vlUInt uiHeightRatio = uiSourceHeight / uiDestHeight;
+
+	vlUInt uiKernelWidth = uiDiameter * uiWidthRatio;
+	vlUInt uiKernelHeight = uiDiameter * uiHeightRatio;
+
+	std::vector<vlSingle> Kernel(uiKernelWidth * uiKernelHeight);
+	GenerateNiceFilter(uiWidthRatio, uiHeightRatio, uiDiameter, Kernel.data());
+
+	// Compute gamma tables...
+	vlSingle sToLinear[256], sFromLinear[4096];
+
+	for(vlUInt i = 0; i < 256; i++)
+	{
+		vlSingle s = (vlSingle)i / 255.0f;
+		sToLinear[i] = bSRGB ? (vlSingle)pow(s, 2.2f) : s;
+	}
+
+	for(vlUInt i = 0; i < 4096; i++)
+	{
+		vlSingle s = (vlSingle)i / 4095.0f;
+		sFromLinear[i] = bSRGB ? (vlSingle)pow(s, 1.0f / 2.2f) : s;
+	}
+
+	// centered kernel
+	vlInt iOffsetX = ((vlInt)uiWidthRatio - (vlInt)uiKernelWidth) / 2;
+	vlInt iOffsetY = ((vlInt)uiHeightRatio - (vlInt)uiKernelHeight) / 2;
+
+	for(vlUInt y = 0; y < uiDestHeight; y++)
+	{
+		for(vlUInt x = 0; x < uiDestWidth; x++)
+		{
+			vlSingle sAccum[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+			for(vlUInt i = 0; i < uiKernelHeight; i++)
+			{
+				vlInt iSourceY = (vlInt)(y * uiHeightRatio) + iOffsetY + (vlInt)i;
+				iSourceY = iSourceY < 0 ? 0 : (iSourceY > (vlInt)uiSourceHeight - 1 ? (vlInt)uiSourceHeight - 1 : iSourceY);
+
+				for(vlUInt j = 0; j < uiKernelWidth; j++)
+				{
+					vlSingle sWeight = Kernel[i * uiKernelWidth + j];
+
+					if(sWeight == 0.0f)
+					{
+						continue;
+					}
+
+					vlInt iSourceX = (vlInt)(x * uiWidthRatio) + iOffsetX + (vlInt)j;
+					iSourceX = iSourceX < 0 ? 0 : (iSourceX > (vlInt)uiSourceWidth - 1 ? (vlInt)uiSourceWidth - 1 : iSourceX);
+
+					vlByte *lpPixel = lpSourceRGBA8888 + ((vlUInt)iSourceY * uiSourceWidth + (vlUInt)iSourceX) * 4;
+
+					sAccum[0] += sWeight * sToLinear[lpPixel[0]];
+					sAccum[1] += sWeight * sToLinear[lpPixel[1]];
+					sAccum[2] += sWeight * sToLinear[lpPixel[2]];
+					sAccum[3] += sWeight * (vlSingle)lpPixel[3] / 255.0f;
+				}
+			}
+
+			vlByte *lpDest = lpDestRGBA8888 + (y * uiDestWidth + x) * 4;
+
+			for(vlUInt c = 0; c < 3; c++)
+			{
+				vlSingle s = sAccum[c] < 0.0f ? 0.0f : (sAccum[c] > 1.0f ? 1.0f : sAccum[c]);
+				lpDest[c] = (vlByte)(sFromLinear[(vlUInt)(s * 4095.0f + 0.5f)] * 255.0f + 0.5f);
+			}
+
+			vlSingle sAlpha = sAccum[3] < 0.0f ? 0.0f : (sAccum[3] > 1.0f ? 1.0f : sAccum[3]);
+			lpDest[3] = (vlByte)(sAlpha * 255.0f + 0.5f);
+		}
+	}
+
+	return vlTrue;
+}
+
 vlBool CVTFFile::Resize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB)
 {
 	assert(ResizeFilter >= 0 && ResizeFilter < MIPMAP_FILTER_COUNT);
+
+	// prevent too large of a kernel
+	const vlUInt uiMaxNiceRatio = 64;
+
+	if(ResizeFilter == MIPMAP_FILTER_NICE &&
+	   uiDestWidth > 0 && uiDestHeight > 0 &&
+		// The NICE filter only handles integer ratio downsamples
+	   uiSourceWidth % uiDestWidth == 0 && uiSourceHeight % uiDestHeight == 0 &&
+	   uiSourceWidth / uiDestWidth <= uiMaxNiceRatio && uiSourceHeight / uiDestHeight <= uiMaxNiceRatio &&
+	   !(uiSourceWidth == uiDestWidth && uiSourceHeight == uiDestHeight))
+	{
+		return ResizeNice(lpSourceRGBA8888, lpDestRGBA8888, uiSourceWidth, uiSourceHeight, uiDestWidth, uiDestHeight, bSRGB);
+	}
 
 	if (!stbir_resize_uint8_generic(
 		lpSourceRGBA8888, uiSourceWidth, uiSourceHeight, 0,
@@ -3633,7 +3793,7 @@ vlVoid CVTFFile::ComputeImageReflectivity(vlByte *lpImageDataRGBA8888, vlUInt ui
 
 	for(vlUInt i = 0; i < 256; i++)
 	{
-		sTable[i] = pow((vlSingle)i / 255.0f, 2.2f);
+		sTable[i] = (vlSingle)pow((vlSingle)i / 255.0f, 2.2f);
 	}
 
 	//

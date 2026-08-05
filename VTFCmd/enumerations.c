@@ -281,6 +281,10 @@ VTFMipmapFilter StringToMipmapFilter(const vlChar *cString)
 	{
 		return MIPMAP_FILTER_KAISER;
 	}
+	else if(stricmp(cString, "NICE") == 0)
+	{
+		return MIPMAP_FILTER_NICE;
+	}
 	else
 	{
 		return MIPMAP_FILTER_COUNT;

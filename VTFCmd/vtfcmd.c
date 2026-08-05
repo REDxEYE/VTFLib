@@ -727,7 +727,7 @@ void PrintUsage(const vlChar *lpError, ...)
 
 		Print("\n");
 		Print("Resize Filter:  POINT, BOX, TRIANGLE, QUADRATIC, CUBIC, CATROM, MITCHELL\n");
-		Print("                GAUSSIAN, SINC, BESSEL, HANNING, HAMMING, BLACKMAN, KAISER\n");
+		Print("                GAUSSIAN, SINC, BESSEL, HANNING, HAMMING, BLACKMAN, KAISER, NICE\n");
 
 		Print("\n");
 		Print("Normal Kernal:  4X, 3X3, 5X5, 7X7, 9X9, DUDV\n");
