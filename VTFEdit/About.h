@@ -153,7 +153,7 @@ namespace VTFEdit
 			this->lblAuthor->Name = L"lblAuthor";
 			this->lblAuthor->Size = System::Drawing::Size(346, 61);
 			this->lblAuthor->TabIndex = 2;
-			this->lblAuthor->Text = L"Author: ficool2, Joshua Ashton, Neil Jedrzejewski && Ryan Gregg";
+			this->lblAuthor->Text = L"Author: ficool2, misyltoad, Neil Jedrzejewski && Ryan Gregg";
 			// 
 			// lblVTFEditVersion
 			// 
