@@ -18,9 +18,10 @@ CVMTGroupNode::CVMTGroupNode(const vlChar *cName) : CVMTNode(cName)
 	this->VMTNodeList = new CVMTNodeList();
 }
 
-#pragma warning( disable : 26495 )
 CVMTGroupNode::CVMTGroupNode(const CVMTGroupNode &GroupNode) : CVMTNode(GroupNode.GetName())
 {
+	this->VMTNodeList = new CVMTNodeList();
+
 	for(CVMTNodeList::const_iterator it = GroupNode.VMTNodeList->begin(); it != GroupNode.VMTNodeList->end(); ++it)
 	{
 		this->AddNode((*it)->Clone());
