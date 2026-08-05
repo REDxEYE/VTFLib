@@ -80,7 +80,6 @@
       <Command>copy "$(SolutionDir)VTFLib\$(Platform)\$(Configuration)\VTFLib.dll" "$(TargetDir)"
 copy "$(SolutionDir)VTFLib\$(Platform)\$(Configuration)\VTFLib.pdb" "$(TargetDir)"
 copy "$(SolutionDir)..\..\thirdparty\DevIL.dll" "$(TargetDir)"
-copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
 
 </Command>
     </PostBuildEvent>
@@ -112,7 +111,6 @@ copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)VTFLib\$(Platform)\$(Configuration)\VTFLib.dll" "$(TargetDir)"
 copy "$(SolutionDir)..\..\thirdparty\bin\DevIL.dll" "$(TargetDir)"
-copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -148,7 +146,6 @@ copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
     <ClCompile Include="..\..\..\VTFEdit\VMTCreate.cpp" />
     <ClCompile Include="..\..\..\VTFEdit\VTFEdit.cpp" />
     <ClCompile Include="..\..\..\VTFEdit\VTFOptions.cpp" />
-    <ClCompile Include="..\..\..\VTFEdit\WADConvert.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\VTFEdit\About.h">
@@ -170,9 +167,6 @@ copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
     </ClInclude>
     <ClInclude Include="..\..\..\VTFEdit\VTFFileUtility.h" />
     <ClInclude Include="..\..\..\VTFEdit\VTFOptions.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
-    <ClInclude Include="..\..\..\VTFEdit\WADConvert.h">
       <FileType>CppForm</FileType>
     </ClInclude>
   </ItemGroup>
@@ -207,11 +201,6 @@ copy "$(SolutionDir)..\..\bin\x64\HLLib.dll" "$(TargetDir)"
       <DependentUpon>..\..\..\VTFEdit\VTFOptions.h</DependentUpon>
       <LogicalName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VTFEdit.CVTFOptions.resources</LogicalName>
       <LogicalName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VTFEdit.CVTFOptions.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\..\..\VTFEdit\WADConvert.resX">
-      <DependentUpon>..\..\..\VTFEdit\WADConvert.h</DependentUpon>
-      <LogicalName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VTFEdit.CWADConvert.resources</LogicalName>
-      <LogicalName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VTFEdit.CWADConvert.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

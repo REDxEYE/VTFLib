@@ -24,7 +24,6 @@
 #include "VTFOptions.h"
 #include "VMTCreate.h"
 #include "BatchConvert.h"
-#include "WADConvert.h"
 #include "DirectoryItemInfoManager.h"
 #include "Utility.h"
 
@@ -64,7 +63,6 @@ namespace VTFEdit
 		CVTFOptions ^Options;
 		CVMTCreate ^VMTCreate;
 		CBatchConvert ^BatchConvert;
-		CWADConvert ^WADConvert;
 		CAbout ^About;
 
 		HWND hWndNewViewer;
@@ -89,7 +87,6 @@ namespace VTFEdit
 			this->Options = gcnew CVTFOptions();
 			this->VMTCreate = gcnew CVMTCreate();
 			this->BatchConvert = gcnew CBatchConvert(this->Options);
-			this->WADConvert = gcnew CWADConvert(this->Options);
 			this->About = gcnew CAbout();
 
 			this->hWndNewViewer = 0;
@@ -142,9 +139,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::MenuItem ^  btnVMTFileSelectAll;
 	private: System::Windows::Forms::MenuItem ^  btnConvertFolder;
 	private: System::Windows::Forms::RichTextBox ^  txtVMTFile;
-	private: System::Windows::Forms::MenuItem ^  btnOptionsSpace1;
 	private: System::Windows::Forms::MenuItem ^  btnAutoCreateVMTFile;
-	private: System::Windows::Forms::MenuItem ^  btnConvertWADFile;
 	private: System::Windows::Forms::MenuItem ^  btnFileSpace4;
 	private: System::Windows::Forms::MenuItem ^  btnCreateVMTFile;
 	private: System::Windows::Forms::MenuItem ^  btnToolsMenu;
@@ -172,16 +167,9 @@ namespace VTFEdit
 	private: System::Windows::Forms::MenuItem ^  btnGotoRemove;
 	private: System::Windows::Forms::MenuItem ^  btnGotoClear;
 	private: System::Windows::Forms::MenuItem ^  btnOptionsMenu;
-	private: System::Windows::Forms::MenuItem ^  btnFileMapping;
-	private: System::Windows::Forms::MenuItem ^  btnVolatileAccess;
 	private: System::Windows::Forms::ContextMenu ^  mnuFileSystem;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemExpandAll;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemCollapseAll;
 	private: System::Windows::Forms::MenuItem ^  btnFileSystemOpen;
 	private: System::Windows::Forms::MenuItem ^  btnFileSystemShellExecute;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemExtract;
-	private: System::Windows::Forms::FolderBrowserDialog ^  dlgExtractDirectoryItem;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemMount;
 	private: System::Windows::Forms::GroupBox ^  grpGoto;
 	private: System::Windows::Forms::ComboBox ^  cboGoto;
 	private: System::Windows::Forms::MenuItem ^  btnMask;
@@ -305,12 +293,8 @@ namespace VTFEdit
 			this->btnToolsMenu = (gcnew System::Windows::Forms::MenuItem());
 			this->btnCreateVMTFile = (gcnew System::Windows::Forms::MenuItem());
 			this->btnConvertFolder = (gcnew System::Windows::Forms::MenuItem());
-			this->btnConvertWADFile = (gcnew System::Windows::Forms::MenuItem());
 			this->btnOptionsMenu = (gcnew System::Windows::Forms::MenuItem());
 			this->btnAutoCreateVMTFile = (gcnew System::Windows::Forms::MenuItem());
-			this->btnOptionsSpace1 = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileMapping = (gcnew System::Windows::Forms::MenuItem());
-			this->btnVolatileAccess = (gcnew System::Windows::Forms::MenuItem());
 			this->btnHelpMenu = (gcnew System::Windows::Forms::MenuItem());
 			this->btnAbout = (gcnew System::Windows::Forms::MenuItem());
 			this->dlgOpenFile = (gcnew System::Windows::Forms::OpenFileDialog());
@@ -331,10 +315,6 @@ namespace VTFEdit
 			this->mnuFileSystem = (gcnew System::Windows::Forms::ContextMenu());
 			this->btnFileSystemOpen = (gcnew System::Windows::Forms::MenuItem());
 			this->btnFileSystemShellExecute = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemExtract = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemExpandAll = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemCollapseAll = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemMount = (gcnew System::Windows::Forms::MenuItem());
 			this->btnFileSystemSpace1 = (gcnew System::Windows::Forms::MenuItem());
 			this->btnFileSystemAddGoto = (gcnew System::Windows::Forms::MenuItem());
 			this->btnFileSystemSpace2 = (gcnew System::Windows::Forms::MenuItem());
@@ -436,7 +416,6 @@ namespace VTFEdit
 			this->btnToolPaste = (gcnew System::Windows::Forms::ToolBarButton());
 			this->imgTool = (gcnew System::Windows::Forms::ImageList(this->components));
 			this->splSidebar = (gcnew System::Windows::Forms::Splitter());
-			this->dlgExtractDirectoryItem = (gcnew System::Windows::Forms::FolderBrowserDialog());
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlFileName))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo1))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo2))->BeginInit();
@@ -671,9 +650,9 @@ namespace VTFEdit
 			// btnToolsMenu
 			// 
 			this->btnToolsMenu->Index = 3;
-			this->btnToolsMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(3) {
+			this->btnToolsMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(2) {
 				this->btnCreateVMTFile,
-					this->btnConvertFolder, this->btnConvertWADFile
+					this->btnConvertFolder
 			});
 			this->btnToolsMenu->Text = L"&Tools";
 			// 
@@ -689,19 +668,10 @@ namespace VTFEdit
 			this->btnConvertFolder->Text = L"Convert &Folder";
 			this->btnConvertFolder->Click += gcnew System::EventHandler(this, &CVTFEdit::btnConvertFolder_Click);
 			// 
-			// btnConvertWADFile
-			// 
-			this->btnConvertWADFile->Index = 2;
-			this->btnConvertWADFile->Text = L"Convert &WAD File";
-			this->btnConvertWADFile->Click += gcnew System::EventHandler(this, &CVTFEdit::btnConvertWADFile_Click);
-			// 
 			// btnOptionsMenu
 			// 
 			this->btnOptionsMenu->Index = 4;
-			this->btnOptionsMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(4) {
-				this->btnAutoCreateVMTFile,
-					this->btnOptionsSpace1, this->btnFileMapping, this->btnVolatileAccess
-			});
+			this->btnOptionsMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(1) { this->btnAutoCreateVMTFile });
 			this->btnOptionsMenu->Text = L"&Options";
 			// 
 			// btnAutoCreateVMTFile
@@ -709,23 +679,6 @@ namespace VTFEdit
 			this->btnAutoCreateVMTFile->Index = 0;
 			this->btnAutoCreateVMTFile->Text = L"&Auto Create VMT File";
 			this->btnAutoCreateVMTFile->Click += gcnew System::EventHandler(this, &CVTFEdit::btnAutoCreateVMTFile_Click);
-			// 
-			// btnOptionsSpace1
-			// 
-			this->btnOptionsSpace1->Index = 1;
-			this->btnOptionsSpace1->Text = L"-";
-			// 
-			// btnFileMapping
-			// 
-			this->btnFileMapping->Index = 2;
-			this->btnFileMapping->Text = L"File &Mapping";
-			this->btnFileMapping->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileMapping_Click);
-			// 
-			// btnVolatileAccess
-			// 
-			this->btnVolatileAccess->Index = 3;
-			this->btnVolatileAccess->Text = L"&Volatile Access";
-			this->btnVolatileAccess->Click += gcnew System::EventHandler(this, &CVTFEdit::btnVolatileAccess_Click);
 			// 
 			// btnHelpMenu
 			// 
@@ -890,10 +843,10 @@ namespace VTFEdit
 			// 
 			// mnuFileSystem
 			// 
-			this->mnuFileSystem->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(10) {
+			this->mnuFileSystem->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(6) {
 				this->btnFileSystemOpen,
-					this->btnFileSystemShellExecute, this->btnFileSystemExtract, this->btnFileSystemExpandAll, this->btnFileSystemCollapseAll, this->btnFileSystemMount,
-					this->btnFileSystemSpace1, this->btnFileSystemAddGoto, this->btnFileSystemSpace2, this->btnFileSystemDelete
+					this->btnFileSystemShellExecute, this->btnFileSystemSpace1, this->btnFileSystemAddGoto,
+					this->btnFileSystemSpace2, this->btnFileSystemDelete
 			});
 			this->mnuFileSystem->Popup += gcnew System::EventHandler(this, &CVTFEdit::mnuFileSystem_Popup);
 			// 
@@ -912,56 +865,28 @@ namespace VTFEdit
 			this->btnFileSystemShellExecute->Visible = false;
 			this->btnFileSystemShellExecute->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemShellExecute_Click);
 			// 
-			// btnFileSystemExtract
-			// 
-			this->btnFileSystemExtract->Index = 2;
-			this->btnFileSystemExtract->Text = L"&Extract";
-			this->btnFileSystemExtract->Visible = false;
-			this->btnFileSystemExtract->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemExtract_Click);
-			// 
-			// btnFileSystemExpandAll
-			// 
-			this->btnFileSystemExpandAll->Index = 3;
-			this->btnFileSystemExpandAll->Text = L"&Expand All";
-			this->btnFileSystemExpandAll->Visible = false;
-			this->btnFileSystemExpandAll->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemExpandAll_Click);
-			// 
-			// btnFileSystemCollapseAll
-			// 
-			this->btnFileSystemCollapseAll->Index = 4;
-			this->btnFileSystemCollapseAll->Text = L"&Collapse All";
-			this->btnFileSystemCollapseAll->Visible = false;
-			this->btnFileSystemCollapseAll->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemCollapseAll_Click);
-			// 
-			// btnFileSystemMount
-			// 
-			this->btnFileSystemMount->Index = 5;
-			this->btnFileSystemMount->Text = L"&Mount";
-			this->btnFileSystemMount->Visible = false;
-			this->btnFileSystemMount->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemMount_Click);
-			// 
 			// btnFileSystemSpace1
 			// 
-			this->btnFileSystemSpace1->Index = 6;
+			this->btnFileSystemSpace1->Index = 2;
 			this->btnFileSystemSpace1->Text = L"-";
 			this->btnFileSystemSpace1->Visible = false;
 			// 
 			// btnFileSystemAddGoto
 			// 
-			this->btnFileSystemAddGoto->Index = 7;
+			this->btnFileSystemAddGoto->Index = 3;
 			this->btnFileSystemAddGoto->Text = L"Add &Goto";
 			this->btnFileSystemAddGoto->Visible = false;
 			this->btnFileSystemAddGoto->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemAddGoto_Click);
 			// 
 			// btnFileSystemSpace2
 			// 
-			this->btnFileSystemSpace2->Index = 8;
+			this->btnFileSystemSpace2->Index = 4;
 			this->btnFileSystemSpace2->Text = L"-";
 			this->btnFileSystemSpace2->Visible = false;
 			// 
 			// btnFileSystemDelete
 			// 
-			this->btnFileSystemDelete->Index = 9;
+			this->btnFileSystemDelete->Index = 5;
 			this->btnFileSystemDelete->Text = L"&Delete";
 			this->btnFileSystemDelete->Visible = false;
 			this->btnFileSystemDelete->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemDelete_Click);
@@ -1865,10 +1790,6 @@ namespace VTFEdit
 			this->splSidebar->TabStop = false;
 			this->splSidebar->SplitterMoved += gcnew System::Windows::Forms::SplitterEventHandler(this, &CVTFEdit::splSidebar_SplitterMoved);
 			// 
-			// dlgExtractDirectoryItem
-			// 
-			this->dlgExtractDirectoryItem->Description = L"Extract directory item to:";
-			// 
 			// CVTFEdit
 			// 
 			this->AutoScaleBaseSize = System::Drawing::Size(6, 16);
@@ -1958,6 +1879,16 @@ namespace VTFEdit
 		};*/
 
 		//
+		// EDirectoryItemType
+		// The kind of file system object a tree node represents.
+		//
+		private: enum class EDirectoryItemType
+		{
+			Folder,
+			File
+		};
+
+		//
 		// CFileSystemTreeNode
 		// File system tree node base class.
 		//
@@ -2003,256 +1934,6 @@ namespace VTFEdit
 			}
 		};
 
-		//
-		// CDirectoryItemFileSystemTreeNode
-		// A file system node implimentation for HLLib CDirectroyItem objects.
-		//
-		private: ref class CDirectoryItemFileSystemTreeNode : public CFileSystemTreeNode
-		{
-		private:
-			HLLib::CPackage *Package;
-			HLLib::CDirectoryItem *DirectoryItem;
-			bool bTreeBuilt;
-
-		public:
-			CDirectoryItemFileSystemTreeNode(HLLib::CPackage *Package, HLLib::CDirectoryItem *DirectoryItem, CVTFEdit ^VTFEdit, CDirectoryItemInfoManager ^DirectoryItemInfoManager) : CFileSystemTreeNode(VTFEdit, DirectoryItemInfoManager)
-			{
-				this->Package = Package;
-				this->DirectoryItem = DirectoryItem;
-
-				if(this->DirectoryItem->GetType() == HL_ITEM_FOLDER)
-				{
-					this->bTreeBuilt = false;
-
-					this->Text = gcnew System::String(DirectoryItem->GetName());
-
-					this->ImageIndex = this->DirectoryItemInfoManager->GetFolderTypeInfo("Folder")->IconIndex;
-					this->SelectedImageIndex = this->ImageIndex;
-
-					// Add a dummy node so we can expand the node.
-					this->Nodes->Add(gcnew System::Windows::Forms::TreeNode());
-				}
-				else
-				{
-					this->bTreeBuilt = true;
-
-					this->Text = gcnew System::String(DirectoryItem->GetName());
-
-					this->ImageIndex = this->DirectoryItemInfoManager->GetFileTypeInfo(gcnew System::String(DirectoryItem->GetName()))->IconIndex;
-					this->SelectedImageIndex = this->ImageIndex;
-				}
-			}
-
-		public:
-			void BuildChildren() override
-			{
-				if(bTreeBuilt)
-					return;
-
-				// Remove dummy node.
-				this->Nodes->Clear();
-
-				if(this->DirectoryItem->GetType() == HL_ITEM_FOLDER)
-				{
-					HLLib::CDirectoryFolder *Folder = static_cast<HLLib::CDirectoryFolder *>(this->DirectoryItem);
-
-					for(DWORD i = 0; i < Folder->GetCount(); i++)
-					{
-						this->Nodes->Add(gcnew CDirectoryItemFileSystemTreeNode(this->Package, Folder->GetItem(i), this->VTFEdit, this->DirectoryItemInfoManager));
-					}
-				}
-
-				this->bTreeBuilt = true;
-			}
-
-			virtual void AfterCollapse() override
-			{
-				this->ImageIndex--;
-				this->SelectedImageIndex--;
-			}
-
-			virtual void AfterExpand() override
-			{
-				this->ImageIndex++;
-				this->SelectedImageIndex++;
-			}
-
-			//
-			// Extract()
-			// Extract the item, if it is a file, to sPath.
-			//
-			bool Extract(System::String ^sPath)
-			{
-				if(this->DirectoryItem->GetType() == HL_ITEM_FILE)
-				{
-					char *cPath = (char *)(System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(sPath)).ToPointer();
-
-					hlBool bResult = static_cast<HLLib::CDirectoryFile *>(this->DirectoryItem)->Extract(cPath);
-
-					System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cPath);
-
-					return bResult != hlFalse;
-				}
-
-				return false;
-			}
-
-			property System::String ^ItemPath
-			{
-				System::String^ get() override
-				{
-					System::String^ sTempPath = System::IO::Path::GetTempPath();
-
-					if (this->Extract(sTempPath))
-					{
-						return System::String::Concat(sTempPath, gcnew System::String(this->DirectoryItem->GetName()));
-					}
-
-					return "";
-				}
-			}
-
-			property HLDirectoryItemType DirectoryItemType
-			{
-				HLDirectoryItemType get()
-				{
-					return this->DirectoryItem->GetType();
-				}
-			}
-		};
-
-		//
-		// CPackageFileSystemTreeNode
-		// A file system node implimentation for HLLib CPackage objects.
-		// This node loads them on expansion.
-		//
-		private: ref class CPackageFileSystemTreeNode : public CFileSystemTreeNode
-		{
-		private:
-			System::String ^sMoutPointPath;
-
-		private:
-			HLLib::CPackage *Package;
-			bool bTreeBuilt;
-
-		public:
-			CPackageFileSystemTreeNode(System::IO::FileInfo ^FileInfo, CVTFEdit ^VTFEdit, CDirectoryItemInfoManager ^DirectoryItemInfoManager) : CFileSystemTreeNode(VTFEdit, DirectoryItemInfoManager)
-			{
-				this->Package = 0;
-				this->bTreeBuilt = false;
-
-				this->sMoutPointPath = FileInfo->FullName;
-				this->Text = FileInfo->Name;
-
-				this->ImageIndex = this->DirectoryItemInfoManager->GetFileTypeInfo(FileInfo->Name)->IconIndex;
-				this->SelectedImageIndex = this->ImageIndex;
-
-				// Add a dummy node so we can expand the node.
-				this->Nodes->Add(gcnew System::Windows::Forms::TreeNode());
-			}
-
-			~CPackageFileSystemTreeNode()
-			{
-				delete this->Package;
-			}
-
-		public:
-			void BuildChildren() override
-			{
-				if(bTreeBuilt)
-					return;
-
-				this->Mount();
-			}
-
-			//
-			// Mount()
-			// Load the package.
-			//
-			bool Mount()
-			{
-				if(this->Package != 0)
-					return true;
-
-				// Remove dummy node.
-				this->Nodes->Clear();
-
-				char *cMountPointPath = (char *)(System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(this->sMoutPointPath)).ToPointer();
-
-				HLPackageType ePackageType = hlGetPackageTypeFromName(cMountPointPath);
-
-				if(ePackageType == HL_PACKAGE_NONE)
-				{
-					HLLib::Streams::CFileStream FileStream = HLLib::Streams::CFileStream(cMountPointPath);
-					ePackageType = hlGetPackageTypeFromStream(&FileStream);
-				}
-
-				switch(ePackageType)
-				{
-				case HL_PACKAGE_BSP:
-					this->Package = new HLLib::CBSPFile();
-					break;
-				case HL_PACKAGE_GCF:
-					this->Package = new HLLib::CGCFFile();
-					break;
-				case HL_PACKAGE_NCF:
-					this->Package = new HLLib::CNCFFile();
-					break;
-				case HL_PACKAGE_PAK:
-					this->Package = new HLLib::CPAKFile();
-					break;
-				case HL_PACKAGE_VBSP:
-					this->Package = new HLLib::CVBSPFile();
-					break;
-				case HL_PACKAGE_VPK:
-					this->Package = new HLLib::CVPKFile();
-					break;
-				case HL_PACKAGE_WAD:
-					this->Package = new HLLib::CWADFile();
-					break;
-				case HL_PACKAGE_XZP:
-					this->Package = new HLLib::CXZPFile();
-					break;
-				case HL_PACKAGE_ZIP:
-					this->Package = new HLLib::CZIPFile();
-					break;
-				}
-
-				hlUInt uiMode = HL_MODE_READ;
-				uiMode |= !this->DirectoryItemInfoManager->FileMapping ? HL_MODE_NO_FILEMAPPING : 0;
-				uiMode |= this->DirectoryItemInfoManager->VolatileAccess ? HL_MODE_VOLATILE : 0;
-
-				if(this->Package != 0 && this->Package->Open(cMountPointPath, uiMode))
-				{
-					HLLib::CDirectoryFolder *Root = this->Package->GetRoot();
-
-					for(hlUInt i = 0; i < Root->GetCount(); i++)
-					{
-						this->Nodes->Add(gcnew CDirectoryItemFileSystemTreeNode(this->Package, Root->GetItem(i), this->VTFEdit, this->DirectoryItemInfoManager));
-					}
-				}
-				else
-				{
-					delete this->Package;
-					this->Package = 0;
-				}
-
-				System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cMountPointPath);
-
-				this->bTreeBuilt = true;
-
-				return this->Package != 0;
-			}
-
-			property bool Mounted
-			{
-				bool get()
-				{
-					return this->Package != 0;
-				}
-			}
-		};
-
 		private: delegate void AddDirectoryTreeNodeEventHandler(System::Windows::Forms::TreeNode ^Node, System::IO::DirectoryInfo ^DirectoryInfo);
 
 		private: void AddDirectoryTreeNode(System::Windows::Forms::TreeNode ^Node, System::IO::DirectoryInfo ^DirectoryInfo)
@@ -2267,13 +1948,6 @@ namespace VTFEdit
 			Node->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(FileInfo, this, this->DirectoryItemInfoManager));
 		}
 
-		private: delegate void AddPackageTreeNodeEventHandler(System::Windows::Forms::TreeNode ^Node, System::IO::FileInfo ^FileInfo);
-
-		private: void AddPackageTreeNode(System::Windows::Forms::TreeNode ^Node, System::IO::FileInfo ^FileInfo)
-		{
-			Node->Nodes->Add(gcnew CPackageFileSystemTreeNode(FileInfo, this, this->DirectoryItemInfoManager));
-		}
-
 		//
 		// CDirectoryFileSystemTreeNode
 		// A file system node implimentation for Window's files and folders.
@@ -2281,7 +1955,7 @@ namespace VTFEdit
 		private: ref class CDirectoryFileSystemTreeNode : public CFileSystemTreeNode
 		{
 		private:
-			HLDirectoryItemType eDirectoryItemType;
+			EDirectoryItemType eDirectoryItemType;
 			System::String ^sItemPath;
 
 		private:
@@ -2293,7 +1967,7 @@ namespace VTFEdit
 			{
 				this->bTreeBuilt = false;
 
-				this->eDirectoryItemType = HL_ITEM_FOLDER;
+				this->eDirectoryItemType = EDirectoryItemType::Folder;
 				this->sItemPath = DirectoryInfo->FullName;
 				this->Text = DirectoryInfo->Name;
 
@@ -2315,7 +1989,7 @@ namespace VTFEdit
 			{
 				this->bTreeBuilt = true;
 
-				this->eDirectoryItemType = HL_ITEM_FILE;
+				this->eDirectoryItemType = EDirectoryItemType::File;
 				this->sItemPath = FileInfo->FullName;
 				this->Text = FileInfo->Name;
 
@@ -2356,23 +2030,11 @@ namespace VTFEdit
 
 						if (!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
 						{
-							if(System::String::Compare(SubFileInfo->Extension, ".bsp", true) == 0 ||
-								System::String::Compare(SubFileInfo->Extension, ".gcf", true) == 0 ||
-								System::String::Compare(SubFileInfo->Extension, ".pak", true) == 0 ||
-								System::String::Compare(SubFileInfo->Extension, ".vpk", true) == 0 ||
-								System::String::Compare(SubFileInfo->Extension, ".wad", true) == 0 ||
-								System::String::Compare(SubFileInfo->Extension, ".xzp", true) == 0)
-							{
-								this->Nodes->Add(gcnew CPackageFileSystemTreeNode(SubFileInfo, VTFEdit, this->DirectoryItemInfoManager));
-							}
-							else
-							{
-								this->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(SubFileInfo, VTFEdit, this->DirectoryItemInfoManager));
-							}
+							this->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(SubFileInfo, VTFEdit, this->DirectoryItemInfoManager));
 						}
 					}
 
-					if (this->eDirectoryItemType == HL_ITEM_FOLDER)
+					if (this->eDirectoryItemType == EDirectoryItemType::Folder)
 					{
 						this->Watcher = gcnew System::IO::FileSystemWatcher(this->sItemPath);
 						this->Watcher->IncludeSubdirectories = false;
@@ -2414,22 +2076,11 @@ namespace VTFEdit
 
 					if(!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
 					{
-						if(System::String::Compare(SubFileInfo->Extension, ".bsp", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".gcf", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".pak", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".vpk", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".wad", true) == 0)
-						{
-							array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-							oArgumentst[0] = this;
-							oArgumentst[1] = SubFileInfo;
-							
-							VTFEdit->Invoke(gcnew AddPackageTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddPackageTreeNode), oArgumentst);
-						}
-						else
-						{
-							array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-							oArgumentst[0] = this;
-							oArgumentst[1] = SubFileInfo;
-							
-							VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
-						}
+						array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
+						oArgumentst[0] = this;
+						oArgumentst[1] = SubFileInfo;
+
+						VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
 					}
 				}
 			}
@@ -2462,22 +2113,11 @@ namespace VTFEdit
 
 							if(!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
 							{
-								if(System::String::Compare(SubFileInfo->Extension, ".bsp", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".gcf", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".pak", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".vpk", true) == 0 || System::String::Compare(SubFileInfo->Extension, ".wad", true) == 0)
-								{
-									array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-									oArgumentst[0] = this;
-									oArgumentst[1] = SubFileInfo;
-									
-									VTFEdit->Invoke(gcnew AddPackageTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddPackageTreeNode), oArgumentst);
-								}
-								else
-								{
-									array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-									oArgumentst[0] = this;
-									oArgumentst[1] = SubFileInfo;
-									
-									VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
-								}
+								array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
+								oArgumentst[0] = this;
+								oArgumentst[1] = SubFileInfo;
+
+								VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
 							}
 						}
 
@@ -2520,9 +2160,9 @@ namespace VTFEdit
 				}
 			}
 
-			property HLDirectoryItemType DirectoryItemType
+			property EDirectoryItemType DirectoryItemType
 			{
-				HLDirectoryItemType get()
+				EDirectoryItemType get()
 				{
 					return this->eDirectoryItemType;
 				}
@@ -2639,8 +2279,6 @@ namespace VTFEdit
 			}
 			this->RestoreForm();
 
-			this->btnFileMapping->Checked = this->DirectoryItemInfoManager->FileMapping;
-			this->btnVolatileAccess->Checked = this->DirectoryItemInfoManager->VolatileAccess;
 
 			// If we were pased a file, load it.
 			array<System::String^>^ CommandLineArgs = System::Environment::GetCommandLineArgs();
@@ -3984,11 +3622,6 @@ namespace VTFEdit
 			this->BatchConvert->ShowDialog();
 		}
 
-		private: System::Void btnConvertWADFile_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->WADConvert->ShowDialog();
-		}
-
 		private: System::Void btnRecentFile_Click(System::Object ^sender, System::EventArgs ^e)
 		{
 			this->Open(static_cast<System::String ^>(this->RecentFiles[static_cast<MenuItem ^>(sender)->Index]), false);
@@ -4116,20 +3749,6 @@ namespace VTFEdit
 		private: System::Void btnAutoCreateVMTFile_Click(System::Object ^  sender, System::EventArgs ^  e)
 		{
 			this->btnAutoCreateVMTFile->Checked = !this->btnAutoCreateVMTFile->Checked;
-		}
-
-		private: System::Void btnFileMapping_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->btnFileMapping->Checked = !this->btnFileMapping->Checked;
-
-			this->DirectoryItemInfoManager->FileMapping = this->btnFileMapping->Checked;
-		}
-
-		private: System::Void btnVolatileAccess_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->btnVolatileAccess->Checked = !this->btnVolatileAccess->Checked;
-
-			this->DirectoryItemInfoManager->VolatileAccess = this->btnVolatileAccess->Checked;
 		}
 
 		private: System::Void btnAbout_Click(System::Object ^  sender, System::EventArgs ^  e)
@@ -4479,7 +4098,7 @@ namespace VTFEdit
 			if(this->treFileSystem->SelectedNode == nullptr)
 				return;
 
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid) || this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
+			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
 			{
 				//if(static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == DirectoryItemFolder)
 				{
@@ -4552,10 +4171,6 @@ namespace VTFEdit
 		{
 			this->btnFileSystemOpen->Visible = false;
 			this->btnFileSystemShellExecute->Visible = false;
-			this->btnFileSystemExtract->Visible = false;
-			this->btnFileSystemExpandAll->Visible = false;
-			this->btnFileSystemCollapseAll->Visible = false;
-			this->btnFileSystemMount->Visible = false;
 			this->btnFileSystemSpace1->Visible = false;
 			this->btnFileSystemAddGoto->Visible = false;
 			this->btnFileSystemSpace2->Visible = false;
@@ -4566,7 +4181,7 @@ namespace VTFEdit
 
 			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
 			{
-				if(static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == HL_ITEM_FOLDER)
+				if(static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == EDirectoryItemType::Folder)
 				{
 					this->btnFileSystemShellExecute->Visible = true;
 					this->btnFileSystemSpace1->Visible = true;
@@ -4580,27 +4195,6 @@ namespace VTFEdit
 					this->btnFileSystemDelete->Visible = true;
 				}
 			}
-			else if(this->treFileSystem->SelectedNode->GetType()->Equals(CPackageFileSystemTreeNode::typeid))
-			{
-				this->btnFileSystemMount->Visible = true;
-				this->btnFileSystemMount->Enabled = !static_cast<CPackageFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->Mounted;
-			}
-			else if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
-			{
-				if(static_cast<CDirectoryItemFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == HL_ITEM_FOLDER)
-				{
-					this->btnFileSystemExpandAll->Visible = true;
-					this->btnFileSystemCollapseAll->Visible = true;
-					this->btnFileSystemSpace1->Visible = true;
-					this->btnFileSystemAddGoto->Visible = true;
-				}
-				else
-				{
-					this->btnFileSystemOpen->Visible = true;
-					this->btnFileSystemShellExecute->Visible = true;
-					this->btnFileSystemExtract->Visible = true;
-				}
-			}
 		}
 
 		private: System::Void btnFileSystemOpen_Click(System::Object ^  sender, System::EventArgs ^  e)
@@ -4608,7 +4202,7 @@ namespace VTFEdit
 			if(this->treFileSystem->SelectedNode == nullptr)
 				return;
 
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid) || this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
+			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
 			{
 				System::String ^sItemPath = static_cast<CFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->ItemPath;
 
@@ -4617,7 +4211,7 @@ namespace VTFEdit
 
 				if(sItemPath->ToLower()->EndsWith(".vtf") || sItemPath->ToLower()->EndsWith(".vmt"))
 				{
-					this->Open(sItemPath, this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid));
+					this->Open(sItemPath, false);
 
 					this->tabSidebar->SelectedTab = this->tabFileSystem;
 				}
@@ -4634,7 +4228,7 @@ namespace VTFEdit
 			if(this->treFileSystem->SelectedNode == nullptr)
 				return;
 
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid) || this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
+			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
 			{
 				System::String ^sItemPath = static_cast<CFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->ItemPath;
 
@@ -4649,63 +4243,6 @@ namespace VTFEdit
 				{
 					MessageBox::Show(System::String::Concat("Error shell executing directory item:\n\n", ex->Message), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
 				}
-			}
-		}
-
-		private: System::Void btnFileSystemExtract_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
-			{
-				if(this->dlgExtractDirectoryItem->ShowDialog() == System::Windows::Forms::DialogResult::OK)
-				{
-					static_cast<CDirectoryItemFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->Extract(this->dlgExtractDirectoryItem->SelectedPath);
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemExpandAll_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
-			{
-				if(static_cast<CDirectoryItemFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == HL_ITEM_FOLDER)
-				{
-					this->treFileSystem->BeginUpdate();
-					this->treFileSystem->SelectedNode->ExpandAll();
-					this->treFileSystem->EndUpdate();
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemCollapseAll_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryItemFileSystemTreeNode::typeid))
-			{
-				if(static_cast<CDirectoryItemFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == HL_ITEM_FOLDER)
-				{
-					this->treFileSystem->BeginUpdate();
-					this->treFileSystem->SelectedNode->Collapse();
-					this->treFileSystem->EndUpdate();
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemMount_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CPackageFileSystemTreeNode::typeid))
-			{
-				static_cast<CPackageFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->Mount();
 			}
 		}
 
@@ -4823,9 +4360,6 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.Mask = ", this->btnMask->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.Tile = ", this->btnTile->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.AutoCreateVMTFile = ", this->btnAutoCreateVMTFile->Checked.ToString()));
-				ConfigFile->WriteLine(System::String::Concat("VTFEdit.FileMapping = ", this->DirectoryItemInfoManager->FileMapping.ToString()));
-				ConfigFile->WriteLine(System::String::Concat("VTFEdit.VolatileAccess = ", this->DirectoryItemInfoManager->VolatileAccess.ToString()));
-				ConfigFile->WriteLine(System::String::Concat("VTFEdit.ExtractDirectory = ", this->dlgExtractDirectoryItem->SelectedPath));
 				for(int i = 0; i < this->cboGoto->Items->Count; i++)
 				{
 					ConfigFile->WriteLine(System::String::Concat("VTFEdit.Goto = ", static_cast<System::String ^>(this->cboGoto->Items[i])));
@@ -4858,9 +4392,6 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("Forms.BatchConvert.Recurse = ", this->BatchConvert->Recurse.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("Forms.BatchConvert.CreateVMTFiles = ", this->BatchConvert->CreateVMTFiles.ToString()));
 
-				ConfigFile->WriteLine(System::String::Concat("Forms.WADConvert.WADFile = ", this->WADConvert->WADFile));
-				ConfigFile->WriteLine(System::String::Concat("Forms.WADConvert.OutputFolder = ", this->WADConvert->OutputFolder));
-				ConfigFile->WriteLine(System::String::Concat("Forms.WADConvert.CreateVMTFiles = ", this->WADConvert->CreateVMTFiles.ToString()));
 
 				ConfigFile->WriteLine("");
 				ConfigFile->WriteLine("[VTF Options]");
@@ -4983,18 +4514,6 @@ namespace VTFEdit
 						{
 							this->btnAutoCreateVMTFile->Checked = Convert::ToBoolean(sVal);
 						}
-						else if(System::String::Compare(sArg, "VTFEdit.FileMapping", true) == 0)
-						{
-							this->DirectoryItemInfoManager->FileMapping = Convert::ToBoolean(sVal);
-						}
-						else if(System::String::Compare(sArg, "VTFEdit.VolatileAccess", true) == 0)
-						{
-							this->DirectoryItemInfoManager->VolatileAccess = Convert::ToBoolean(sVal);
-						}
-						else if(System::String::Compare(sArg, "VTFEdit.ExtractDirectory", true) == 0)
-						{
-							this->dlgExtractDirectoryItem->SelectedPath = sVal;;
-						}
 						else if(System::String::Compare(sArg, "VTFEdit.Goto", true) == 0)
 						{
 							this->cboGoto->Items->Add(sVal);
@@ -5063,19 +4582,6 @@ namespace VTFEdit
 						else if(System::String::Compare(sArg, "Forms.BatchConvert.CreateVMTFiles", true) == 0)
 						{
 							this->BatchConvert->CreateVMTFiles = Convert::ToBoolean(sVal);
-						}
-
-						else if(System::String::Compare(sArg, "Forms.WADConvert.WADFile", true) == 0)
-						{
-							this->WADConvert->WADFile = sVal;
-						}
-						else if(System::String::Compare(sArg, "Forms.WADConvert.OutputFolder", true) == 0)
-						{
-							this->WADConvert->OutputFolder = sVal;
-						}
-						else if(System::String::Compare(sArg, "Forms.WADConvert.CreateVMTFiles", true) == 0)
-						{
-							this->WADConvert->CreateVMTFiles = Convert::ToBoolean(sVal);
 						}
 
 						else if(System::String::Compare(sArg, "VTFOptions.NormalFormat", true) == 0)

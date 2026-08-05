@@ -93,7 +93,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.pdb&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\HLLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.pdb&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -172,7 +172,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.pdb&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\HLLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.pdb&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -251,7 +251,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\HLLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x86\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -331,7 +331,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\HLLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\VTFLib\$(PlatformName)\$(ConfigurationName)\VTFLib.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\..\bin\x64\DevIL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -385,10 +385,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\VTFEdit\VTFOptions.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\VTFEdit\WADConvert.cpp"
 				>
 			</File>
 		</Filter>
@@ -622,47 +618,6 @@
 						<Tool
 							Name="VCManagedResourceCompilerTool"
 							ResourceFileName="$(IntDir)/VTFEdit.CVTFOptions.resources"
-						/>
-					</FileConfiguration>
-				</File>
-			</File>
-			<File
-				RelativePath="..\..\..\VTFEdit\WADConvert.h"
-				FileType="3"
-				>
-				<File
-					RelativePath="..\..\..\VTFEdit\WADConvert.resX"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCManagedResourceCompilerTool"
-							ResourceFileName="$(IntDir)/VTFEdit.CWADConvert.resources"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCManagedResourceCompilerTool"
-							ResourceFileName="$(IntDir)/VTFEdit.CWADConvert.resources"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCManagedResourceCompilerTool"
-							ResourceFileName="$(IntDir)/VTFEdit.CWADConvert.resources"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCManagedResourceCompilerTool"
-							ResourceFileName="$(IntDir)/VTFEdit.CWADConvert.resources"
 						/>
 					</FileConfiguration>
 				</File>

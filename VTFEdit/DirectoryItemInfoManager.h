@@ -67,9 +67,6 @@ namespace VTFEdit
 	public:
 		CDirectoryItemInfoManager()
 		{
-			this->FileMapping = true;
-			this->VolatileAccess = true;
-
 			this->oFileTypeInfoTable = gcnew System::Collections::Hashtable();
 
 			this->oSmallImageList = gcnew System::Windows::Forms::ImageList();
@@ -77,10 +74,6 @@ namespace VTFEdit
 			this->oSmallImageList->ColorDepth = System::Windows::Forms::ColorDepth::Depth32Bit;
 			this->oSmallImageList->TransparentColor = System::Drawing::Color::Transparent;
 		}
-
-	public:
-		property bool FileMapping;
-		property bool VolatileAccess;
 
 	public:
 		property System::Windows::Forms::ImageList ^ SmallImageList;

@@ -39,12 +39,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 		return 1;
 	}
 
-	if(hlGetInteger(HL_VERSION) != HL_VERSION_NUMBER)
-	{
-		MessageBox::Show("Invalid HLLib.dll version number.", Application::ProductName, System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
-		return 1;
-	}
-
 	ILuint uiImage;
 
 	// Initialize DevIL.
