@@ -1631,7 +1631,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		this->chkMipmaps->Checked = true;
 		this->cboMipmapFilter->SelectedIndex = 1; // NICE
 
-		this->cboVersion->SelectedIndex = 0;
+		this->cboVersion->SelectedIndex = 1; // 7.4
 
 		this->chkReflectivity->Checked = true;
 		this->chkThumbnail->Checked = true;
