@@ -134,6 +134,9 @@ VTFLIB_API vlVoid vlImageCreateDefaultCreateStructure(SVTFCreateOptions *VTFCrea
 
 	VTFCreateOptions->bSphereMap = vlFalse;
 	VTFCreateOptions->bSRGB = vlFalse;
+
+	VTFCreateOptions->sAuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_NONE;
+	VTFCreateOptions->sAuxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
 }
 
 VTFLIB_API vlBool vlImageCreate(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt uiFaces, vlUInt uiSlices, VTFImageFormat ImageFormat, vlBool bThumbnail, vlBool bMipmaps, vlBool bNullImageData)
@@ -276,6 +279,46 @@ VTFLIB_API vlUInt vlImageGetSize()
 		return 0;
 
 	return Image->GetSize();
+}
+
+VTFLIB_API vlBool vlImageGetSupportsAuxCompression()
+{
+	if(Image == 0)
+		return vlFalse;
+
+	return Image->GetSupportsAuxCompression();
+}
+
+VTFLIB_API vlShort vlImageGetAuxCompressionLevel()
+{
+	if(Image == 0)
+		return VTF_AUX_COMPRESSION_LEVEL_NONE;
+
+	return Image->GetAuxCompressionLevel();
+}
+
+VTFLIB_API vlBool vlImageSetAuxCompressionLevel(vlShort sLevel)
+{
+	if(Image == 0)
+		return vlFalse;
+
+	return Image->SetAuxCompressionLevel(sLevel);
+}
+
+VTFLIB_API vlShort vlImageGetAuxCompressionMethod()
+{
+	if(Image == 0)
+		return AUX_COMPRESSION_METHOD_DEFLATE;
+
+	return Image->GetAuxCompressionMethod();
+}
+
+VTFLIB_API vlBool vlImageSetAuxCompressionMethod(vlShort sMethod)
+{
+	if(Image == 0)
+		return vlFalse;
+
+	return Image->SetAuxCompressionMethod(sMethod);
 }
 
 VTFLIB_API vlUInt vlImageGetHasImage()

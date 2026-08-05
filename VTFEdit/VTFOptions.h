@@ -119,6 +119,10 @@ namespace VTFEdit
 	private: System::Windows::Forms::GroupBox^ grpVersion;
 	private: System::Windows::Forms::ComboBox^ cboVersion;
 	private: System::Windows::Forms::Label^ lblVersion;
+	private: System::Windows::Forms::ComboBox^ cboCompressionLevel;
+	private: System::Windows::Forms::Label^ lblCompressionLevel;
+	private: System::Windows::Forms::ComboBox^ cboCompressionMethod;
+	private: System::Windows::Forms::Label^ lblCompressionMethod;
 	private: System::Windows::Forms::TabPage^ tabResources;
 	private: System::Windows::Forms::GroupBox^ grpResourceOptions;
 	private: System::Windows::Forms::GroupBox^ grpLODControlResource;
@@ -209,6 +213,10 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpAdvancedOptions = (gcnew System::Windows::Forms::GroupBox());
 			this->grpVersion = (gcnew System::Windows::Forms::GroupBox());
 			this->lblVersion = (gcnew System::Windows::Forms::Label());
+			this->cboCompressionLevel = (gcnew System::Windows::Forms::ComboBox());
+			this->lblCompressionLevel = (gcnew System::Windows::Forms::Label());
+			this->cboCompressionMethod = (gcnew System::Windows::Forms::ComboBox());
+			this->lblCompressionMethod = (gcnew System::Windows::Forms::Label());
 			this->grpLuminanceWeights = (gcnew System::Windows::Forms::GroupBox());
 			this->lblLuminanceWeightsB = (gcnew System::Windows::Forms::Label());
 			this->lblLuminanceWeightsG = (gcnew System::Windows::Forms::Label());
@@ -264,7 +272,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpMiscellaneous->Controls->Add(this->chkThumbnail);
 			this->grpMiscellaneous->Controls->Add(this->chkSphereMap);
 			this->grpMiscellaneous->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpMiscellaneous->Location = System::Drawing::Point(10, 194);
+			this->grpMiscellaneous->Location = System::Drawing::Point(10, 250);
 			this->grpMiscellaneous->Name = L"grpMiscellaneous";
 			this->grpMiscellaneous->Size = System::Drawing::Size(326, 111);
 			this->grpMiscellaneous->TabIndex = 1;
@@ -372,11 +380,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboFormat->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboFormat->Items->AddRange(gcnew cli::array< System::Object^  >(29) {
+			this->cboFormat->Items->AddRange(gcnew cli::array< System::Object^  >(30) {
 				L"RGBA8888", L"ABGR8888", L"RGB888", L"BGR888",
 					L"RGB565", L"I8", L"IA88", L"P8 (Not supported)", L"A8", L"RGB888 Bluescreen", L"BGR888 Bluescreen", L"ARGB8888", L"BGRA8888",
 					L"DXT1", L"DXT3", L"DXT5", L"BGRX8888", L"BGR565", L"BGRX5551", L"BGRA4444", L"DXT1 With One Bit Alpha", L"BGRA5551", L"UV88",
-					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"BC7", L"BC6H"
+					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"R8", L"BC7", L"BC6H"
 			});
 			this->cboFormat->Location = System::Drawing::Point(125, 28);
 			this->cboFormat->Name = L"cboFormat";
@@ -453,11 +461,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboAlphaFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboAlphaFormat->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboAlphaFormat->Items->AddRange(gcnew cli::array< System::Object^  >(29) {
+			this->cboAlphaFormat->Items->AddRange(gcnew cli::array< System::Object^  >(30) {
 				L"RGBA8888", L"ABGR8888", L"RGB888", L"BGR888",
 					L"RGB565", L"I8", L"IA88", L"P8 (Not supported)", L"A8", L"RGB888 Bluescreen", L"BGR888 Bluescreen", L"ARGB8888", L"BGRA8888",
 					L"DXT1", L"DXT3", L"DXT5", L"BGRX8888", L"BGR565", L"BGRX5551", L"BGRA4444", L"DXT1 With One Bit Alpha", L"BGRA5551", L"UV88",
-					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"BC7", L"BC6H"
+					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"R8", L"BC7", L"BC6H"
 			});
 			this->cboAlphaFormat->Location = System::Drawing::Point(125, 55);
 			this->cboAlphaFormat->Name = L"cboAlphaFormat";
@@ -499,7 +507,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpGammaCorrection->Controls->Add(this->lblGammaCorrection);
 			this->grpGammaCorrection->Controls->Add(this->chkGammaCorrection);
 			this->grpGammaCorrection->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpGammaCorrection->Location = System::Drawing::Point(10, 92);
+			this->grpGammaCorrection->Location = System::Drawing::Point(10, 148);
 			this->grpGammaCorrection->Name = L"grpGammaCorrection";
 			this->grpGammaCorrection->Size = System::Drawing::Size(326, 93);
 			this->grpGammaCorrection->TabIndex = 3;
@@ -696,11 +704,12 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// cboVersion
 			// 
 			this->cboVersion->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-			this->cboVersion->Items->AddRange(gcnew cli::array< System::Object^  >(6) { L"7.5", L"7.4", L"7.3", L"7.2", L"7.1", L"7.0" });
+			this->cboVersion->Items->AddRange(gcnew cli::array< System::Object^  >(7) { L"7.6", L"7.5", L"7.4", L"7.3", L"7.2", L"7.1", L"7.0" });
 			this->cboVersion->Location = System::Drawing::Point(125, 28);
 			this->cboVersion->Name = L"cboVersion";
 			this->cboVersion->Size = System::Drawing::Size(192, 28);
 			this->cboVersion->TabIndex = 1;
+			this->cboVersion->SelectedIndexChanged += gcnew System::EventHandler(this, &CVTFOptions::cboVersion_SelectedIndexChanged);
 			this->tipMain->SetToolTip(this->cboVersion, L"VTF Version number. Higher versions support more features but are less compatible"
 				L" with older games.");
 			// 
@@ -796,7 +805,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpAdvancedOptions->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpAdvancedOptions->Location = System::Drawing::Point(10, 9);
 			this->grpAdvancedOptions->Name = L"grpAdvancedOptions";
-			this->grpAdvancedOptions->Size = System::Drawing::Size(347, 317);
+			this->grpAdvancedOptions->Size = System::Drawing::Size(347, 373);
 			this->grpAdvancedOptions->TabIndex = 0;
 			this->grpAdvancedOptions->TabStop = false;
 			this->grpAdvancedOptions->Text = L"Advanced Options:";
@@ -806,13 +815,57 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpVersion->ContextMenu = this->mnuReset;
 			this->grpVersion->Controls->Add(this->cboVersion);
 			this->grpVersion->Controls->Add(this->lblVersion);
+			this->grpVersion->Controls->Add(this->cboCompressionLevel);
+			this->grpVersion->Controls->Add(this->lblCompressionLevel);
+			this->grpVersion->Controls->Add(this->cboCompressionMethod);
+			this->grpVersion->Controls->Add(this->lblCompressionMethod);
 			this->grpVersion->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpVersion->Location = System::Drawing::Point(10, 18);
 			this->grpVersion->Name = L"grpVersion";
-			this->grpVersion->Size = System::Drawing::Size(326, 65);
+			this->grpVersion->Size = System::Drawing::Size(326, 121);
 			this->grpVersion->TabIndex = 0;
 			this->grpVersion->TabStop = false;
 			this->grpVersion->Text = L"Version:";
+			// 
+			// cboCompressionLevel
+			// 
+			this->cboCompressionLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+			this->cboCompressionLevel->Items->AddRange(gcnew cli::array< System::Object^  >(11) { L"None", L"Default", L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8", L"9" });
+			this->cboCompressionLevel->Location = System::Drawing::Point(125, 56);
+			this->cboCompressionLevel->Name = L"cboCompressionLevel";
+			this->cboCompressionLevel->Size = System::Drawing::Size(192, 28);
+			this->cboCompressionLevel->TabIndex = 3;
+			this->cboCompressionLevel->SelectedIndexChanged += gcnew System::EventHandler(this, &CVTFOptions::cboVersion_SelectedIndexChanged);
+			this->tipMain->SetToolTip(this->cboCompressionLevel, L"Strength of the CPU compression applied to the image data"
+				L" Higher values compress better but take longer. VTF version 7.6 only.");
+			// 
+			// lblCompressionLevel
+			// 
+			this->lblCompressionLevel->FlatStyle = System::Windows::Forms::FlatStyle::System;
+			this->lblCompressionLevel->Location = System::Drawing::Point(10, 56);
+			this->lblCompressionLevel->Name = L"lblCompressionLevel";
+			this->lblCompressionLevel->Size = System::Drawing::Size(105, 18);
+			this->lblCompressionLevel->TabIndex = 2;
+			this->lblCompressionLevel->Text = L"Compression:";
+			// 
+			// cboCompressionMethod
+			// 
+			this->cboCompressionMethod->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+			this->cboCompressionMethod->Items->AddRange(gcnew cli::array< System::Object^  >(2) { L"Deflate", L"Zstandard" });
+			this->cboCompressionMethod->Location = System::Drawing::Point(125, 84);
+			this->cboCompressionMethod->Name = L"cboCompressionMethod";
+			this->cboCompressionMethod->Size = System::Drawing::Size(192, 28);
+			this->cboCompressionMethod->TabIndex = 5;
+			this->tipMain->SetToolTip(this->cboCompressionMethod, L"Compression method. Deflate has the widest compatibility.");
+			// 
+			// lblCompressionMethod
+			// 
+			this->lblCompressionMethod->FlatStyle = System::Windows::Forms::FlatStyle::System;
+			this->lblCompressionMethod->Location = System::Drawing::Point(10, 84);
+			this->lblCompressionMethod->Name = L"lblCompressionMethod";
+			this->lblCompressionMethod->Size = System::Drawing::Size(105, 18);
+			this->lblCompressionMethod->TabIndex = 4;
+			this->lblCompressionMethod->Text = L"Method:";
 			// 
 			// lblVersion
 			// 
@@ -833,7 +886,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpLuminanceWeights->Controls->Add(this->numLuminanceWeightsR);
 			this->grpLuminanceWeights->Controls->Add(this->lblLuminanceWeightsR);
 			this->grpLuminanceWeights->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpLuminanceWeights->Location = System::Drawing::Point(20, 332);
+			this->grpLuminanceWeights->Location = System::Drawing::Point(20, 388);
 			this->grpLuminanceWeights->Name = L"grpLuminanceWeights";
 			this->grpLuminanceWeights->Size = System::Drawing::Size(326, 120);
 			this->grpLuminanceWeights->TabIndex = 4;
@@ -1115,11 +1168,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		VTFImageFormat get()
 		{
 			int iIndex = this->cboFormat->SelectedIndex;
-			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_BC7 + iIndex - 27) : (VTFImageFormat)iIndex;
+			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_R8 + iIndex - 27) : (VTFImageFormat)iIndex;
 		}
 		void set(VTFImageFormat ImageFormat)
 		{
-			int iIndex = ImageFormat >= IMAGE_FORMAT_BC7 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_BC7 : Convert::ToInt32(ImageFormat);
+			int iIndex = ImageFormat >= IMAGE_FORMAT_R8 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_R8 : Convert::ToInt32(ImageFormat);
 			if (iIndex >= 0 && iIndex < this->cboFormat->Items->Count)
 			{
 				this->cboFormat->SelectedIndex = iIndex;
@@ -1132,11 +1185,11 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		VTFImageFormat get()
 		{
 			int iIndex = this->cboAlphaFormat->SelectedIndex;
-			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_BC7 + iIndex - 27) : (VTFImageFormat)iIndex;
+			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_R8 + iIndex - 27) : (VTFImageFormat)iIndex;
 		}
 		void set(VTFImageFormat ImageFormat)
 		{
-			int iIndex = ImageFormat >= IMAGE_FORMAT_BC7 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_BC7 : Convert::ToInt32(ImageFormat);
+			int iIndex = ImageFormat >= IMAGE_FORMAT_R8 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_R8 : Convert::ToInt32(ImageFormat);
 			if (iIndex >= 0 && iIndex < this->cboAlphaFormat->Items->Count)
 			{
 				this->cboAlphaFormat->SelectedIndex = iIndex;
@@ -1288,8 +1341,54 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->cboVersion->Text = sVersion;
 			if (this->cboVersion->SelectedIndex == -1)
 			{
-				this->cboVersion->SelectedIndex = 1;
+				this->cboVersion->SelectedIndex = 2; // 7.4
 			}
+		}
+	}
+
+		  // Auxiliary compression.
+
+	public: property vlShort AuxCompressionLevel
+	{
+		vlShort get()
+		{
+			switch(this->cboCompressionLevel->SelectedIndex)
+			{
+			case 1:
+				return VTF_AUX_COMPRESSION_LEVEL_DEFAULT;
+			case -1:
+			case 0:
+				return VTF_AUX_COMPRESSION_LEVEL_NONE;
+			default:
+				return (vlShort)(this->cboCompressionLevel->SelectedIndex - 1);
+			}
+		}
+		void set(vlShort sLevel)
+		{
+			if(sLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT)
+			{
+				this->cboCompressionLevel->SelectedIndex = 1;
+			}
+			else if(sLevel <= VTF_AUX_COMPRESSION_LEVEL_NONE || sLevel > VTF_AUX_COMPRESSION_LEVEL_MAX)
+			{
+				this->cboCompressionLevel->SelectedIndex = 0;
+			}
+			else
+			{
+				this->cboCompressionLevel->SelectedIndex = sLevel + 1;
+			}
+		}
+	}
+
+	public: property vlShort AuxCompressionMethod
+	{
+		vlShort get()
+		{
+			return this->cboCompressionMethod->SelectedIndex == 1 ? AUX_COMPRESSION_METHOD_ZSTD : AUX_COMPRESSION_METHOD_DEFLATE;
+		}
+		void set(vlShort sMethod)
+		{
+			this->cboCompressionMethod->SelectedIndex = sMethod == AUX_COMPRESSION_METHOD_ZSTD ? 1 : 0;
 		}
 	}
 
@@ -1563,6 +1662,17 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		this->cboHeightSource->SelectedIndex = 1;*/
 	}
 
+	private: System::Void cboVersion_SelectedIndexChanged(System::Object^ sender, System::EventArgs^ e)
+	{
+		// hack
+		vlBool bSupported = System::String::Compare(this->cboVersion->Text, L"7.6") == 0;
+
+		this->lblCompressionLevel->Enabled = bSupported;
+		this->cboCompressionLevel->Enabled = bSupported;
+		this->lblCompressionMethod->Enabled = bSupported;
+		this->cboCompressionMethod->Enabled = bSupported && this->AuxCompressionLevel != VTF_AUX_COMPRESSION_LEVEL_NONE;
+	}
+
 	private: System::Void cboTextureType_SelectedIndexChanged(System::Object^ sender, System::EventArgs^ e)
 	{
 		this->chkSphereMap->Enabled = this->cboTextureType->SelectedIndex == 1;
@@ -1631,7 +1741,10 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		this->chkMipmaps->Checked = true;
 		this->cboMipmapFilter->SelectedIndex = 1; // NICE
 
-		this->cboVersion->SelectedIndex = 1; // 7.4
+		this->cboVersion->SelectedIndex = 2; // 7.4
+
+		this->cboCompressionLevel->SelectedIndex = 0; // None
+		this->cboCompressionMethod->SelectedIndex = 0; // Deflate
 
 		this->chkReflectivity->Checked = true;
 		this->chkThumbnail->Checked = true;
@@ -1665,6 +1778,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		this->chkNormalMap_CheckedChanged(this, System::EventArgs::Empty);
 		this->chkCreateLODControlResource_CheckedChanged(this, System::EventArgs::Empty);
 		this->chkCreateInformationResource_CheckedChanged(this, System::EventArgs::Empty);
+		this->cboVersion_SelectedIndexChanged(this, System::EventArgs::Empty);
 	}
 
 	private: System::Void btnOK_Click(System::Object^ sender, System::EventArgs^ e)

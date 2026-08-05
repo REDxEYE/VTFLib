@@ -66,7 +66,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include;$(SolutionDir)..\..\thirdparty\miniz;$(SolutionDir)..\..\thirdparty\zstd</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)VTFLib.dll</OutputFile>
@@ -93,7 +93,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\thirdparty\include;$(SolutionDir)..\..\thirdparty\miniz;$(SolutionDir)..\..\thirdparty\zstd</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)VTFLib.dll</OutputFile>
@@ -107,6 +107,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\thirdparty\miniz\miniz.c" />
+    <ClCompile Include="..\..\..\thirdparty\zstd\zstd.c">
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="..\..\..\VTFLib\Error.cpp" />
     <ClCompile Include="..\..\..\VTFLib\FileReader.cpp" />
     <ClCompile Include="..\..\..\VTFLib\FileWriter.cpp" />
@@ -130,6 +134,8 @@
     <ClCompile Include="..\..\..\VTFLib\VTFWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\thirdparty\miniz\miniz.h" />
+    <ClInclude Include="..\..\..\thirdparty\zstd\zstd.h" />
     <ClInclude Include="..\..\..\VTFLib\Error.h" />
     <ClInclude Include="..\..\..\VTFLib\FileReader.h" />
     <ClInclude Include="..\..\..\VTFLib\FileWriter.h" />

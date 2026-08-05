@@ -148,6 +148,8 @@ namespace VTFEdit
 	private: System::Windows::Forms::Label ^  lblFileSizeLabel;
 	private: System::Windows::Forms::Label ^  lblFileVersion;
 	private: System::Windows::Forms::Label ^  lblFileVersionLabel;
+	private: System::Windows::Forms::Label ^  lblFileCompression;
+	private: System::Windows::Forms::Label ^  lblFileCompressionLabel;
 	private: System::Windows::Forms::MenuItem ^  btnFileSpace3;
 	private: System::Windows::Forms::MenuItem ^  btnVTFFileZoomIn;
 	private: System::Windows::Forms::MenuItem ^  btnVTFFileZoomOut;
@@ -370,6 +372,8 @@ namespace VTFEdit
 			this->lblFileSizeLabel = (gcnew System::Windows::Forms::Label());
 			this->lblFileVersion = (gcnew System::Windows::Forms::Label());
 			this->lblFileVersionLabel = (gcnew System::Windows::Forms::Label());
+			this->lblFileCompression = (gcnew System::Windows::Forms::Label());
+			this->lblFileCompressionLabel = (gcnew System::Windows::Forms::Label());
 			this->tabResources = (gcnew System::Windows::Forms::TabPage());
 			this->grpResources = (gcnew System::Windows::Forms::GroupBox());
 			this->treResources = (gcnew System::Windows::Forms::TreeView());
@@ -755,7 +759,7 @@ namespace VTFEdit
 			this->tabSidebar->Location = System::Drawing::Point(8, 8);
 			this->tabSidebar->Name = L"tabSidebar";
 			this->tabSidebar->SelectedIndex = 0;
-			this->tabSidebar->Size = System::Drawing::Size(244, 508);
+			this->tabSidebar->Size = System::Drawing::Size(244, 520);
 			this->tabSidebar->TabIndex = 2;
 			// 
 			// tabFileSystem
@@ -1104,7 +1108,7 @@ namespace VTFEdit
 			this->grpImageInfo->Controls->Add(this->lblImageWidth);
 			this->grpImageInfo->Controls->Add(this->lblImageWidthLabel);
 			this->grpImageInfo->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpImageInfo->Location = System::Drawing::Point(8, 93);
+			this->grpImageInfo->Location = System::Drawing::Point(8, 115);
 			this->grpImageInfo->Name = L"grpImageInfo";
 			this->grpImageInfo->Size = System::Drawing::Size(204, 265);
 			this->grpImageInfo->TabIndex = 1;
@@ -1293,7 +1297,7 @@ namespace VTFEdit
 			this->grpThumbnailInfo->Controls->Add(this->lblThumbnailWidth);
 			this->grpThumbnailInfo->Controls->Add(this->lblThumbnailWidthLabel);
 			this->grpThumbnailInfo->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpThumbnailInfo->Location = System::Drawing::Point(8, 365);
+			this->grpThumbnailInfo->Location = System::Drawing::Point(8, 387);
 			this->grpThumbnailInfo->Name = L"grpThumbnailInfo";
 			this->grpThumbnailInfo->Size = System::Drawing::Size(204, 102);
 			this->grpThumbnailInfo->TabIndex = 2;
@@ -1355,6 +1359,8 @@ namespace VTFEdit
 			// 
 			this->grpFileInfo->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
+			this->grpFileInfo->Controls->Add(this->lblFileCompression);
+			this->grpFileInfo->Controls->Add(this->lblFileCompressionLabel);
 			this->grpFileInfo->Controls->Add(this->lblFileSize);
 			this->grpFileInfo->Controls->Add(this->lblFileSizeLabel);
 			this->grpFileInfo->Controls->Add(this->lblFileVersion);
@@ -1362,7 +1368,7 @@ namespace VTFEdit
 			this->grpFileInfo->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpFileInfo->Location = System::Drawing::Point(8, 8);
 			this->grpFileInfo->Name = L"grpFileInfo";
-			this->grpFileInfo->Size = System::Drawing::Size(204, 78);
+			this->grpFileInfo->Size = System::Drawing::Size(204, 100);
 			this->grpFileInfo->TabIndex = 0;
 			this->grpFileInfo->TabStop = false;
 			this->grpFileInfo->Text = L"File Info:";
@@ -1383,6 +1389,23 @@ namespace VTFEdit
 			this->lblFileSizeLabel->Size = System::Drawing::Size(56, 23);
 			this->lblFileSizeLabel->TabIndex = 2;
 			this->lblFileSizeLabel->Text = L"Size:";
+			// 
+			// lblFileCompression
+			// 
+			this->lblFileCompression->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
+				| System::Windows::Forms::AnchorStyles::Right));
+			this->lblFileCompression->Location = System::Drawing::Point(64, 68);
+			this->lblFileCompression->Name = L"lblFileCompression";
+			this->lblFileCompression->Size = System::Drawing::Size(134, 23);
+			this->lblFileCompression->TabIndex = 5;
+			// 
+			// lblFileCompressionLabel
+			// 
+			this->lblFileCompressionLabel->Location = System::Drawing::Point(8, 68);
+			this->lblFileCompressionLabel->Name = L"lblFileCompressionLabel";
+			this->lblFileCompressionLabel->Size = System::Drawing::Size(56, 23);
+			this->lblFileCompressionLabel->TabIndex = 4;
+			this->lblFileCompressionLabel->Text = L"Compression:";
 			// 
 			// lblFileVersion
 			// 
@@ -1794,7 +1817,7 @@ namespace VTFEdit
 			// 
 			this->AutoScaleBaseSize = System::Drawing::Size(6, 16);
 			this->BackColor = System::Drawing::SystemColors::ControlDark;
-			this->ClientSize = System::Drawing::Size(752, 585);
+			this->ClientSize = System::Drawing::Size(752, 597);
 			this->Controls->Add(this->pnlMain);
 			this->Controls->Add(this->splSidebar);
 			this->Controls->Add(this->pnlSidebar);
@@ -2800,6 +2823,19 @@ namespace VTFEdit
 
 			this->lblFileVersion->Text = System::String::Concat(VTFFile->GetMajorVersion().ToString(), ".", VTFFile->GetMinorVersion().ToString());
 			this->lblFileSize->Text = System::String::Concat(((float)VTFFile->GetSize() / 1024.0f).ToString("#,##0.000"), " KB");
+
+			vlShort sAuxCompressionLevel = VTFFile->GetAuxCompressionLevel();
+			if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
+			{
+				this->lblFileCompression->Text = "None";
+			}
+			else
+			{
+				System::String ^sMethod = VTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD ? "Zstandard" : "Deflate";
+				this->lblFileCompression->Text = sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
+					? sMethod
+					: System::String::Concat(sMethod, " (", sAuxCompressionLevel.ToString(), ")");
+			}
 
 			this->lblImageWidth->Text = VTFFile->GetWidth().ToString();
 			this->lblImageHeight->Text = VTFFile->GetHeight().ToString();
@@ -4414,6 +4450,8 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.MipmapFilter = ", Convert::ToInt32(this->Options->MipmapFilter).ToString()));
 
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.Version = ", this->Options->Version));
+				ConfigFile->WriteLine(System::String::Concat("VTFOptions.AuxCompressionLevel = ", this->Options->AuxCompressionLevel.ToString()));
+				ConfigFile->WriteLine(System::String::Concat("VTFOptions.AuxCompressionMethod = ", this->Options->AuxCompressionMethod.ToString()));
 
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.ComputeReflectivity = ", this->Options->ComputeReflectivity.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.GenerateThumbnail = ", this->Options->GenerateThumbnail.ToString()));
@@ -4638,6 +4676,14 @@ namespace VTFEdit
 						else if(System::String::Compare(sArg, "VTFOptions.Version", true) == 0)
 						{
 							this->Options->Version = sVal;
+						}
+						else if(System::String::Compare(sArg, "VTFOptions.AuxCompressionLevel", true) == 0)
+						{
+							this->Options->AuxCompressionLevel = Convert::ToInt16(sVal);
+						}
+						else if(System::String::Compare(sArg, "VTFOptions.AuxCompressionMethod", true) == 0)
+						{
+							this->Options->AuxCompressionMethod = Convert::ToInt16(sVal);
 						}
 
 						else if(System::String::Compare(sArg, "VTFOptions.ComputeReflectivity", true) == 0)

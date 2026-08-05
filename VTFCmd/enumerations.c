@@ -125,6 +125,10 @@ VTFImageFormat StringToImageFormat(const vlChar *cString)
 	{
 		return IMAGE_FORMAT_UVLX8888;
 	}
+	else if(stricmp(cString, "R8") == 0)
+	{
+		return IMAGE_FORMAT_R8;
+	}
 	else if(stricmp(cString, "BC7") == 0)
 	{
 		return IMAGE_FORMAT_BC7;

@@ -40,10 +40,11 @@ typedef vlSingle		vlFloat;
 #define VL_VERSION_STRING	"2.0.0"
 
 #define VTF_MAJOR_VERSION	7
-#define VTF_MINOR_VERSION	5
+#define VTF_MINOR_VERSION	6
 
 #define VTF_MINOR_VERSION_MIN_SPHERE_MAP	1
 #define VTF_MINOR_VERSION_MIN_VOLUME		2
+#define VTF_MINOR_VERSION_MIN_AUX_COMPRESSION	6
 
 //
 // C data types.
@@ -113,8 +114,9 @@ typedef enum tagVTFImageFormat
 	IMAGE_FORMAT_NV_NULL,
 	IMAGE_FORMAT_ATI2N,						
 	IMAGE_FORMAT_ATI1N,
-	IMAGE_FORMAT_BC7 = 70,
-	IMAGE_FORMAT_BC6H = 71,
+	IMAGE_FORMAT_R8 = 69,
+	IMAGE_FORMAT_BC7,
+	IMAGE_FORMAT_BC6H,
 	IMAGE_FORMAT_COUNT,
 	IMAGE_FORMAT_NONE = -1
 } VTFImageFormat;
@@ -224,8 +226,25 @@ typedef enum tagVTFResourceEntryType
 	VTF_RSRC_TEXTURE_LOD_SETTINGS = MAKE_VTF_RSRC_IDF('L', 'O', 'D', RSRCF_HAS_NO_DATA_CHUNK),
 	VTF_RSRC_TEXTURE_SETTINGS_EX = MAKE_VTF_RSRC_IDF('T', 'S', 'O', RSRCF_HAS_NO_DATA_CHUNK),
 	VTF_RSRC_KEY_VALUE_DATA = MAKE_VTF_RSRC_ID('K', 'V', 'D'),
+	VTF_RSRC_AUX_COMPRESSION_INFO = MAKE_VTF_RSRC_ID('A', 'X', 'C'),
 	VTF_RSRC_MAX_DICTIONARY_ENTRIES = 32
 } VTFResourceEntryType;
+
+typedef enum tagVTFAuxCompressionMethod
+{
+	AUX_COMPRESSION_METHOD_DEFLATE = 8,
+	AUX_COMPRESSION_METHOD_ZSTD = 93
+} VTFAuxCompressionMethod;
+
+#define VTF_AUX_COMPRESSION_LEVEL_DEFAULT	-1
+#define VTF_AUX_COMPRESSION_LEVEL_NONE		0
+#define VTF_AUX_COMPRESSION_LEVEL_MAX		9
+
+typedef struct tagSVTFAuxCompressionInfoHeader
+{
+	vlShort		Level;
+	vlShort		Method;
+} SVTFAuxCompressionInfoHeader;
 
 typedef enum tagVMTParseMode
 {
@@ -291,6 +310,9 @@ typedef struct tagSVTFCreateOptions
 
 	vlBool bSphereMap;									//!< Generate a sphere map for six faced environment maps.
 	vlBool bSRGB;										//!< Texture is in the SRGB color space.
+
+	vlShort sAuxCompressionLevel;						//!< Auxiliary compression strength; 0 disables it. (v7.6 only.)
+	vlShort sAuxCompressionMethod;						//!< A VTFAuxCompressionMethod value. (v7.6 only.)
 } SVTFCreateOptions;
 
 typedef struct tagSVTFTextureLODControlResource
@@ -419,6 +441,12 @@ VTFLIB_API vlUInt vlImageGetHasImage();
 VTFLIB_API vlUInt vlImageGetMajorVersion();
 VTFLIB_API vlUInt vlImageGetMinorVersion();
 VTFLIB_API vlUInt vlImageGetSize();
+
+VTFLIB_API vlBool vlImageGetSupportsAuxCompression();
+VTFLIB_API vlShort vlImageGetAuxCompressionLevel();
+VTFLIB_API vlBool vlImageSetAuxCompressionLevel(vlShort sLevel);
+VTFLIB_API vlShort vlImageGetAuxCompressionMethod();
+VTFLIB_API vlBool vlImageSetAuxCompressionMethod(vlShort sMethod);
 
 VTFLIB_API vlUInt vlImageGetWidth();
 VTFLIB_API vlUInt vlImageGetHeight();
@@ -752,6 +780,18 @@ namespace VTFLib
 		vlUInt uiThumbnailBufferSize;
 		vlByte *lpThumbnailImageData;
 
+		vlShort sAuxCompressionLevel;
+		vlShort sAuxCompressionMethod;
+
+		vlUInt uiAuxCompressedBufferSize;
+		vlByte *lpAuxCompressedData;
+		vlByte *lpAuxCompressionInfo;
+		vlUInt uiAuxCompressionInfoSize;
+
+	private:
+		vlBool ComputeAuxCompression(vlBool bForce);
+		vlVoid DestroyAuxCompression();
+
 	public:
 		CVTFFile();
 		CVTFFile(const CVTFFile &VTFFile);
@@ -839,6 +879,12 @@ namespace VTFLib
 
 		vlVoid *GetResourceData(vlUInt uiType, vlUInt &uiSize) const;
 		vlVoid *SetResourceData(vlUInt uiType, vlUInt uiSize, vlVoid *lpData);
+
+		vlBool GetSupportsAuxCompression() const;
+		vlShort GetAuxCompressionLevel() const;
+		vlBool SetAuxCompressionLevel(vlShort sLevel);
+		vlShort GetAuxCompressionMethod() const;
+		vlBool SetAuxCompressionMethod(vlShort sMethod);
 
 	public:
 		vlBool GenerateMipmaps(VTFMipmapFilter MipmapFilter = MIPMAP_FILTER_BOX);

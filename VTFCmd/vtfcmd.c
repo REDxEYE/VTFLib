@@ -118,6 +118,7 @@ int main(int argc, char* argv[])
 	VTFImageFlag ImageFlag;				// Temp variable for string to VTFImageFlag test.
 
 	vlUInt uiTemp0, uiTemp1;			// Temp variables for string to integer test.
+	vlInt iTemp0;						// Temp variable for signed string to integer test.
 	vlSingle sTemp;						// Temp variable for string to single test.
 
 	VTFResizeMethod ResizeMethod;		// Temp variable for string to VTFResizeMethod test.
@@ -240,6 +241,45 @@ int main(int argc, char* argv[])
 				else
 				{
 					PrintUsage("-version expects string argument.");
+					return 2;
+				}
+			}
+			else if(stricmp(argv[i], "-compress") == 0)
+			{
+				if(i + 1 < argc && sscanf(argv[++i], "%d", &iTemp0) == 1
+					&& iTemp0 >= VTF_AUX_COMPRESSION_LEVEL_DEFAULT && iTemp0 <= VTF_AUX_COMPRESSION_LEVEL_MAX)
+				{
+					CreateOptions.sAuxCompressionLevel = (vlShort)iTemp0;
+				}
+				else
+				{
+					PrintUsage("-compress expects an integer argument between %d and %d.", 
+						VTF_AUX_COMPRESSION_LEVEL_DEFAULT, VTF_AUX_COMPRESSION_LEVEL_MAX);
+					return 2;
+				}
+			}
+			else if(stricmp(argv[i], "-cmethod") == 0)
+			{
+				if(i + 1 < argc)
+				{
+					i++;
+					if(stricmp(argv[i], "deflate") == 0)
+					{
+						CreateOptions.sAuxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
+					}
+					else if(stricmp(argv[i], "zstd") == 0)
+					{
+						CreateOptions.sAuxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
+					}
+					else
+					{
+						PrintUsage("Unknown compression method: %s.", argv[i]);
+						return 2;
+					}
+				}
+				else
+				{
+					PrintUsage("-cmethod expects string argument.");
 					return 2;
 				}
 			}
@@ -665,6 +705,8 @@ void PrintUsage(const vlChar *lpError, ...)
 	Print(" -postfix <string>        (Output file postfix.)\n");
 	Print(" -version <string>        (Output version.)\n");
 	Print(" -format <string>         (Output format to use on non-alpha (colour) textures.)\n");
+	Print(" -compress <integer>      (Compress image data; -1 default, 0 off, 1-9. Requires version 7.6.)\n");
+	Print(" -cmethod <string>        (Compression method: deflate or zstd.)\n");
 	Print(" -alphaformat <string>    (Output format to use on alpha textures.)\n");
 	Print(" -srgb                    (Whether to treat image as sRGB colour space or not)\n");
 	Print(" -flag <string>           (Output flags to set.)\n");
@@ -974,6 +1016,10 @@ void ProcessFile(vlChar *lpInputFile)
 		Print("  Start Frame: %u\n", vlImageGetStartFrame());
 		Print("  Faces: %u\n", vlImageGetFaceCount());
 		Print("  Mipmaps: %u\n", vlImageGetMipmapCount());
+		if(vlImageGetSupportsAuxCompression() && vlImageGetAuxCompressionLevel() != VTF_AUX_COMPRESSION_LEVEL_NONE)
+		{
+			Print("  Compression: %s, level %d\n", vlImageGetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD ? "Zstandard" : "deflate", vlImageGetAuxCompressionLevel());
+		}
 		Print("  Flags: %#.8x\n", vlImageGetFlags());
 		Print("  Bumpmap Scale: %.2f\n", vlImageGetBumpmapScale());
 		vlImageGetReflectivity(&sR, &sG, &sB);

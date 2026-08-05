@@ -212,4 +212,21 @@
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Third Party">
+      <UniqueIdentifier>{7a1e6f0c-2d5c-4f6a-9a2e-8c4d0b7e51aa}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\..\thirdparty\miniz\miniz.c">
+      <Filter>Third Party</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\thirdparty\zstd\zstd.c">
+      <Filter>Third Party</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\thirdparty\miniz\miniz.h">
+      <Filter>Third Party</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\thirdparty\zstd\zstd.h">
+      <Filter>Third Party</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

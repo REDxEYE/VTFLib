@@ -89,6 +89,9 @@ typedef struct tagSVTFCreateOptions
 
 	vlBool bSphereMap;									//!< Generate a sphere map for six faced environment maps.
 	vlBool bSRGB;										//!< Texture is in the SRGB color space.
+
+	vlShort sAuxCompressionLevel;						//!< Auxiliary compression strength; 0 disables it. (v7.6 only.)
+	vlShort sAuxCompressionMethod;						//!< A VTFAuxCompressionMethod value. (v7.6 only.)
 } SVTFCreateOptions;
 #pragma pack()
 
@@ -128,6 +131,29 @@ namespace VTFLib
 
 		vlUInt uiThumbnailBufferSize;			// Size of VTF thumbnail image data buffer
 		vlByte *lpThumbnailImageData;			// VTF thumbnail image buffer
+
+		vlShort sAuxCompressionLevel;			// CPU compression strength, 0 if uncompressed
+		vlShort sAuxCompressionMethod;			// CPU compression method (VTFAuxCompressionMethod)
+
+		vlUInt uiAuxCompressedBufferSize;
+		vlByte *lpAuxCompressedData;
+		vlByte *lpAuxCompressionInfo;
+		vlUInt uiAuxCompressionInfoSize;
+
+	private:
+
+		/*!
+			Compresses the image data into lpAuxCompressedData and builds the matching AXC resource payload.  
+			Returns false if compression is off or the image cannot be compressed. 
+			Reuses the cached result unless bForce is set.
+		*/
+		vlBool ComputeAuxCompression(vlBool bForce);
+
+		/*!
+			Throws away any cached compression result. 
+			Called whenever image data changes.
+		*/
+		vlVoid DestroyAuxCompression();
 
 	public:
 
@@ -456,6 +482,40 @@ namespace VTFLib
 			\return a pointer to the resource data buffer if the resource exists or was created.
 		*/
 		vlVoid *SetResourceData(vlUInt uiType, vlUInt uiSize, vlVoid *lpData);
+
+	public:
+
+		//! Returns true if the current VTF supports CPU compression.
+		/*!
+		* 
+		*/
+		vlBool GetSupportsAuxCompression() const;
+
+		//! Returns the CPU compression strength.
+		/*!
+			\return 0 if uncompressed, -1 for codec default, or 1 (fastest) to 9 (smallest)
+		*/
+		vlShort GetAuxCompressionLevel() const;
+
+		//! Sets the CPU compression strength.
+		/*!
+			\param sLevel is 0 to disable compression, -1 for the codec default, otherwise 1 to 9.
+			\return true if the level was set, false if it is out of range or the file version is below v7.6
+		*/
+		vlBool SetAuxCompressionLevel(vlShort sLevel);
+
+		//! Returns the CPU compression method.
+		/*!
+			\return a VTFAuxCompressionMethod value.
+		*/
+		vlShort GetAuxCompressionMethod() const;
+
+		//! Sets the CPU compression method.
+		/*!
+			\param sMethod is a VTFAuxCompressionMethod value
+			\return true if the method was set, false if it is not a supported method or the file version is below v7.6.
+		*/
+		vlBool SetAuxCompressionMethod(vlShort sMethod);
 
 	public:
 

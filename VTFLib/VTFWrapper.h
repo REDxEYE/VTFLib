@@ -59,6 +59,12 @@ VTFLIB_API vlUInt vlImageGetMajorVersion();
 VTFLIB_API vlUInt vlImageGetMinorVersion();
 VTFLIB_API vlUInt vlImageGetSize();
 
+VTFLIB_API vlBool vlImageGetSupportsAuxCompression();
+VTFLIB_API vlShort vlImageGetAuxCompressionLevel();
+VTFLIB_API vlBool vlImageSetAuxCompressionLevel(vlShort sLevel);
+VTFLIB_API vlShort vlImageGetAuxCompressionMethod();
+VTFLIB_API vlBool vlImageSetAuxCompressionMethod(vlShort sMethod);
+
 VTFLIB_API vlUInt vlImageGetWidth();
 VTFLIB_API vlUInt vlImageGetHeight();
 VTFLIB_API vlUInt vlImageGetDepth();

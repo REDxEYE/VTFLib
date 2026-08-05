@@ -65,6 +65,13 @@ namespace VTFEdit
 			VTFCreateOptions.bSphereMap = Options->GenerateSphereMap;
 			VTFCreateOptions.bSRGB = Options->sRGB;
 
+			if(VTFCreateOptions.uiVersion[0] == VTF_MAJOR_VERSION 
+				&& VTFCreateOptions.uiVersion[1] >= VTF_MINOR_VERSION_MIN_AUX_COMPRESSION)
+			{
+				VTFCreateOptions.sAuxCompressionLevel = Options->AuxCompressionLevel;
+				VTFCreateOptions.sAuxCompressionMethod = Options->AuxCompressionMethod;
+			}
+
 			vlSetFloat(VTFLIB_LUMINANCE_WEIGHT_R, Options->LuminanceWeightR);
 			vlSetFloat(VTFLIB_LUMINANCE_WEIGHT_G, Options->LuminanceWeightG);
 			vlSetFloat(VTFLIB_LUMINANCE_WEIGHT_B, Options->LuminanceWeightB);

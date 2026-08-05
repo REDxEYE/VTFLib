@@ -40,16 +40,17 @@
 extern "C" {
 #endif
 
-// VTF version numbers (current version is 7.5)
+// VTF version numbers (current version is 7.6)
 //---------------------------------------------
 #define VTF_MAJOR_VERSION					7		//!< VTF major version number
-#define VTF_MINOR_VERSION					5		//!< VTF minor version number
+#define VTF_MINOR_VERSION					6		//!< VTF minor version number
 #define VTF_MINOR_VERSION_DEFAULT			3
 
 #define VTF_MINOR_VERSION_MIN_SPHERE_MAP	1
 #define VTF_MINOR_VERSION_MIN_VOLUME		2
 #define VTF_MINOR_VERSION_MIN_RESOURCE		3
 #define VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP	5
+#define VTF_MINOR_VERSION_MIN_AUX_COMPRESSION 6
 
 //! Image data formats VTFLib supports.
 /*!
@@ -116,7 +117,8 @@ typedef enum tagVTFImageFormat
 	IMAGE_FORMAT_LE_BGRX8888,				//!<  = Blue, Green, Red, Unused - 32 bpp
 	IMAGE_FORMAT_LE_BGRA8888,				//!<  = Blue, Green, Red, Alpha - 32 bpp
 	*/
-	IMAGE_FORMAT_BC7 = 70,					//!<  = BC7 compressed format - 8 bpp
+	IMAGE_FORMAT_R8 = 69,					//!<  = Red - 8 bpp
+	IMAGE_FORMAT_BC7,						//!<  = BC7 compressed format - 8 bpp
 	IMAGE_FORMAT_BC6H = 71,					//!<  = BC6H compressed format (signed half-float) - 8 bpp
 	IMAGE_FORMAT_COUNT,
 	IMAGE_FORMAT_NONE = -1
@@ -289,8 +291,31 @@ typedef enum tagVTFResourceEntryType
 	VTF_RSRC_TEXTURE_LOD_SETTINGS = MAKE_VTF_RSRC_IDF('L', 'O', 'D', RSRCF_HAS_NO_DATA_CHUNK),
 	VTF_RSRC_TEXTURE_SETTINGS_EX = MAKE_VTF_RSRC_IDF('T', 'S', 'O', RSRCF_HAS_NO_DATA_CHUNK),
 	VTF_RSRC_KEY_VALUE_DATA = MAKE_VTF_RSRC_ID('K', 'V', 'D'),
+	VTF_RSRC_AUX_COMPRESSION_INFO = MAKE_VTF_RSRC_ID('A', 'X', 'C'),
 	VTF_RSRC_MAX_DICTIONARY_ENTRIES = 32
 } VTFResourceEntryType;
+
+//! CPU compression methods supported by Strata VTF v7.6
+//! See https://wiki.stratasource.org/modding/formats/vtf-v76
+
+//!The values match the corresponding minizip method identifiers
+//--------------------------------------------
+typedef enum tagVTFAuxCompressionMethod
+{
+	AUX_COMPRESSION_METHOD_DEFLATE = 8,		//!< Deflate
+	AUX_COMPRESSION_METHOD_ZSTD = 93		//!< Zstandard
+} VTFAuxCompressionMethod;
+
+#define VTF_AUX_COMPRESSION_LEVEL_DEFAULT	-1
+#define VTF_AUX_COMPRESSION_LEVEL_NONE		0
+#define VTF_AUX_COMPRESSION_LEVEL_MAX		9
+
+//! Layout of the Auxiliary Compression Info (AXC) resource
+typedef struct tagSVTFAuxCompressionInfoHeader
+{
+	vlShort		Level;						//!< Compression strength: -1 (default), 0, or 1-9
+	vlShort		Method;						//!< VTFAuxCompressionMethod
+} SVTFAuxCompressionInfoHeader;
 
 #pragma pack(1)
 
@@ -422,6 +447,23 @@ struct SVTFHeader_75 : public SVTFHeader_74
 	The complete header for v7.5 of the VTF file format aligned to 16 bytes.
 */
 __declspec(align(16)) struct SVTFHeader_75_A : public SVTFHeader_75 {};
+
+//! VTFHeader_76 struct.
+/*!
+
+	The complete header for v7.6 of the VTF file format aligned to 16 bytes.
+*/
+struct SVTFHeader_76 : public SVTFHeader_75
+{
+
+};
+
+//! VTFHeader_76_A struct.
+/*!
+
+	The complete header for v7.6 of the VTF file format aligned to 16 bytes.
+*/
+__declspec(align(16)) struct SVTFHeader_76_A : public SVTFHeader_76 {};
 
 struct SVTFResource
 {
