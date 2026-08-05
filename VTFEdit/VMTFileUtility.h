@@ -179,7 +179,11 @@ namespace VTFEdit
 				POINT ScrollLocation;
 				SendMessage(Handle, EM_GETSCROLLPOS, 0, (LPARAM)&ScrollLocation);
 
-				TextBox->Select(0, TextBox->Text->Length);
+				// fetch the text once cus every access to the Text property marshals the entire buffer
+				String ^ sText = this->TextBox->Text;
+				int iLength = sText->Length;
+
+				TextBox->Select(0, iLength);
 				array<Int32>^ tabs = gcnew array<Int32>(4);
 				// Consolas has a font-width of 55%
 				// The thing is 10px...
@@ -189,16 +193,23 @@ namespace VTFEdit
 					tabs[i] = tabs[0] * (i + 1);
 				}
 				TextBox->SelectionTabs = tabs;
-				
+				TextBox->SelectionFont = this->TextBox->Font;
+
 				bool quoted = false;
 				bool key = true;
 				bool hadCharThisLine = false;
 				bool comment = false;
 				char lastChar = '\0';
-				for (int i = 0; i < TextBox->Text->Length; i++)
+
+				// group into runs of a single color so that we issue one selection/colour round trip
+				int iRunStart = 0;
+				System::Drawing::Color RunColor;
+				bool bHaveRun = false;
+
+				for (int i = 0; i < iLength; i++)
 				{
-					char character = char(TextBox->Text[i]);
-					char nextCharacter = char((i + 1) != TextBox->Text->Length ? TextBox->Text[i + 1] : '\0');
+					char character = char(sText[i]);
+					char nextCharacter = char((i + 1) != iLength ? sText[i + 1] : '\0');
 					bool validQuote = character == '"' && lastChar != '\\';
 					if (validQuote)
 						quoted = !quoted;
@@ -215,27 +226,41 @@ namespace VTFEdit
 
 					comment |= character == '/' && nextCharacter == '/';
 
-					this->TextBox->Select(i, 1);
-					this->TextBox->SelectionFont = this->TextBox->Font;
+					System::Drawing::Color CharColor;
 					if (comment)
-						this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(181, 189, 104);
+						CharColor = System::Drawing::Color::FromArgb(181, 189, 104);
 					else if (character == '{' || character == '}' || validQuote)
-						this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(197, 200, 198);
+						CharColor = System::Drawing::Color::FromArgb(197, 200, 198);
 					else if (key)
 					{
 						if (character == '$' && (!hadCharThisLine || (lastChar == '"')))
-							this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(222, 147, 144);
+							CharColor = System::Drawing::Color::FromArgb(222, 147, 144);
 						else if (character == '%' && (!hadCharThisLine || (lastChar == '"')))
-							this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(138, 190, 183);
+							CharColor = System::Drawing::Color::FromArgb(138, 190, 183);
 						else
-							this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(204, 102, 102);
+							CharColor = System::Drawing::Color::FromArgb(204, 102, 102);
 					}
 					else
 					{
 						if (character == '[' || character == ']')
-							this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(197, 200, 198);
+							CharColor = System::Drawing::Color::FromArgb(197, 200, 198);
 						else
-							this->TextBox->SelectionColor = System::Drawing::Color::FromArgb(129, 162, 190);
+							CharColor = System::Drawing::Color::FromArgb(129, 162, 190);
+					}
+
+					if (!bHaveRun)
+					{
+						iRunStart = i;
+						RunColor = CharColor;
+						bHaveRun = true;
+					}
+					else if (CharColor != RunColor)
+					{
+						this->TextBox->Select(iRunStart, i - iRunStart);
+						this->TextBox->SelectionColor = RunColor;
+
+						iRunStart = i;
+						RunColor = CharColor;
 					}
 
 					hadCharThisLine = hadCharThisLine || !(character == ' ' || character == '\t' || character == '\n');
@@ -243,17 +268,24 @@ namespace VTFEdit
 					lastChar = character;
 				}
 
+				if (bHaveRun)
+				{
+					this->TextBox->Select(iRunStart, iLength - iRunStart);
+					this->TextBox->SelectionColor = RunColor;
+				}
+
 				// Clear the old error hilight and apply the current one
-				this->TextBox->Select(0, this->TextBox->Text->Length);
+				this->TextBox->Select(0, iLength);
 				this->TextBox->SelectionBackColor = this->TextBox->BackColor;
 
-				if (this->ErrorLine > 0 && this->ErrorLine <= this->TextBox->Lines->Length)
+				array<String ^> ^ sLines = this->TextBox->Lines;
+				if (this->ErrorLine > 0 && this->ErrorLine <= sLines->Length)
 				{
 					int iLineStart = this->TextBox->GetFirstCharIndexFromLine(this->ErrorLine - 1);
 					if (iLineStart >= 0)
 					{
 						// Blank lines still get a marker a character wide
-						int iLineLength = this->TextBox->Lines[this->ErrorLine - 1]->Length;
+						int iLineLength = sLines[this->ErrorLine - 1]->Length;
 						if (iLineLength == 0)
 							iLineLength = 1;
 
