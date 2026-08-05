@@ -148,14 +148,19 @@ namespace VTFEdit
 			CSyntaxHilighter(System::Windows::Forms::RichTextBox ^ TextBox) : sOldText(""), TextBox(TextBox)
 			{
 				Enabled = false;
+				ErrorLine = 0;
 			}
 
 		public:
 			property bool Enabled;
 
+			// Line (1 based) to hilight as erroneous, or 0 for none
+			property int ErrorLine;
+
 			void Purge()
 			{
 				sOldText = "";
+				ErrorLine = 0;
 			}
 
 			void Process()
@@ -236,6 +241,25 @@ namespace VTFEdit
 					hadCharThisLine = hadCharThisLine || !(character == ' ' || character == '\t' || character == '\n');
 
 					lastChar = character;
+				}
+
+				// Clear the old error hilight and apply the current one
+				this->TextBox->Select(0, this->TextBox->Text->Length);
+				this->TextBox->SelectionBackColor = this->TextBox->BackColor;
+
+				if (this->ErrorLine > 0 && this->ErrorLine <= this->TextBox->Lines->Length)
+				{
+					int iLineStart = this->TextBox->GetFirstCharIndexFromLine(this->ErrorLine - 1);
+					if (iLineStart >= 0)
+					{
+						// Blank lines still get a marker a character wide
+						int iLineLength = this->TextBox->Lines[this->ErrorLine - 1]->Length;
+						if (iLineLength == 0)
+							iLineLength = 1;
+
+						this->TextBox->Select(iLineStart, iLineLength);
+						this->TextBox->SelectionBackColor = System::Drawing::Color::FromArgb(90, 40, 40);
+					}
 				}
 
 				this->TextBox->Select(iSelectionStart, iSelectionLength);

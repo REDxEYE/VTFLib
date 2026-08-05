@@ -40,6 +40,8 @@ namespace VTFLib
 	private:
 		Nodes::CVMTGroupNode *Root;
 
+		vlUInt ParseErrorLine;
+
 	public:
 		CVMTFile();
 		CVMTFile(const CVMTFile &VMTFile);
@@ -70,6 +72,8 @@ namespace VTFLib
 
 	public:
 		Nodes::CVMTGroupNode *GetRoot() const;
+
+		vlUInt GetParseErrorLine() const;
 	};
 }
 

@@ -18,10 +18,13 @@ using namespace VTFLib::Nodes;
 CVMTFile::CVMTFile()
 {
 	this->Root = 0;
+	this->ParseErrorLine = 0;
 }
 
 CVMTFile::CVMTFile(const CVMTFile &VMTFile)
 {
+	this->ParseErrorLine = VMTFile.ParseErrorLine;
+
 	if(VMTFile.Root == 0)
 	{
 		this->Root = 0;
@@ -206,6 +209,8 @@ class CByteTokenizer
 {
 private:
 	vlUInt uiLine;
+	vlUInt uiCurrentTokenLine;
+	vlUInt uiNextTokenLine;
 	IO::Readers::IReader *Reader;
 
 private:
@@ -213,7 +218,7 @@ private:
 	CToken *NextToken;
 
 public:
-	CByteTokenizer(IO::Readers::IReader *Reader) : uiLine(1), Reader(Reader), CurrentToken(0), NextToken(0)
+	CByteTokenizer(IO::Readers::IReader *Reader) : uiLine(1), uiCurrentTokenLine(1), uiNextTokenLine(1), Reader(Reader), CurrentToken(0), NextToken(0)
 	{
 		this->GetNextToken();
 	}
@@ -228,6 +233,8 @@ private:
 	vlVoid GetNextToken(const vlChar *lpSpecial = 0)
 	{
 		vlChar cChar;
+
+		this->uiNextTokenLine = this->uiLine;
 
 		if(!Reader->Read(cChar))
 		{
@@ -296,6 +303,7 @@ public:
 		delete this->CurrentToken;
 		this->CurrentToken = this->NextToken;
 		this->NextToken = 0;
+		this->uiCurrentTokenLine = this->uiNextTokenLine;
 
 		if(lpSpecial && this->CurrentToken)
 		{
@@ -313,10 +321,10 @@ public:
 		return this->NextToken;
 	}
 
-	// Get the current line.
+	// Get the line the current token starts on.
 	vlUInt GetLine()
 	{
-		return this->uiLine;
+		return this->uiCurrentTokenLine;
 	}
 };
 
@@ -330,8 +338,11 @@ private:
 	CToken *CurrentToken;
 	CToken *NextToken;
 
+	vlUInt uiCurrentTokenLine;
+	vlUInt uiNextTokenLine;
+
 public:
-	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(0), NextToken(0)
+	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(0), NextToken(0), uiCurrentTokenLine(1), uiNextTokenLine(1)
 	{
 		this->GetNextToken();
 	}
@@ -345,6 +356,22 @@ public:
 public:
 	vlVoid GetNextToken()
 	{
+		try
+		{
+			this->GetNextTokenInternal();
+		}
+		catch(char *cErrorMessage)
+		{
+			// The bad token is the one we were reading ahead for
+			// so blame it line rather than the line of the last token handed to the parser
+			this->uiCurrentTokenLine = this->uiNextTokenLine;
+			throw cErrorMessage;
+		}
+	}
+
+private:
+	vlVoid GetNextTokenInternal()
+	{
 		CToken *Token;
 		
 		Token = this->ByteTokenizer->Next();
@@ -354,6 +381,8 @@ public:
 		{
 			Token = this->ByteTokenizer->Next();
 		}
+
+		this->uiNextTokenLine = this->ByteTokenizer->GetLine();
 
 		vlUInt uiIndex = 0;
 		vlChar cBuffer[4096];
@@ -442,11 +471,13 @@ public:
 		}
 	}
 
+public:
 	CToken *Next()
 	{
 		delete this->CurrentToken;
 		this->CurrentToken = this->NextToken;
 		this->NextToken = 0;
+		this->uiCurrentTokenLine = this->uiNextTokenLine;
 
 		this->GetNextToken();
 
@@ -460,7 +491,7 @@ public:
 
 	vlUInt GetLine()
 	{
-		return this->ByteTokenizer->GetLine();
+		return this->uiCurrentTokenLine;
 	}
 };
 
@@ -696,12 +727,15 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader)
 	CTokenizer Tokenizer = CTokenizer(&ByteTokenizer);
 	CParser Parser = CParser(&Tokenizer);
 
+	this->ParseErrorLine = 0;
+
 	try
 	{
 		this->Root = Parser.Parse();
 	}
 	catch(char *cErrorMessage)
 	{
+		this->ParseErrorLine = Tokenizer.GetLine();
 		LastError.SetFormatted("Error parsing material on line %u (%s).", Tokenizer.GetLine(), cErrorMessage);
 	}
 
@@ -1019,4 +1053,9 @@ vlVoid CVMTFile::Save(IO::Writers::IWriter *Writer, CVMTNode *Node, vlUInt uiLev
 CVMTGroupNode *CVMTFile::GetRoot() const
 {
 	return this->Root;
+}
+
+vlUInt CVMTFile::GetParseErrorLine() const
+{
+	return this->ParseErrorLine;
 }

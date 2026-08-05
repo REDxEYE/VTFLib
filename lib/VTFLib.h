@@ -923,6 +923,8 @@ namespace VTFLib
 
 	public:
 		Nodes::CVMTGroupNode *GetRoot() const;
+
+		vlUInt GetParseErrorLine() const;
 	};
 }
 #endif

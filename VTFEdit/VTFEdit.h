@@ -3361,23 +3361,43 @@ namespace VTFEdit
 
 			this->EnableVMTContextMenuItems();
 			this->SyntaxHilighter->Enabled = true;
+			this->ValidateVMTFile();
 			this->SyntaxHilighter->Process();
 
 			this->txtVMTFile->Visible = true;
 		}
 
-		private: bool GetVMTFile()
+		private: bool ValidateVMTFile()
 		{
+			if(this->VMTFile == 0)
+				return true;
+
 			char *cText = (char *)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(this->txtVMTFile->Text).ToPointer();
-			vlBool bResult = VMTFile->Load( cText, this->txtVMTFile->Text->Length);
+			vlBool bResult = this->VMTFile->Load(cText, this->txtVMTFile->Text->Length);
 			System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cText);
 
-			if (!bResult)
+			if(bResult)
 			{
-				MessageBox::Show(System::String::Concat("Error parsing VMT:\n\n", gcnew System::String(vlGetLastError())), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
+				this->SyntaxHilighter->ErrorLine = 0;
+				this->pnlInfo1->Text = nullptr;
+			}
+			else
+			{
+				this->SyntaxHilighter->ErrorLine = (int)this->VMTFile->GetParseErrorLine();
+				this->pnlInfo1->Text = gcnew System::String(vlGetLastError());
 			}
 
 			return bResult != 0;
+		}
+
+		private: bool GetVMTFile()
+		{
+			if(!this->ValidateVMTFile())
+			{
+				return MessageBox::Show(System::String::Concat("This VMT has a syntax error:\n\n", gcnew System::String(vlGetLastError()), "\n\nSave it anyway?"), Application::ProductName, MessageBoxButtons::YesNo, MessageBoxIcon::Warning) == System::Windows::Forms::DialogResult::Yes;
+			}
+
+			return true;
 		}
 
 		private: System::Void barTool_ButtonClick(System::Object ^  sender, System::Windows::Forms::ToolBarButtonClickEventArgs ^  e)
@@ -3472,45 +3492,38 @@ namespace VTFEdit
 			{
 				VTFLib::CVMTFile *VMTFile = new VTFLib::CVMTFile();
 
-				if(VMTFile->Load(cPath))
+				VMTFile->Load(cPath);
+
+				try
 				{
-					try
-					{
-						this->txtVMTFile->LoadFile(sFileName, System::Windows::Forms::RichTextBoxStreamType::PlainText);
-					}
-					catch(Exception ^e)
-					{
-						delete VMTFile;
-
-						MessageBox::Show(System::String::Concat("Error loading VMT texture:\n\n", e->Message), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
-						return;
-					}
-
-					this->SetVMTFile(VMTFile);
-
-					if(!bTemp)
-					{
-						this->FileName = sFileName;
-
-						this->AddRecentFile(this->FileName);
-					}
-					else
-					{
-						this->FileName = nullptr;
-					}
-
-					this->btnSave->Enabled = true;
-					this->btnToolSave->Enabled = true;
-					this->btnSaveAs->Enabled = true;
-
-					this->txtVMTFile->Focus();
+					this->txtVMTFile->LoadFile(sFileName, System::Windows::Forms::RichTextBoxStreamType::PlainText);
 				}
-				else
+				catch(Exception ^e)
 				{
 					delete VMTFile;
 
-					MessageBox::Show(System::String::Concat("Error loading VMT texture:\n\n", gcnew System::String(vlGetLastError())), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
+					MessageBox::Show(System::String::Concat("Error loading VMT texture:\n\n", e->Message), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
+					return;
 				}
+
+				this->SetVMTFile(VMTFile);
+
+				if(!bTemp)
+				{
+					this->FileName = sFileName;
+
+					this->AddRecentFile(this->FileName);
+				}
+				else
+				{
+					this->FileName = nullptr;
+				}
+
+				this->btnSave->Enabled = true;
+				this->btnToolSave->Enabled = true;
+				this->btnSaveAs->Enabled = true;
+
+				this->txtVMTFile->Focus();
 			}
 		}
 
@@ -4340,8 +4353,7 @@ namespace VTFEdit
 
 		private: System::Void btnVMTFileValidateLoose_Click(System::Object ^  sender, System::EventArgs ^  e)
 		{
-			char *cText = (char *)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(this->txtVMTFile->Text).ToPointer();
-			if(VMTFile->Load( cText, this->txtVMTFile->Text->Length))
+			if(this->ValidateVMTFile())
 			{
 				MessageBox::Show("VMT validation successful.", Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Information);
 			}
@@ -4349,7 +4361,8 @@ namespace VTFEdit
 			{
 				MessageBox::Show(System::String::Concat("Error validating VMT:\n\n", gcnew System::String(vlGetLastError())), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
 			}
-			System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cText);
+
+			this->SyntaxHilighter->Process();
 		}
 
 		private: System::Void btnVMTFileValidateStrict_Click(System::Object ^  sender, System::EventArgs ^  e)
@@ -4367,6 +4380,8 @@ namespace VTFEdit
 		private: System::Void txtVMTFile_TextChanged(System::Object ^  sender, System::EventArgs ^  e)
 		{
 			this->EnableVMTContextMenuItems();
+
+			this->ValidateVMTFile();
 
 			this->txtVMTFile->SelectionChanged -= gcnew System::EventHandler(this, &CVTFEdit::txtVMTFile_SelectionChanged);
 			this->SyntaxHilighter->Process();
