@@ -36,7 +36,7 @@ using namespace System::Drawing;
 
 namespace VTFEdit
 {
-	public ref class CVTFEdit : public System::Windows::Forms::Form
+	public ref class CVTFEdit : public System::Windows::Forms::Form, public System::Windows::Forms::IMessageFilter
 	{
 	private:
 		System::String ^sFileName;
@@ -47,6 +47,10 @@ namespace VTFEdit
 		bool bHDRReseting;
 		float fImageScale;
 		unsigned char *ucImageData;
+
+		bool bImagePanning;
+		System::Drawing::Point ImagePanStartMouse;
+		System::Drawing::Point ImagePanStartScroll;
 
 		CVMTFileUtility::CSyntaxHilighter ^SyntaxHilighter;
 
@@ -77,6 +81,8 @@ namespace VTFEdit
 
 			this->bHDRReseting = false;
 			this->ucImageData = nullptr;
+
+			this->bImagePanning = false;
 
 			this->uiMaximumRecentFiles = 8;
 			this->RecentFiles = gcnew System::Collections::ArrayList();
@@ -1508,6 +1514,7 @@ namespace VTFEdit
 			// 
 			this->pnlMain->AllowDrop = true;
 			this->pnlMain->AutoScroll = true;
+			this->pnlMain->ContextMenu = this->mnuVTFFile;
 			this->pnlMain->Controls->Add(this->picVTFFileBR);
 			this->pnlMain->Controls->Add(this->picVTFFileBL);
 			this->pnlMain->Controls->Add(this->picVTFFileTR);
@@ -1520,6 +1527,9 @@ namespace VTFEdit
 			this->pnlMain->TabIndex = 2;
 			this->pnlMain->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 			this->pnlMain->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragEnter);
+			this->pnlMain->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseDown);
+			this->pnlMain->MouseMove += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::pnlMain_MouseMove);
+			this->pnlMain->MouseUp += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseUp);
 			// 
 			// picVTFFileBR
 			// 
@@ -1532,7 +1542,9 @@ namespace VTFEdit
 			this->picVTFFileBR->Visible = false;
 			this->picVTFFileBR->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 			this->picVTFFileBR->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragEnter);
+			this->picVTFFileBR->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseDown);
 			this->picVTFFileBR->MouseMove += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseMove);
+			this->picVTFFileBR->MouseUp += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseUp);
 			// 
 			// mnuVTFFile
 			// 
@@ -1561,7 +1573,7 @@ namespace VTFEdit
 			// btnVTFFileZoomReset
 			// 
 			this->btnVTFFileZoomReset->Index = 3;
-			this->btnVTFFileZoomReset->Text = L"&Reset";
+			this->btnVTFFileZoomReset->Text = L"&Reset Zoom/Pan";
 			this->btnVTFFileZoomReset->Click += gcnew System::EventHandler(this, &CVTFEdit::btnVTFFileZoomReset_Click);
 			// 
 			// btnVTFFileSpace2
@@ -1586,7 +1598,9 @@ namespace VTFEdit
 			this->picVTFFileBL->Visible = false;
 			this->picVTFFileBL->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 			this->picVTFFileBL->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragEnter);
+			this->picVTFFileBL->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseDown);
 			this->picVTFFileBL->MouseMove += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseMove);
+			this->picVTFFileBL->MouseUp += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseUp);
 			// 
 			// picVTFFileTR
 			// 
@@ -1599,7 +1613,9 @@ namespace VTFEdit
 			this->picVTFFileTR->Visible = false;
 			this->picVTFFileTR->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 			this->picVTFFileTR->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragEnter);
+			this->picVTFFileTR->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseDown);
 			this->picVTFFileTR->MouseMove += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseMove);
+			this->picVTFFileTR->MouseUp += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseUp);
 			// 
 			// picVTFFileTL
 			// 
@@ -1612,7 +1628,9 @@ namespace VTFEdit
 			this->picVTFFileTL->Visible = false;
 			this->picVTFFileTL->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 			this->picVTFFileTL->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragEnter);
+			this->picVTFFileTL->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseDown);
 			this->picVTFFileTL->MouseMove += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseMove);
+			this->picVTFFileTL->MouseUp += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::picVTFFile_MouseUp);
 			// 
 			// txtVMTFile
 			// 
@@ -2258,6 +2276,8 @@ namespace VTFEdit
 
 		private: System::Void CVTFEdit_Load(System::Object ^  sender, System::EventArgs ^  e)
 		{
+			System::Windows::Forms::Application::AddMessageFilter(this);
+
 			this->picVTFFileTL->AllowDrop = true;
 			this->picVTFFileTR->AllowDrop = true;
 			this->picVTFFileBL->AllowDrop = true;
@@ -2394,6 +2414,8 @@ namespace VTFEdit
 		{
 			//Causes crah when more than once instance of VTFEdit is open.  WM_DESTROY is all that is needed?
 			//ChangeClipboardChain((HWND)this->Handle.ToPointer(), this->hWndNewViewer);
+
+			System::Windows::Forms::Application::RemoveMessageFilter(this);
 
 			System::String ^pNewConfigFile = IO::Path::Combine(GetAppDataFolder(), System::String::Concat(Application::ProductName, ".ini"));
 			System::String ^pOldConfigFile = IO::Path::Combine(Application::StartupPath, System::String::Concat(Application::ProductName, ".ini"));
@@ -3888,30 +3910,105 @@ namespace VTFEdit
 
 		private: System::Void picVTFFile_MouseMove(System::Object ^  sender, System::Windows::Forms::MouseEventArgs ^  e)
 		{
+			if(this->UpdateImagePan())
+				return;
+
 			int iX = (int)((float)e->X / this->fImageScale) + 1;
 			int iY = (int)((float)e->Y / this->fImageScale) + 1;
 
 			this->pnlInfo2->Text = System::String::Concat(iX.ToString(), ", ", iY.ToString());
 		}
 
-		private: System::Void btnVTFFileZoomIn_Click(System::Object ^  sender, System::EventArgs ^  e)
+		private: System::Void pnlMain_MouseMove(System::Object ^  sender, System::Windows::Forms::MouseEventArgs ^  e)
 		{
-			if(this->VTFFile == 0 || this->picVTFFileTL->Width == 4096 || this->picVTFFileTL->Height == 4096)
+			this->UpdateImagePan();
+		}
+
+		private: System::Void picVTFFile_MouseDown(System::Object ^  sender, System::Windows::Forms::MouseEventArgs ^  e)
+		{
+			if(this->VTFFile == 0 || e->Button != System::Windows::Forms::MouseButtons::Left)
 				return;
 
-			this->fImageScale *= 2.0f;
-			//this->UpdateVTFFileScale();
+			if((System::Windows::Forms::Control::ModifierKeys & System::Windows::Forms::Keys::Alt) != System::Windows::Forms::Keys::Alt)
+				return;
+
+			this->bImagePanning = true;
+			this->ImagePanStartMouse = System::Windows::Forms::Control::MousePosition;
+			this->ImagePanStartScroll = System::Drawing::Point(-this->pnlMain->AutoScrollPosition.X, -this->pnlMain->AutoScrollPosition.Y);
+			this->pnlMain->Cursor = System::Windows::Forms::Cursors::Hand;
+		}
+
+		private: System::Void picVTFFile_MouseUp(System::Object ^  sender, System::Windows::Forms::MouseEventArgs ^  e)
+		{
+			if(!this->bImagePanning)
+				return;
+
+			this->bImagePanning = false;
+			this->pnlMain->Cursor = System::Windows::Forms::Cursors::Default;
+		}
+
+		private: bool UpdateImagePan()
+		{
+			if(!this->bImagePanning)
+				return false;
+
+			if((System::Windows::Forms::Control::MouseButtons & System::Windows::Forms::MouseButtons::Left) != System::Windows::Forms::MouseButtons::Left)
+			{
+				this->bImagePanning = false;
+				this->pnlMain->Cursor = System::Windows::Forms::Cursors::Default;
+				return false;
+			}
+
+			System::Drawing::Point Mouse = System::Windows::Forms::Control::MousePosition;
+
+			this->pnlMain->AutoScrollPosition = System::Drawing::Point(
+				this->ImagePanStartScroll.X - (Mouse.X - this->ImagePanStartMouse.X),
+				this->ImagePanStartScroll.Y - (Mouse.Y - this->ImagePanStartMouse.Y));
+
+			return true;
+		}
+
+		private: void ZoomVTFFileAt(float fFactor, System::Drawing::Point Anchor)
+		{
+			if(this->VTFFile == 0 || !this->picVTFFileTL->Visible)
+				return;
+
+			if(fFactor > 1.0f && (this->picVTFFileTL->Width >= 4096 || this->picVTFFileTL->Height >= 4096))
+				return;
+
+			if(fFactor < 1.0f && this->picVTFFileTL->Width <= 1 && this->picVTFFileTL->Height <= 1)
+				return;
+
+			float fOldImageScale = this->fImageScale;
+
+			float fContentX = (float)(Anchor.X - this->pnlMain->AutoScrollPosition.X);
+			float fContentY = (float)(Anchor.Y - this->pnlMain->AutoScrollPosition.Y);
+
+			this->fImageScale *= fFactor;
+
+			// this may clamp the scale
 			this->UpdateVTFFile();
+
+			float fRatio = this->fImageScale / fOldImageScale;
+
+			this->pnlMain->AutoScrollPosition = System::Drawing::Point(
+				(int)(fContentX * fRatio) - Anchor.X,
+				(int)(fContentY * fRatio) - Anchor.Y);
+		}
+
+		private: void ZoomVTFFile(float fFactor)
+		{
+			this->ZoomVTFFileAt(fFactor, System::Drawing::Point(this->pnlMain->ClientSize.Width / 2, this->pnlMain->ClientSize.Height / 2));
+		}
+
+		private: System::Void btnVTFFileZoomIn_Click(System::Object ^  sender, System::EventArgs ^  e)
+		{
+			this->ZoomVTFFile(2.0f);
 		}
 
 		private: System::Void btnVTFFileZoomOut_Click(System::Object ^  sender, System::EventArgs ^  e)
 		{
-			if(this->VTFFile == 0 || this->picVTFFileTL->Width == 1 || this->picVTFFileTL->Height == 1)
-				return;
-
-			this->fImageScale *= 0.5f;
-			//this->UpdateVTFFileScale();
-			this->UpdateVTFFile();
+			this->ZoomVTFFile(0.5f);
 		}
 
 		private: System::Void btnVTFFileZoomReset_Click(System::Object ^  sender, System::EventArgs ^  e)
@@ -3922,6 +4019,32 @@ namespace VTFEdit
 			this->fImageScale = 1.0f;
 			//this->UpdateVTFFileScale();
 			this->UpdateVTFFile();
+
+			this->pnlMain->AutoScrollPosition = System::Drawing::Point(0, 0);
+		}
+
+		public: virtual bool PreFilterMessage(System::Windows::Forms::Message %WinMessage)
+		{
+			// intercept the mouse wheel only
+			if(WinMessage.Msg != WM_MOUSEWHEEL)
+				return false;
+
+			if (this->VTFFile == 0 || !this->picVTFFileTL->Visible)
+				return false;
+
+			System::Drawing::Point ScreenPoint = System::Windows::Forms::Control::MousePosition;
+
+			if(!this->pnlMain->RectangleToScreen(this->pnlMain->ClientRectangle).Contains(ScreenPoint))
+				return false;
+
+			int iDelta = (short)((WinMessage.WParam.ToInt64() >> 16) & 0xffff);
+
+			if(iDelta != 0)
+			{
+				this->ZoomVTFFileAt(iDelta > 0 ? 2.0f : 0.5f, this->pnlMain->PointToClient(ScreenPoint));
+			}
+
+			return true;
 		}
 
 		private: System::Void btnVTFFileCopy_Click(System::Object ^  sender, System::EventArgs ^  e)
