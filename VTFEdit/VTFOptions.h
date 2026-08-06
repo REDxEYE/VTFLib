@@ -30,6 +30,24 @@ using namespace System::Drawing;
 
 namespace VTFEdit
 {
+	// Formats without an alpha channel.
+	static const VTFImageFormat NormalImageFormats[] =
+	{
+		IMAGE_FORMAT_RGB888, IMAGE_FORMAT_BGR888, IMAGE_FORMAT_RGB565, IMAGE_FORMAT_I8, IMAGE_FORMAT_P8,
+		IMAGE_FORMAT_RGB888_BLUESCREEN, IMAGE_FORMAT_BGR888_BLUESCREEN, IMAGE_FORMAT_DXT1, IMAGE_FORMAT_BGRX8888,
+		IMAGE_FORMAT_BGR565, IMAGE_FORMAT_BGRX5551, IMAGE_FORMAT_UV88, IMAGE_FORMAT_UVLX8888, IMAGE_FORMAT_R8,
+		IMAGE_FORMAT_BC6H
+	};
+
+	// Formats with an alpha channel.
+	static const VTFImageFormat AlphaImageFormats[] =
+	{
+		IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_ABGR8888, IMAGE_FORMAT_IA88, IMAGE_FORMAT_A8, IMAGE_FORMAT_ARGB8888,
+		IMAGE_FORMAT_BGRA8888, IMAGE_FORMAT_DXT3, IMAGE_FORMAT_DXT5, IMAGE_FORMAT_BGRA4444,
+		IMAGE_FORMAT_DXT1_ONEBITALPHA, IMAGE_FORMAT_BGRA5551, IMAGE_FORMAT_UVWQ8888, IMAGE_FORMAT_RGBA16161616F,
+		IMAGE_FORMAT_RGBA16161616, IMAGE_FORMAT_BC7
+	};
+
 	public ref class CVTFOptions : public System::Windows::Forms::Form
 	{
 	public:
@@ -380,11 +398,9 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboFormat->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboFormat->Items->AddRange(gcnew cli::array< System::Object^  >(30) {
-				L"RGBA8888", L"ABGR8888", L"RGB888", L"BGR888",
-					L"RGB565", L"I8", L"IA88", L"P8 (Not supported)", L"A8", L"RGB888 Bluescreen", L"BGR888 Bluescreen", L"ARGB8888", L"BGRA8888",
-					L"DXT1", L"DXT3", L"DXT5", L"BGRX8888", L"BGR565", L"BGRX5551", L"BGRA4444", L"DXT1 With One Bit Alpha", L"BGRA5551", L"UV88",
-					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"R8", L"BC7", L"BC6H"
+			this->cboFormat->Items->AddRange(gcnew cli::array< System::Object^  >(15) {
+				L"RGB888", L"BGR888", L"RGB565", L"I8", L"P8 (Not supported)", L"RGB888 Bluescreen", L"BGR888 Bluescreen",
+					L"DXT1", L"BGRX8888", L"BGR565", L"BGRX5551", L"UV88", L"UVLX8888", L"R8", L"BC6H"
 			});
 			this->cboFormat->Location = System::Drawing::Point(125, 28);
 			this->cboFormat->Name = L"cboFormat";
@@ -461,11 +477,9 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->cboAlphaFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->cboAlphaFormat->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->cboAlphaFormat->Items->AddRange(gcnew cli::array< System::Object^  >(30) {
-				L"RGBA8888", L"ABGR8888", L"RGB888", L"BGR888",
-					L"RGB565", L"I8", L"IA88", L"P8 (Not supported)", L"A8", L"RGB888 Bluescreen", L"BGR888 Bluescreen", L"ARGB8888", L"BGRA8888",
-					L"DXT1", L"DXT3", L"DXT5", L"BGRX8888", L"BGR565", L"BGRX5551", L"BGRA4444", L"DXT1 With One Bit Alpha", L"BGRA5551", L"UV88",
-					L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"UVLX8888", L"R8", L"BC7", L"BC6H"
+			this->cboAlphaFormat->Items->AddRange(gcnew cli::array< System::Object^  >(15) {
+				L"RGBA8888", L"ABGR8888", L"IA88", L"A8", L"ARGB8888", L"BGRA8888", L"DXT3", L"DXT5", L"BGRA4444",
+					L"DXT1 With One Bit Alpha", L"BGRA5551", L"UVWQ8888", L"RGBA16161616F", L"RGBA16161616", L"BC7"
 			});
 			this->cboAlphaFormat->Location = System::Drawing::Point(125, 55);
 			this->cboAlphaFormat->Name = L"cboAlphaFormat";
@@ -1168,14 +1182,17 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		VTFImageFormat get()
 		{
 			int iIndex = this->cboFormat->SelectedIndex;
-			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_R8 + iIndex - 27) : (VTFImageFormat)iIndex;
+			return iIndex >= 0 ? NormalImageFormats[iIndex] : IMAGE_FORMAT_NONE;
 		}
 		void set(VTFImageFormat ImageFormat)
 		{
-			int iIndex = ImageFormat >= IMAGE_FORMAT_R8 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_R8 : Convert::ToInt32(ImageFormat);
-			if (iIndex >= 0 && iIndex < this->cboFormat->Items->Count)
+			for (int i = 0; i < this->cboFormat->Items->Count; i++)
 			{
-				this->cboFormat->SelectedIndex = iIndex;
+				if (NormalImageFormats[i] == ImageFormat)
+				{
+					this->cboFormat->SelectedIndex = i;
+					break;
+				}
 			}
 		}
 	}
@@ -1185,14 +1202,17 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		VTFImageFormat get()
 		{
 			int iIndex = this->cboAlphaFormat->SelectedIndex;
-			return iIndex >= 27 ? (VTFImageFormat)(IMAGE_FORMAT_R8 + iIndex - 27) : (VTFImageFormat)iIndex;
+			return iIndex >= 0 ? AlphaImageFormats[iIndex] : IMAGE_FORMAT_NONE;
 		}
 		void set(VTFImageFormat ImageFormat)
 		{
-			int iIndex = ImageFormat >= IMAGE_FORMAT_R8 ? 27 + Convert::ToInt32(ImageFormat) - IMAGE_FORMAT_R8 : Convert::ToInt32(ImageFormat);
-			if (iIndex >= 0 && iIndex < this->cboAlphaFormat->Items->Count)
+			for (int i = 0; i < this->cboAlphaFormat->Items->Count; i++)
 			{
-				this->cboAlphaFormat->SelectedIndex = iIndex;
+				if (AlphaImageFormats[i] == ImageFormat)
+				{
+					this->cboAlphaFormat->SelectedIndex = i;
+					break;
+				}
 			}
 		}
 	}
@@ -1726,8 +1746,8 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 
 	private: System::Void btnReset_Click(System::Object^ sender, System::EventArgs^ e)
 	{
-		this->cboFormat->SelectedIndex = 13;
-		this->cboAlphaFormat->SelectedIndex = 15;
+		this->cboFormat->SelectedIndex = 7;			// DXT1
+		this->cboAlphaFormat->SelectedIndex = 7;	// DXT5
 		this->cboTextureType->SelectedIndex = 0;
 
 		this->chkResize->Checked = true;
