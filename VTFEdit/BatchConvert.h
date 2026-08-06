@@ -727,54 +727,71 @@ namespace VTFEdit
 					else if(bIsVTF)  // Convert from .vtf.
 					{
 						String ^sOtherName = Files[j]->Name->Substring(0, Files[j]->Name->Length - Files[j]->Extension->Length);
-						String ^sOtherFile = String::Concat(sOutputFolder, "\\", sOtherName, ".", this->cboFromVTFFormat->Text);
 
 						char *cFile = (char *)(System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(Files[j]->FullName)).ToPointer();
 
 						if(VTFFile.Load(cFile))
 						{
 							vlUInt uiWidth = VTFFile.GetWidth(), uiHeight = VTFFile.GetHeight();
-				
+
 							vlByte *lpImageData = new vlByte[VTFFile.ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
-							if(VTFFile.ConvertToRGBA8888(VTFFile.GetData(0, 0, 0, 0), lpImageData, uiWidth, uiHeight, VTFFile.GetFormat()))
+							vlUInt uiFrameCount = VTFFile.GetFrameCount();
+							vlUInt uiFaceCount = VTFFile.GetFaceCount();
+							vlUInt uiSliceCount = VTFFile.GetDepth();
+
+							vlBool bSingleImage = uiFrameCount <= 1 && uiFaceCount <= 1 && uiSliceCount <= 1;
+
+							for(vlUInt uiFrame = 0; uiFrame < uiFrameCount; uiFrame++)
 							{
-								// DevIL likes image data upside down...
-								VTFFile.FlipImage(lpImageData, uiWidth, uiHeight);
-
-								if(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, lpImageData))
+								for(vlUInt uiFace = 0; uiFace < uiFaceCount; uiFace++)
 								{
-									if(!System::IO::Directory::Exists(sOutputFolder))
+									for(vlUInt uiSlice = 0; uiSlice < uiSliceCount; uiSlice++)
 									{
-										try
-										{
-											System::IO::Directory::CreateDirectory(sOutputFolder);
-										}
-										catch(Exception ^)
-										{
+										String ^sSuffix = bSingleImage ? "" : String::Format("_{0:00}_{1:00}_{2:00}", uiFrame, uiFace, uiSlice);
+										String ^sOtherFile = String::Concat(sOutputFolder, "\\", sOtherName, sSuffix, ".", this->cboFromVTFFormat->Text);
 
+										if(VTFFile.ConvertToRGBA8888(VTFFile.GetData(uiFrame, uiFace, uiSlice, 0), lpImageData, uiWidth, uiHeight, VTFFile.GetFormat()))
+										{
+											// DevIL likes image data upside down...
+											VTFFile.FlipImage(lpImageData, uiWidth, uiHeight);
+
+											if(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, lpImageData))
+											{
+												if(!System::IO::Directory::Exists(sOutputFolder))
+												{
+													try
+													{
+														System::IO::Directory::CreateDirectory(sOutputFolder);
+													}
+													catch(Exception ^)
+													{
+
+													}
+												}
+
+												char *cOtherFile = (char *)(System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(sOtherFile)).ToPointer();
+												if(ilSaveImage(cOtherFile))
+												{
+													this->Log(String::Concat("Wrote ", sOtherFile, "."), System::Drawing::Color::Green);
+												}
+												else
+												{
+													this->Log(String::Concat("Error writing ", Files[j]->Name, "."), System::Drawing::Color::Red);
+												}
+												System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cOtherFile);
+											}
+											else
+											{
+												this->Log(String::Concat("Error creating ", Files[j]->Name, "."), System::Drawing::Color::Red);
+											}
+										}
+										else
+										{
+											this->Log(String::Concat("Error converting ", Files[j]->Name, ".", (gcnew String(vlGetLastError()))->Replace("\n", " ")), System::Drawing::Color::Red);
 										}
 									}
-
-									char *cOtherFile = (char *)(System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(sOtherFile)).ToPointer();
-									if(ilSaveImage(cOtherFile))
-									{
-										this->Log(String::Concat("Wrote ", sOtherFile, "."), System::Drawing::Color::Green);
-									}
-									else
-									{
-										this->Log(String::Concat("Error writing ", Files[j]->Name, "."), System::Drawing::Color::Red);
-									}
-									System::Runtime::InteropServices::Marshal::FreeHGlobal((IntPtr)cOtherFile);
 								}
-								else
-								{
-									this->Log(String::Concat("Error creating ", Files[j]->Name, "."), System::Drawing::Color::Red);
-								}
-							}
-							else
-							{
-								this->Log(String::Concat("Error converting ", Files[j]->Name, ".", (gcnew String(vlGetLastError()))->Replace("\n", " ")), System::Drawing::Color::Red);
 							}
 
 							delete []lpImageData;
