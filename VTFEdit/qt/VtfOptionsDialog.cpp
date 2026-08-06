@@ -1,0 +1,460 @@
+/*
+ * VTFEdit
+ * Copyright (C) 2005-2026 ficool2, Neil Jedrzejewski & Ryan Gregg
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+
+#include "VtfOptionsDialog.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDialogButtonBox>
+#include <QDoubleSpinBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QTabWidget>
+#include <QVBoxLayout>
+
+namespace VTFEdit
+{
+	namespace
+	{
+		const char *const ResizeMethodNames[] = { "Nearest Power Of 2", "Biggest Power Of 2", "Smallest Power Of 2" };
+		const char *const FilterNames[] = { "Box", "NICE" };
+		const char *const VersionNames[] = { "7.6", "7.5", "7.4", "7.3", "7.2", "7.1", "7.0" };
+		const char *const CompressionLevelNames[] = { "None", "Default", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+		const char *const CompressionMethodNames[] = { "Deflate", "Zstandard" };
+
+		QStringList powerOfTwoList()
+		{
+			QStringList list;
+			for(int i = 1; i <= 4096; i *= 2)
+			{
+				list << QString::number(i);
+			}
+			return list;
+		}
+
+		template <int N>
+		void fill(QComboBox *pCombo, const char *const (&names)[N])
+		{
+			for(int i = 0; i < N; i++)
+			{
+				pCombo->addItem(QString::fromLatin1(names[i]));
+			}
+		}
+	}
+
+	VtfOptionsDialog::VtfOptionsDialog(VtfOptions *pOptions, QWidget *pParent)
+		: QDialog(pParent)
+		, m_pOptions(pOptions)
+	{
+		setWindowTitle(tr("VTF Options"));
+
+		QTabWidget *pTabs = new QTabWidget(this);
+		pTabs->addTab(createGeneralTab(), tr("General"));
+		pTabs->addTab(createAdvancedTab(), tr("Advanced"));
+		pTabs->addTab(createResourcesTab(), tr("Resources"));
+
+		QDialogButtonBox *pButtons = new QDialogButtonBox(
+			QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::Reset, this);
+		connect(pButtons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+		connect(pButtons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+		connect(pButtons->button(QDialogButtonBox::Reset), &QPushButton::clicked,
+			this, &VtfOptionsDialog::onResetClicked);
+
+		QVBoxLayout *pLayout = new QVBoxLayout(this);
+		pLayout->addWidget(pTabs);
+		pLayout->addWidget(pButtons);
+
+		connect(m_pResize, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pResizeClamp, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pMipmaps, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pGammaCorrection, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pCreateLODControlResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pCreateInformationResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pTextureType, &QComboBox::currentIndexChanged, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pVersion, &QComboBox::currentIndexChanged, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pCompressionLevel, &QComboBox::currentIndexChanged, this, &VtfOptionsDialog::updateEnabledState);
+	}
+
+	QWidget *VtfOptionsDialog::createGeneralTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pGeneral = new QGroupBox(tr("General:"), pTab);
+		QFormLayout *pGeneralForm = new QFormLayout(pGeneral);
+		m_pFormat = new QComboBox(pGeneral);
+		fill(m_pFormat, NormalImageFormatNames);
+		m_pFormat->setToolTip(tr("The output image format for textures with no alpha channel. "
+			"Common values are DXT1 and RGB888."));
+		m_pAlphaFormat = new QComboBox(pGeneral);
+		fill(m_pAlphaFormat, AlphaImageFormatNames);
+		m_pAlphaFormat->setToolTip(tr("The output image format for textures with an alpha channel. "
+			"Common values are DXT5 and RGBA8888."));
+		m_pTextureType = new QComboBox(pGeneral);
+		m_pTextureType->addItems({ tr("Animated Texture"), tr("Environment Map"), tr("Volume Texture") });
+		pGeneralForm->addRow(tr("Normal Format:"), m_pFormat);
+		pGeneralForm->addRow(tr("Alpha Format:"), m_pAlphaFormat);
+		pGeneralForm->addRow(tr("Texture Type:"), m_pTextureType);
+
+		QGroupBox *pResize = new QGroupBox(tr("Resize:"), pTab);
+		QFormLayout *pResizeForm = new QFormLayout(pResize);
+		m_pResize = new QCheckBox(tr("Resize to power of 2"), pResize);
+		m_pResizeMethod = new QComboBox(pResize);
+		fill(m_pResizeMethod, ResizeMethodNames);
+		m_pResizeMethod->setToolTip(tr("The method for choosing which power of 2 to use."));
+		m_pResizeFilter = new QComboBox(pResize);
+		fill(m_pResizeFilter, FilterNames);
+		m_pResizeClamp = new QCheckBox(tr("Clamp resize dimensions"), pResize);
+		m_pMaximumWidth = new QComboBox(pResize);
+		m_pMaximumWidth->addItems(powerOfTwoList());
+		m_pMaximumWidth->setToolTip(tr("Maximum width."));
+		m_pMaximumHeight = new QComboBox(pResize);
+		m_pMaximumHeight->addItems(powerOfTwoList());
+		m_pMaximumHeight->setToolTip(tr("Maximum height."));
+		pResizeForm->addRow(m_pResize);
+		pResizeForm->addRow(tr("Resize Method:"), m_pResizeMethod);
+		pResizeForm->addRow(tr("Resize Filter:"), m_pResizeFilter);
+		pResizeForm->addRow(m_pResizeClamp);
+		pResizeForm->addRow(tr("Maximum Width:"), m_pMaximumWidth);
+		pResizeForm->addRow(tr("Maximum Height:"), m_pMaximumHeight);
+
+		QGroupBox *pGeneralOptions = new QGroupBox(tr("General Options:"), pTab);
+		QVBoxLayout *pGeneralOptionsLayout = new QVBoxLayout(pGeneralOptions);
+		pGeneralOptionsLayout->addWidget(pGeneral);
+		pGeneralOptionsLayout->addWidget(pResize);
+
+		QGroupBox *pMipmaps = new QGroupBox(tr("Mipmaps:"), pTab);
+		QFormLayout *pMipmapsForm = new QFormLayout(pMipmaps);
+		m_pMipmaps = new QCheckBox(tr("Generate mipmaps"), pMipmaps);
+		m_pMipmapFilter = new QComboBox(pMipmaps);
+		fill(m_pMipmapFilter, FilterNames);
+		pMipmapsForm->addRow(m_pMipmaps);
+		pMipmapsForm->addRow(tr("Mipmap Filter:"), m_pMipmapFilter);
+
+		pLayout->addWidget(pGeneralOptions);
+		pLayout->addWidget(pMipmaps);
+		pLayout->addStretch();
+
+		return pTab;
+	}
+
+	QWidget *VtfOptionsDialog::createAdvancedTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pVersion = new QGroupBox(tr("Version:"), pTab);
+		QFormLayout *pVersionForm = new QFormLayout(pVersion);
+		m_pVersion = new QComboBox(pVersion);
+		fill(m_pVersion, VersionNames);
+		m_pCompressionLevel = new QComboBox(pVersion);
+		fill(m_pCompressionLevel, CompressionLevelNames);
+		m_pCompressionMethod = new QComboBox(pVersion);
+		fill(m_pCompressionMethod, CompressionMethodNames);
+		pVersionForm->addRow(tr("Version:"), m_pVersion);
+		pVersionForm->addRow(tr("Compression Level:"), m_pCompressionLevel);
+		pVersionForm->addRow(tr("Compression Method:"), m_pCompressionMethod);
+
+		QGroupBox *pGamma = new QGroupBox(tr("Gamma Correction:"), pTab);
+		QFormLayout *pGammaForm = new QFormLayout(pGamma);
+		m_pGammaCorrection = new QCheckBox(tr("Correct gamma"), pGamma);
+		m_pGammaCorrectionValue = new QDoubleSpinBox(pGamma);
+		m_pGammaCorrectionValue->setDecimals(2);
+		m_pGammaCorrectionValue->setSingleStep(0.05);
+		m_pGammaCorrectionValue->setRange(0.0, 100.0);
+		pGammaForm->addRow(m_pGammaCorrection);
+		pGammaForm->addRow(tr("Gamma Correction:"), m_pGammaCorrectionValue);
+
+		QGroupBox *pMisc = new QGroupBox(tr("Miscellaneous:"), pTab);
+		QVBoxLayout *pMiscLayout = new QVBoxLayout(pMisc);
+		m_pReflectivity = new QCheckBox(tr("Compute reflectivity"), pMisc);
+		m_pThumbnail = new QCheckBox(tr("Generate thumbnail"), pMisc);
+		m_pSphereMap = new QCheckBox(tr("Generate sphere map"), pMisc);
+		m_pStripAlpha = new QCheckBox(tr("Strip alpha channel"), pMisc);
+		m_pSrgb = new QCheckBox(tr("sRGB"), pMisc);
+		pMiscLayout->addWidget(m_pReflectivity);
+		pMiscLayout->addWidget(m_pThumbnail);
+		pMiscLayout->addWidget(m_pSphereMap);
+		pMiscLayout->addWidget(m_pStripAlpha);
+		pMiscLayout->addWidget(m_pSrgb);
+
+		QGroupBox *pAdvancedOptions = new QGroupBox(tr("Advanced Options:"), pTab);
+		QVBoxLayout *pAdvancedLayout = new QVBoxLayout(pAdvancedOptions);
+		pAdvancedLayout->addWidget(pVersion);
+		pAdvancedLayout->addWidget(pGamma);
+		pAdvancedLayout->addWidget(pMisc);
+
+		QGroupBox *pLuminance = new QGroupBox(tr("Luminance Weights:"), pTab);
+		QFormLayout *pLuminanceForm = new QFormLayout(pLuminance);
+		QDoubleSpinBox **ppWeights[] = { &m_pLuminanceWeightR, &m_pLuminanceWeightG, &m_pLuminanceWeightB };
+		const QString sLabels[] = { tr("Red:"), tr("Green:"), tr("Blue:") };
+		for(int i = 0; i < 3; i++)
+		{
+			QDoubleSpinBox *pWeight = new QDoubleSpinBox(pLuminance);
+			pWeight->setDecimals(3);
+			pWeight->setSingleStep(0.001);
+			pWeight->setRange(0.0, 1.0);
+			*ppWeights[i] = pWeight;
+			pLuminanceForm->addRow(sLabels[i], pWeight);
+		}
+
+		pLayout->addWidget(pAdvancedOptions);
+		pLayout->addWidget(pLuminance);
+		pLayout->addStretch();
+
+		return pTab;
+	}
+
+	QWidget *VtfOptionsDialog::createResourcesTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pLOD = new QGroupBox(tr("LOD Control Resource:"), pTab);
+		QFormLayout *pLODForm = new QFormLayout(pLOD);
+		m_pCreateLODControlResource = new QCheckBox(tr("Create LOD control resource"), pLOD);
+		m_pLODControlClampU = new QSpinBox(pLOD);
+		m_pLODControlClampU->setRange(0, 31);
+		m_pLODControlClampV = new QSpinBox(pLOD);
+		m_pLODControlClampV->setRange(0, 31);
+		pLODForm->addRow(m_pCreateLODControlResource);
+		pLODForm->addRow(tr("Clamp U:"), m_pLODControlClampU);
+		pLODForm->addRow(tr("Clamp V:"), m_pLODControlClampV);
+
+		QGroupBox *pInformation = new QGroupBox(tr("Information Resource:"), pTab);
+		QFormLayout *pInformationForm = new QFormLayout(pInformation);
+		m_pCreateInformationResource = new QCheckBox(tr("Create information resource"), pInformation);
+		m_pInformationAuthor = new QLineEdit(pInformation);
+		m_pInformationContact = new QLineEdit(pInformation);
+		m_pInformationVersion = new QLineEdit(pInformation);
+		m_pInformationModification = new QLineEdit(pInformation);
+		m_pInformationDescription = new QLineEdit(pInformation);
+		m_pInformationComments = new QLineEdit(pInformation);
+		pInformationForm->addRow(m_pCreateInformationResource);
+		pInformationForm->addRow(tr("Author:"), m_pInformationAuthor);
+		pInformationForm->addRow(tr("Contact:"), m_pInformationContact);
+		pInformationForm->addRow(tr("Version:"), m_pInformationVersion);
+		pInformationForm->addRow(tr("Modification:"), m_pInformationModification);
+		pInformationForm->addRow(tr("Description:"), m_pInformationDescription);
+		pInformationForm->addRow(tr("Comments:"), m_pInformationComments);
+
+		QGroupBox *pResourceOptions = new QGroupBox(tr("Resource Options:"), pTab);
+		QVBoxLayout *pResourceLayout = new QVBoxLayout(pResourceOptions);
+		pResourceLayout->addWidget(pLOD);
+		pResourceLayout->addWidget(pInformation);
+
+		pLayout->addWidget(pResourceOptions);
+		pLayout->addStretch();
+
+		return pTab;
+	}
+
+	int VtfOptionsDialog::exec()
+	{
+		optionsToControls();
+		updateEnabledState();
+
+		const int iResult = QDialog::exec();
+
+		if(iResult == QDialog::Accepted)
+		{
+			controlsToOptions();
+		}
+
+		return iResult;
+	}
+
+	void VtfOptionsDialog::onResetClicked()
+	{
+		VtfOptions Defaults;
+		*m_pOptions = Defaults;
+
+		optionsToControls();
+		updateEnabledState();
+	}
+
+	void VtfOptionsDialog::updateEnabledState()
+	{
+		m_pSphereMap->setEnabled(static_cast<VtfTextureType>(m_pTextureType->currentIndex()) == VtfTextureType::EnvironmentMap);
+
+		m_pResizeMethod->setEnabled(m_pResize->isChecked());
+		m_pResizeFilter->setEnabled(m_pResize->isChecked());
+		m_pResizeClamp->setEnabled(m_pResize->isChecked());
+		m_pMaximumWidth->setEnabled(m_pResize->isChecked() && m_pResizeClamp->isChecked());
+		m_pMaximumHeight->setEnabled(m_pResize->isChecked() && m_pResizeClamp->isChecked());
+
+		m_pMipmapFilter->setEnabled(m_pMipmaps->isChecked());
+
+		m_pGammaCorrectionValue->setEnabled(m_pGammaCorrection->isChecked());
+
+		m_pLODControlClampU->setEnabled(m_pCreateLODControlResource->isChecked());
+		m_pLODControlClampV->setEnabled(m_pCreateLODControlResource->isChecked());
+
+		const bool bInformation = m_pCreateInformationResource->isChecked();
+		m_pInformationAuthor->setEnabled(bInformation);
+		m_pInformationContact->setEnabled(bInformation);
+		m_pInformationVersion->setEnabled(bInformation);
+		m_pInformationModification->setEnabled(bInformation);
+		m_pInformationDescription->setEnabled(bInformation);
+		m_pInformationComments->setEnabled(bInformation);
+
+		const bool bCompressionSupported = m_pVersion->currentText() == QLatin1String("7.6");
+		m_pCompressionLevel->setEnabled(bCompressionSupported);
+		m_pCompressionMethod->setEnabled(bCompressionSupported && m_pCompressionLevel->currentIndex() != 0);
+	}
+
+	void VtfOptionsDialog::optionsToControls()
+	{
+		for(int i = 0; i < 15; i++)
+		{
+			if(NormalImageFormats[i] == m_pOptions->NormalFormat)
+			{
+				m_pFormat->setCurrentIndex(i);
+			}
+			if(AlphaImageFormats[i] == m_pOptions->AlphaFormat)
+			{
+				m_pAlphaFormat->setCurrentIndex(i);
+			}
+		}
+
+		m_pTextureType->setCurrentIndex(static_cast<int>(m_pOptions->TextureType));
+
+		m_pResize->setChecked(m_pOptions->ResizeImage != vlFalse);
+		m_pResizeMethod->setCurrentIndex(static_cast<int>(m_pOptions->ResizeMethod));
+		m_pResizeFilter->setCurrentIndex(m_pOptions->ResizeFilter == MIPMAP_FILTER_NICE ? 1 : 0);
+		m_pResizeClamp->setChecked(m_pOptions->ResizeClamp != vlFalse);
+
+		const int iWidthIndex = m_pMaximumWidth->findText(QString::number(m_pOptions->ResizeClampWidth));
+		m_pMaximumWidth->setCurrentIndex(iWidthIndex >= 0 ? iWidthIndex : m_pMaximumWidth->count() - 1);
+		const int iHeightIndex = m_pMaximumHeight->findText(QString::number(m_pOptions->ResizeClampHeight));
+		m_pMaximumHeight->setCurrentIndex(iHeightIndex >= 0 ? iHeightIndex : m_pMaximumHeight->count() - 1);
+
+		m_pMipmaps->setChecked(m_pOptions->GenerateMipmaps != vlFalse);
+		m_pMipmapFilter->setCurrentIndex(m_pOptions->MipmapFilter == MIPMAP_FILTER_NICE ? 1 : 0);
+
+		const int iVersionIndex = m_pVersion->findText(m_pOptions->Version);
+		m_pVersion->setCurrentIndex(iVersionIndex >= 0 ? iVersionIndex : 2); // 7.4
+
+		if(m_pOptions->AuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT)
+		{
+			m_pCompressionLevel->setCurrentIndex(1);
+		}
+		else if(m_pOptions->AuxCompressionLevel <= VTF_AUX_COMPRESSION_LEVEL_NONE
+			|| m_pOptions->AuxCompressionLevel > VTF_AUX_COMPRESSION_LEVEL_MAX)
+		{
+			m_pCompressionLevel->setCurrentIndex(0);
+		}
+		else
+		{
+			m_pCompressionLevel->setCurrentIndex(m_pOptions->AuxCompressionLevel + 1);
+		}
+		m_pCompressionMethod->setCurrentIndex(
+			m_pOptions->AuxCompressionMethod == AUX_COMPRESSION_METHOD_ZSTD ? 1 : 0);
+
+		m_pReflectivity->setChecked(m_pOptions->ComputeReflectivity != vlFalse);
+		m_pThumbnail->setChecked(m_pOptions->GenerateThumbnail != vlFalse);
+		m_pSphereMap->setChecked(m_pOptions->GenerateSphereMap != vlFalse);
+		m_pStripAlpha->setChecked(m_pOptions->StripAlpha != vlFalse);
+		m_pSrgb->setChecked(m_pOptions->sRGB != vlFalse);
+
+		m_pGammaCorrection->setChecked(m_pOptions->CorrectGamma != vlFalse);
+		m_pGammaCorrectionValue->setValue(m_pOptions->GammaCorrection);
+
+		m_pLuminanceWeightR->setValue(m_pOptions->LuminanceWeightR);
+		m_pLuminanceWeightG->setValue(m_pOptions->LuminanceWeightG);
+		m_pLuminanceWeightB->setValue(m_pOptions->LuminanceWeightB);
+
+		m_pCreateLODControlResource->setChecked(m_pOptions->CreateLODControlResource != vlFalse);
+		m_pLODControlClampU->setValue(static_cast<int>(m_pOptions->LODControlClampU));
+		m_pLODControlClampV->setValue(static_cast<int>(m_pOptions->LODControlClampV));
+
+		m_pCreateInformationResource->setChecked(m_pOptions->CreateInformationResource != vlFalse);
+		m_pInformationAuthor->setText(m_pOptions->InformationAuthor);
+		m_pInformationContact->setText(m_pOptions->InformationContact);
+		m_pInformationVersion->setText(m_pOptions->InformationVersion);
+		m_pInformationModification->setText(m_pOptions->InformationModification);
+		m_pInformationDescription->setText(m_pOptions->InformationDescription);
+		m_pInformationComments->setText(m_pOptions->InformationComments);
+	}
+
+	void VtfOptionsDialog::controlsToOptions()
+	{
+		m_pOptions->NormalFormat = m_pFormat->currentIndex() >= 0
+			? NormalImageFormats[m_pFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+		m_pOptions->AlphaFormat = m_pAlphaFormat->currentIndex() >= 0
+			? AlphaImageFormats[m_pAlphaFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+		m_pOptions->TextureType = static_cast<VtfTextureType>(m_pTextureType->currentIndex());
+
+		m_pOptions->ResizeImage = m_pResize->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentIndex());
+		m_pOptions->ResizeFilter = m_pResizeFilter->currentIndex() == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
+		m_pOptions->ResizeClamp = m_pResizeClamp->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->ResizeClampWidth = m_pMaximumWidth->currentText().toUInt();
+		m_pOptions->ResizeClampHeight = m_pMaximumHeight->currentText().toUInt();
+
+		m_pOptions->GenerateMipmaps = m_pMipmaps->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->MipmapFilter = m_pMipmapFilter->currentIndex() == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
+
+		m_pOptions->Version = m_pVersion->currentText();
+
+		switch(m_pCompressionLevel->currentIndex())
+		{
+		case 1:
+			m_pOptions->AuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_DEFAULT;
+			break;
+		case -1:
+		case 0:
+			m_pOptions->AuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_NONE;
+			break;
+		default:
+			m_pOptions->AuxCompressionLevel = static_cast<vlShort>(m_pCompressionLevel->currentIndex() - 1);
+			break;
+		}
+		m_pOptions->AuxCompressionMethod = m_pCompressionMethod->currentIndex() == 1
+			? AUX_COMPRESSION_METHOD_ZSTD : AUX_COMPRESSION_METHOD_DEFLATE;
+
+		m_pOptions->ComputeReflectivity = m_pReflectivity->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->GenerateThumbnail = m_pThumbnail->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->GenerateSphereMap = m_pSphereMap->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->StripAlpha = m_pStripAlpha->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->sRGB = m_pSrgb->isChecked() ? vlTrue : vlFalse;
+
+		m_pOptions->CorrectGamma = m_pGammaCorrection->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->GammaCorrection = static_cast<vlSingle>(m_pGammaCorrectionValue->value());
+
+		m_pOptions->LuminanceWeightR = static_cast<vlSingle>(m_pLuminanceWeightR->value());
+		m_pOptions->LuminanceWeightG = static_cast<vlSingle>(m_pLuminanceWeightG->value());
+		m_pOptions->LuminanceWeightB = static_cast<vlSingle>(m_pLuminanceWeightB->value());
+
+		m_pOptions->CreateLODControlResource = m_pCreateLODControlResource->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->LODControlClampU = static_cast<vlUInt>(m_pLODControlClampU->value());
+		m_pOptions->LODControlClampV = static_cast<vlUInt>(m_pLODControlClampV->value());
+
+		m_pOptions->CreateInformationResource = m_pCreateInformationResource->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->InformationAuthor = m_pInformationAuthor->text();
+		m_pOptions->InformationContact = m_pInformationContact->text();
+		m_pOptions->InformationVersion = m_pInformationVersion->text();
+		m_pOptions->InformationModification = m_pInformationModification->text();
+		m_pOptions->InformationDescription = m_pInformationDescription->text();
+		m_pOptions->InformationComments = m_pInformationComments->text();
+	}
+}

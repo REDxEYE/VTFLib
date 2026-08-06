@@ -1,0 +1,2400 @@
+/*
+ * VTFEdit
+ * Copyright (C) 2005-2026 ficool2, Neil Jedrzejewski & Ryan Gregg
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+
+#include "MainWindow.h"
+
+#include "AboutDialog.h"
+#include "BatchConvertDialog.h"
+#include "ImageView.h"
+#include "VmtCreateDialog.h"
+#include "VmtFileUtility.h"
+#include "VtfFileUtility.h"
+#include "VtfOptionsDialog.h"
+
+#include <QAction>
+#include <QActionGroup>
+#include <QApplication>
+#include <QClipboard>
+#include <QCloseEvent>
+#include <QDir>
+#include <QDoubleSpinBox>
+#include <QDragEnterEvent>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QListWidget>
+#include <QLocale>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QMimeData>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSignalBlocker>
+#include <QSlider>
+#include <QSpinBox>
+#include <QSplitter>
+#include <QStackedWidget>
+#include <QStandardPaths>
+#include <QStatusBar>
+#include <QStyleHints>
+#include <QTabWidget>
+#include <QTextEdit>
+#include <QTextStream>
+#include <QTimer>
+#include <QToolBar>
+#include <QTreeWidget>
+#include <QVBoxLayout>
+#include <QWheelEvent>
+
+#include <algorithm>
+#include <vector>
+
+namespace VTFEdit
+{
+	namespace
+	{
+		const char *const FlagNames[] =
+		{
+			"Point Sample", 
+			"Trilinear",
+			"Clamp S",
+			"Clamp T",
+			"Anisotropic",
+			"Hint DXT5", 
+			"SRGB",
+			"Normal Map", 
+			"No Mipmap", 
+			"No Level Of Detail",
+			"No Minimum Mipmap",
+			"Procedural",
+			"One Bit Alpha (Format Specific)",
+			"Eight Bit Alpha (Format Specific)",
+			"Enviroment Map (Format Specific)", 
+			"Render Target", 
+			"Depth Render Target",
+			"No Debug Override",
+			"Single Copy",
+			"Unused", 
+			"Unused", 
+			"Unused",
+			"Unused",
+			"No Depth Buffer", 
+			"Unused", 
+			"Clamp U", 
+			"Vertex Texture",
+			"SSBump", 
+			"Unused",
+			"Clamp All"
+		};
+		const int FlagCount = static_cast<int>(sizeof(FlagNames) / sizeof(FlagNames[0]));
+
+		bool isReadOnlyFlag(int iIndex)
+		{
+			return iIndex == 12
+				|| iIndex == 13 
+				|| iIndex == 14
+				|| qstrcmp(FlagNames[iIndex], "Unused") == 0;
+		}
+
+		QString imageFormatString(VTFImageFormat ImageFormat)
+		{
+			SVTFImageFormatInfo ImageFormatInfo;
+			if(vlImageGetImageFormatInfoEx(ImageFormat, &ImageFormatInfo))
+			{
+				return QString::fromLatin1(ImageFormatInfo.lpName);
+			}
+			return QString();
+		}
+
+		QString hex32(vlUInt uiValue)
+		{
+			return QStringLiteral("%1").arg(uiValue, 8, 16, QLatin1Char('0')).toUpper();
+		}
+
+		QString lastErrorString()
+		{
+			return QString::fromLatin1(vlGetLastError());
+		}
+
+		QLabel *addInfoRow(QFormLayout *pForm, const QString &sLabel)
+		{
+			QLabel *pValue = new QLabel(pForm->parentWidget());
+			pValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+			pForm->addRow(sLabel, pValue);
+			return pValue;
+		}
+	}
+
+	MainWindow::MainWindow()
+		: m_pVMTFile(nullptr)
+		, m_pVTFFile(nullptr)
+		, m_fImageScale(1.0f)
+		, m_fEffectiveImageScale(1.0f)
+		, m_bImagePanning(false)
+		, m_bUpdatingVtfFile(false)
+		, m_bUpdatingFlags(false)
+		, m_bHdrResetting(false)
+		, m_iMaximumRecentFiles(8)
+		, m_pOptionsDialog(nullptr)
+		, m_pVmtCreateDialog(nullptr)
+		, m_pBatchConvertDialog(nullptr)
+		, m_pAboutDialog(nullptr)
+		, m_iVmtErrorLine(0)
+	{
+		setWindowTitle(QApplication::applicationName());
+		setAcceptDrops(true);
+		resize(1024, 600);
+
+		createActions();
+		createMenus();
+		createToolBar();
+		createCentralWidget();
+		createStatusBar();
+
+		m_pAnimateTimer = new QTimer(this);
+		m_pAnimateTimer->setInterval(1000 / 24);
+		connect(m_pAnimateTimer, &QTimer::timeout, this, &MainWindow::onAnimateTick);
+
+		connect(QApplication::clipboard(), &QClipboard::dataChanged,
+			this, &MainWindow::onClipboardChanged);
+
+		onHdrReset();
+		closeFile();
+
+		readConfigFile(configFilePath());
+		updateRecentFiles();
+		onClipboardChanged();
+	}
+
+	MainWindow::~MainWindow()
+	{
+		delete m_pVMTFile;
+		delete m_pVTFFile;
+	}
+
+	//
+	// Construction.
+	//
+
+	void MainWindow::createActions()
+	{
+		m_pNewAction = new QAction(tr("&New"), this);
+		m_pNewAction->setShortcut(QKeySequence::New);
+		connect(m_pNewAction, &QAction::triggered, this, &MainWindow::onNew);
+
+		m_pOpenAction = new QAction(tr("&Open"), this);
+		m_pOpenAction->setShortcut(QKeySequence::Open);
+		connect(m_pOpenAction, &QAction::triggered, this, &MainWindow::onOpen);
+
+		m_pSaveAction = new QAction(tr("&Save"), this);
+		m_pSaveAction->setShortcut(QKeySequence::Save);
+		connect(m_pSaveAction, &QAction::triggered, this, &MainWindow::onSave);
+
+		m_pSaveAsAction = new QAction(tr("Save &As..."), this);
+		m_pSaveAsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
+		connect(m_pSaveAsAction, &QAction::triggered, this, &MainWindow::onSaveAs);
+
+		m_pImportAction = new QAction(tr("&Import"), this);
+		m_pImportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+		connect(m_pImportAction, &QAction::triggered, this, &MainWindow::onImport);
+
+		m_pExportAction = new QAction(tr("&Export"), this);
+		m_pExportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+		connect(m_pExportAction, &QAction::triggered, this, &MainWindow::onExport);
+
+		m_pExportAllAction = new QAction(tr("&Export All"), this);
+		m_pExportAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
+		connect(m_pExportAllAction, &QAction::triggered, this, &MainWindow::onExportAll);
+
+		m_pExitAction = new QAction(tr("E&xit"), this);
+		m_pExitAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F4));
+		connect(m_pExitAction, &QAction::triggered, this, &QWidget::close);
+
+		m_pCopyAction = new QAction(tr("&Copy"), this);
+		m_pCopyAction->setShortcut(QKeySequence::Copy);
+		connect(m_pCopyAction, &QAction::triggered, this, &MainWindow::onCopy);
+
+		m_pPasteAction = new QAction(tr("&Paste"), this);
+		m_pPasteAction->setShortcut(QKeySequence::Paste);
+		connect(m_pPasteAction, &QAction::triggered, this, &MainWindow::onPaste);
+
+		m_pChannelGroup = new QActionGroup(this);
+		struct { QAction **ppAction; const char *pText; Qt::Key Key; } Channels[] =
+		{
+			{ &m_pChannelRgbAction, "RGB", Qt::Key_C },
+			{ &m_pChannelRAction, "R", Qt::Key_R },
+			{ &m_pChannelGAction, "G", Qt::Key_G },
+			{ &m_pChannelBAction, "B", Qt::Key_B },
+			{ &m_pChannelAAction, "A", Qt::Key_A },
+		};
+		for(auto &Channel : Channels)
+		{
+			QAction *pAction = new QAction(QString::fromLatin1(Channel.pText), this);
+			pAction->setCheckable(true);
+			pAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Channel.Key));
+			m_pChannelGroup->addAction(pAction);
+			connect(pAction, &QAction::triggered, this, &MainWindow::onChannelChanged);
+			*Channel.ppAction = pAction;
+		}
+		m_pChannelRgbAction->setChecked(true);
+
+		m_pMaskAction = new QAction(tr("&Mask"), this);
+		m_pMaskAction->setCheckable(true);
+		m_pMaskAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+		connect(m_pMaskAction, &QAction::triggered, this, &MainWindow::onViewOptionChanged);
+
+		m_pTileAction = new QAction(tr("&Tile"), this);
+		m_pTileAction->setCheckable(true);
+		m_pTileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
+		connect(m_pTileAction, &QAction::triggered, this, &MainWindow::onViewOptionChanged);
+
+		m_pMipmapFullSizeAction = new QAction(tr("&Zoom Mipmaps"), this);
+		m_pMipmapFullSizeAction->setCheckable(true);
+		m_pMipmapFullSizeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+		connect(m_pMipmapFullSizeAction, &QAction::triggered, this, &MainWindow::onViewOptionChanged);
+
+		m_pCreateVmtFileAction = new QAction(tr("Create &VMT File"), this);
+		connect(m_pCreateVmtFileAction, &QAction::triggered, this, &MainWindow::onCreateVmtFile);
+
+		m_pConvertFolderAction = new QAction(tr("Convert &Folder"), this);
+		connect(m_pConvertFolderAction, &QAction::triggered, this, &MainWindow::onConvertFolder);
+
+		m_pAutoCreateVmtFileAction = new QAction(tr("&Auto Create VMT File"), this);
+		m_pAutoCreateVmtFileAction->setCheckable(true);
+
+		m_pAboutAction = new QAction(tr("&About"), this);
+		connect(m_pAboutAction, &QAction::triggered, this, &MainWindow::onAbout);
+	}
+
+	void MainWindow::createMenus()
+	{
+		QMenu *pFileMenu = menuBar()->addMenu(tr("&File"));
+		pFileMenu->addAction(m_pNewAction);
+		pFileMenu->addAction(m_pOpenAction);
+		pFileMenu->addSeparator();
+		pFileMenu->addAction(m_pSaveAction);
+		pFileMenu->addAction(m_pSaveAsAction);
+		pFileMenu->addSeparator();
+		pFileMenu->addAction(m_pImportAction);
+		pFileMenu->addAction(m_pExportAction);
+		pFileMenu->addAction(m_pExportAllAction);
+		pFileMenu->addSeparator();
+		m_pRecentFilesMenu = pFileMenu->addMenu(tr("&Recent Files"));
+		pFileMenu->addSeparator();
+		pFileMenu->addAction(m_pExitAction);
+
+		QMenu *pEditMenu = menuBar()->addMenu(tr("&Edit"));
+		pEditMenu->addAction(m_pCopyAction);
+		pEditMenu->addAction(m_pPasteAction);
+
+		QMenu *pViewMenu = menuBar()->addMenu(tr("&View"));
+		QMenu *pChannelMenu = pViewMenu->addMenu(tr("&Channel"));
+		pChannelMenu->addActions(m_pChannelGroup->actions());
+		pViewMenu->addAction(m_pMaskAction);
+		pViewMenu->addAction(m_pTileAction);
+		pViewMenu->addAction(m_pMipmapFullSizeAction);
+
+		QMenu *pToolsMenu = menuBar()->addMenu(tr("&Tools"));
+		pToolsMenu->addAction(m_pCreateVmtFileAction);
+		pToolsMenu->addAction(m_pConvertFolderAction);
+
+		QMenu *pOptionsMenu = menuBar()->addMenu(tr("&Options"));
+		pOptionsMenu->addAction(m_pAutoCreateVmtFileAction);
+
+		QMenu *pHelpMenu = menuBar()->addMenu(tr("&Help"));
+		pHelpMenu->addAction(m_pAboutAction);
+	}
+
+	void MainWindow::createToolBar()
+	{
+		QToolBar *pToolBar = addToolBar(tr("Main"));
+		pToolBar->setObjectName(QStringLiteral("MainToolBar"));
+		pToolBar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+		pToolBar->addAction(m_pImportAction);
+		pToolBar->addAction(m_pOpenAction);
+		pToolBar->addAction(m_pSaveAction);
+		pToolBar->addSeparator();
+		pToolBar->addAction(m_pCopyAction);
+		pToolBar->addAction(m_pPasteAction);
+	}
+
+	void MainWindow::createStatusBar()
+	{
+		m_pStatusFileName = new QLabel(this);
+		m_pStatusInfo1 = new QLabel(this);
+		m_pStatusInfo2 = new QLabel(this);
+
+		m_pStatusInfo1->setMinimumWidth(120);
+		m_pStatusInfo2->setMinimumWidth(120);
+
+		statusBar()->addWidget(m_pStatusFileName, 1);
+		statusBar()->addPermanentWidget(m_pStatusInfo1);
+		statusBar()->addPermanentWidget(m_pStatusInfo2);
+	}
+
+	void MainWindow::createCentralWidget()
+	{
+		m_pLeftTabs = new QTabWidget(this);
+		m_pRightTabs = new QTabWidget(this);
+
+		m_pImageTab = createImageTab();
+		m_pInfoTab = createInfoTab();
+		m_pResourcesTab = createResourcesTab();
+
+		m_pImageTab->hide();
+		m_pInfoTab->hide();
+		m_pResourcesTab->hide();
+
+		// Image view page.
+		m_pImageView = new ImageView(this);
+		connect(m_pImageView, &ImageView::mouseMovedOverImage, this, &MainWindow::onImageMouseMoved);
+		connect(m_pImageView, &QWidget::customContextMenuRequested, this, &MainWindow::onImageContextMenu);
+
+		m_pImageContextMenu = new QMenu(this);
+		QAction *pZoomIn = m_pImageContextMenu->addAction(tr("Zoom &In"));
+		connect(pZoomIn, &QAction::triggered, this, &MainWindow::onZoomIn);
+		QAction *pZoomOut = m_pImageContextMenu->addAction(tr("Zoom &Out"));
+		connect(pZoomOut, &QAction::triggered, this, &MainWindow::onZoomOut);
+		m_pImageContextMenu->addSeparator();
+		QAction *pZoomReset = m_pImageContextMenu->addAction(tr("&Reset Zoom/Pan"));
+		connect(pZoomReset, &QAction::triggered, this, &MainWindow::onZoomReset);
+		m_pImageContextMenu->addSeparator();
+		m_pImageContextMenu->addAction(m_pCopyAction);
+
+		m_pImageScrollArea = new QScrollArea(this);
+		m_pImageScrollArea->setWidget(m_pImageView);
+		m_pImageScrollArea->setAlignment(Qt::AlignCenter);
+		m_pImageScrollArea->setWidgetResizable(false);
+		m_pImageScrollArea->viewport()->installEventFilter(this);
+		m_pImageView->installEventFilter(this);
+		{
+			// Grey backdrop
+			const bool bDark = QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+			const QColor Background = bDark ? QColor(60, 60, 60) : QColor(180, 180, 180);
+
+			QWidget *pViewport = m_pImageScrollArea->viewport();
+			pViewport->setBackgroundRole(QPalette::Window);
+			pViewport->setAutoFillBackground(true);
+
+			QPalette Palette = pViewport->palette();
+			Palette.setColor(QPalette::Window, Background);
+			pViewport->setPalette(Palette);
+		}
+
+		// VMT editor page.
+		m_pVmtEdit = new QPlainTextEdit(this);
+		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+		{
+			QFont VmtFont(QStringLiteral("Consolas"), 12);
+			VmtFont.setFamilies({QStringLiteral("Consolas"), QStringLiteral("Cascadia Mono"),
+				// fallbacks
+				QStringLiteral("DejaVu Sans Mono"), QStringLiteral("Courier New")});
+			VmtFont.setStyleHint(QFont::Monospace, QFont::PreferDefault);
+			VmtFont.setFixedPitch(true);
+			m_pVmtEdit->setFont(VmtFont);
+		}
+		m_pVmtEdit->setTabStopDistance(4 * m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+		{
+			QPalette Palette = m_pVmtEdit->palette();
+			Palette.setColor(QPalette::Base, VmtColors::Background);
+			Palette.setColor(QPalette::Text, VmtColors::Text);
+			m_pVmtEdit->setPalette(Palette);
+		}
+		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document());
+		connect(m_pVmtEdit, &QPlainTextEdit::textChanged, this, &MainWindow::onVmtTextChanged);
+		connect(m_pVmtEdit, &QPlainTextEdit::cursorPositionChanged, this, &MainWindow::onVmtCursorChanged);
+
+		m_pVmtEdit->setContextMenuPolicy(Qt::CustomContextMenu);
+		connect(m_pVmtEdit, &QWidget::customContextMenuRequested, this, &MainWindow::onVmtContextMenu);
+
+		m_pCentralStack = new QStackedWidget(this);
+		m_pCentralStack->addWidget(m_pImageScrollArea);
+		m_pCentralStack->addWidget(m_pVmtEdit);
+
+		m_pSplitter = new QSplitter(Qt::Horizontal, this);
+		m_pSplitter->addWidget(m_pLeftTabs);
+		m_pSplitter->addWidget(m_pCentralStack);
+		m_pSplitter->addWidget(m_pRightTabs);
+		m_pSplitter->setStretchFactor(0, 0);
+		m_pSplitter->setStretchFactor(1, 1);
+		m_pSplitter->setStretchFactor(2, 0);
+
+		setCentralWidget(m_pSplitter);
+	}
+
+	QWidget *MainWindow::createImageTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pImage = new QGroupBox(tr("Image:"), pTab);
+		QFormLayout *pForm = new QFormLayout(pImage);
+
+		struct { QSpinBox **ppSpin; const char *pLabel; } Spins[] =
+		{
+			{ &m_pFrame, "Frame:" },
+			{ &m_pFace, "Face:" },
+			{ &m_pSlice, "Slice:" },
+			{ &m_pMipmap, "Mipmap:" },
+		};
+		for(auto &Spin : Spins)
+		{
+			QSpinBox *pSpin = new QSpinBox(pImage);
+			pSpin->setRange(0, 0);
+			connect(pSpin, &QSpinBox::valueChanged, this, &MainWindow::onImageParameterChanged);
+			pForm->addRow(tr(Spin.pLabel), pSpin);
+			*Spin.ppSpin = pSpin;
+		}
+
+		m_pHdrExposure = new QSlider(Qt::Horizontal, pImage);
+		connect(m_pHdrExposure, &QSlider::valueChanged, this, &MainWindow::onImageParameterChanged);
+		pForm->addRow(tr("Exposure:"), m_pHdrExposure);
+
+		m_pAnimateFps = new QSpinBox(pImage);
+		m_pAnimateFps->setRange(1, 100);
+		m_pAnimateFps->setValue(24);
+		connect(m_pAnimateFps, &QSpinBox::valueChanged, this, &MainWindow::onAnimateFpsChanged);
+		pForm->addRow(tr("Framerate:"), m_pAnimateFps);
+
+		m_pAnimateButton = new QPushButton(tr("&Play"), pImage);
+		connect(m_pAnimateButton, &QPushButton::clicked, this, &MainWindow::onAnimateClicked);
+		pForm->addRow(m_pAnimateButton);
+
+		QGroupBox *pFlags = new QGroupBox(tr("Flags:"), pTab);
+		QVBoxLayout *pFlagsLayout = new QVBoxLayout(pFlags);
+		m_pFlags = new QListWidget(pFlags);
+		connect(m_pFlags, &QListWidget::itemChanged, this, &MainWindow::onFlagItemChanged);
+		pFlagsLayout->addWidget(m_pFlags);
+
+		pLayout->addWidget(pImage);
+		pLayout->addWidget(pFlags, 1);
+
+		return pTab;
+	}
+
+	QWidget *MainWindow::createInfoTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pFileInfo = new QGroupBox(tr("File Info:"), pTab);
+		QFormLayout *pFileForm = new QFormLayout(pFileInfo);
+		m_pFileVersion = addInfoRow(pFileForm, tr("Version:"));
+		m_pFileSize = addInfoRow(pFileForm, tr("Size:"));
+		m_pFileCompression = addInfoRow(pFileForm, tr("Compression:"));
+
+		QGroupBox *pImageInfo = new QGroupBox(tr("Image Info:"), pTab);
+		QFormLayout *pImageForm = new QFormLayout(pImageInfo);
+		m_pImageWidth = addInfoRow(pImageForm, tr("Width:"));
+		m_pImageHeight = addInfoRow(pImageForm, tr("Height:"));
+		m_pImageFormat = addInfoRow(pImageForm, tr("Format:"));
+		m_pImageFrames = addInfoRow(pImageForm, tr("Frames:"));
+
+		m_pImageStartFrame = new QSpinBox(pImageInfo);
+		m_pImageStartFrame->setRange(0, 0);
+		pImageForm->addRow(tr("Start:"), m_pImageStartFrame);
+
+		m_pImageFaces = addInfoRow(pImageForm, tr("Faces:"));
+		m_pImageSlices = addInfoRow(pImageForm, tr("Slices:"));
+		m_pImageMipmaps = addInfoRow(pImageForm, tr("Mipmaps:"));
+
+		m_pImageBumpmapScale = new QDoubleSpinBox(pImageInfo);
+		m_pImageBumpmapScale->setDecimals(2);
+		m_pImageBumpmapScale->setSingleStep(0.01);
+		m_pImageBumpmapScale->setRange(-100.0, 100.0);
+		pImageForm->addRow(tr("Bumpmap:"), m_pImageBumpmapScale);
+
+		m_pImageReflectivity = addInfoRow(pImageForm, tr("Reflectivity:"));
+
+		QGroupBox *pThumbnailInfo = new QGroupBox(tr("Thumbnail Info:"), pTab);
+		QFormLayout *pThumbnailForm = new QFormLayout(pThumbnailInfo);
+		m_pThumbnailWidth = addInfoRow(pThumbnailForm, tr("Width:"));
+		m_pThumbnailHeight = addInfoRow(pThumbnailForm, tr("Height:"));
+		m_pThumbnailFormat = addInfoRow(pThumbnailForm, tr("Format:"));
+
+		pLayout->addWidget(pImageInfo);
+		pLayout->addWidget(pThumbnailInfo);
+		pLayout->addWidget(pFileInfo);
+		pLayout->addStretch();
+
+		return pTab;
+	}
+
+	QWidget *MainWindow::createResourcesTab()
+	{
+		QWidget *pTab = new QWidget(this);
+		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+
+		QGroupBox *pResourceInfo = new QGroupBox(tr("Resource Info:"), pTab);
+		QFormLayout *pInfoForm = new QFormLayout(pResourceInfo);
+		m_pResourceCount = addInfoRow(pInfoForm, tr("Count:"));
+
+		QGroupBox *pResources = new QGroupBox(tr("Resources:"), pTab);
+		QVBoxLayout *pResourcesLayout = new QVBoxLayout(pResources);
+		m_pResources = new QTreeWidget(pResources);
+		m_pResources->setHeaderHidden(true);
+		m_pResources->setColumnCount(1);
+		pResourcesLayout->addWidget(m_pResources);
+
+		pLayout->addWidget(pResourceInfo);
+		pLayout->addWidget(pResources, 1);
+
+		return pTab;
+	}
+
+	//
+	// Sidebar visibility.
+	//
+
+	void MainWindow::updateSidebarsVisible()
+	{
+		m_pLeftTabs->setVisible(m_pLeftTabs->count() != 0);
+		m_pRightTabs->setVisible(m_pRightTabs->count() != 0);
+	}
+
+	//
+	// VTF rendering.
+	//
+
+	void MainWindow::updateVtfFile()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		// prevent re-entry
+		if(m_bUpdatingVtfFile)
+		{
+			return;
+		}
+		m_bUpdatingVtfFile = true;
+
+		const vlUInt uiFrame = static_cast<vlUInt>(m_pFrame->value());
+		const vlUInt uiFace = static_cast<vlUInt>(m_pFace->value());
+		vlUInt uiSlice = static_cast<vlUInt>(m_pSlice->value());
+		const vlUInt uiMipmap = static_cast<vlUInt>(m_pMipmap->value());
+		const vlSingle sHDRExposure = static_cast<vlSingle>(m_pHdrExposure->value()) / 100.0f;
+
+		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
+			m_pVTFFile->GetDepth(), uiMipmap, uiWidth, uiHeight, uiDepth);
+
+		if(uiSlice >= uiDepth)
+		{
+			uiSlice = uiDepth - 1;
+		}
+
+		m_pSlice->setValue(static_cast<int>(uiSlice));
+		m_pSlice->setMaximum(static_cast<int>(uiDepth));
+
+		float fMipmapScale = 1.0f;
+		if(m_pMipmapFullSizeAction->isChecked())
+		{
+			fMipmapScale = static_cast<float>(1 << uiMipmap);
+		}
+
+		float fScale = m_fImageScale * fMipmapScale;
+
+		vlUInt uiScaledWidth = 0, uiScaledHeight = 0;
+
+		for(;;)
+		{
+			uiScaledWidth = static_cast<vlUInt>(static_cast<float>(uiWidth) * fScale);
+			uiScaledHeight = static_cast<vlUInt>(static_cast<float>(uiHeight) * fScale);
+
+			if(uiScaledWidth <= 4096 
+				&& uiScaledHeight <= 4096)
+			{
+				break;
+			}
+
+			m_fImageScale *= 0.5f;
+			fScale = m_fImageScale * fMipmapScale;
+		}
+
+		if(uiScaledWidth < 1)
+		{
+			uiScaledWidth = 1;
+		}
+		if(uiScaledHeight < 1)
+		{
+			uiScaledHeight = 1;
+		}
+
+		// Decode image data.
+		const vlUInt uiBufferSize = m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888);
+		std::vector<vlByte> Buffer(uiBufferSize);
+
+		vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
+		m_pVTFFile->ConvertToRGBA8888(m_pVTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap),
+			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+
+		m_fEffectiveImageScale = fScale;
+
+		const float fInverseImageScale = 1.0f / fScale;
+
+		QImage Image(static_cast<int>(uiScaledWidth), static_cast<int>(uiScaledHeight), QImage::Format_RGB888);
+
+		// Pick which source channel feeds each output channel.
+		vlUInt uiR = 0, uiG = 1, uiB = 2;
+		if(m_pChannelRAction->isChecked())
+		{
+			uiR = uiG = uiB = 0;
+		}
+		else if(m_pChannelGAction->isChecked())
+		{
+			uiR = uiG = uiB = 1;
+		}
+		else if(m_pChannelBAction->isChecked())
+		{
+			uiR = uiG = uiB = 2;
+		}
+		else if(m_pChannelAAction->isChecked())
+		{
+			uiR = uiG = uiB = 3;
+		}
+
+		const bool bMask = m_pMaskAction->isChecked();
+
+		for(vlUInt j = 0; j < uiScaledHeight; j++)
+		{
+			uchar *pScanline = Image.scanLine(static_cast<int>(j));
+
+			for(vlUInt i = 0; i < uiScaledWidth; i++)
+			{
+				const vlUInt uiSrcIndex = (static_cast<vlUInt>(static_cast<float>(i) * fInverseImageScale)
+					+ static_cast<vlUInt>(static_cast<float>(j) * fInverseImageScale) * uiWidth) * 4;
+
+				uchar *pPixel = pScanline + i * 3;
+
+				if(bMask)
+				{
+					// Alpha blend against a checker board.
+					const float fAlpha = static_cast<float>(Buffer[uiSrcIndex + 3]) / 255.0f;
+					const float fOneMinusAlpha = 1.0f - fAlpha;
+					const float fBlend = (i / 8 % 2 == j / 8 % 2) ? 255.0f : 191.25f;
+
+					pPixel[0] = static_cast<uchar>(fAlpha * static_cast<float>(Buffer[uiSrcIndex + uiR]) + fOneMinusAlpha * fBlend);
+					pPixel[1] = static_cast<uchar>(fAlpha * static_cast<float>(Buffer[uiSrcIndex + uiG]) + fOneMinusAlpha * fBlend);
+					pPixel[2] = static_cast<uchar>(fAlpha * static_cast<float>(Buffer[uiSrcIndex + uiB]) + fOneMinusAlpha * fBlend);
+				}
+				else
+				{
+					pPixel[0] = Buffer[uiSrcIndex + uiR];
+					pPixel[1] = Buffer[uiSrcIndex + uiG];
+					pPixel[2] = Buffer[uiSrcIndex + uiB];
+				}
+			}
+		}
+
+		m_pImageView->setTiled(m_pTileAction->isChecked());
+		m_pImageView->setImage(Image);
+
+		m_pStatusInfo1->setText(QStringLiteral("%1%").arg(m_fImageScale * 100.0f));
+
+		m_bUpdatingVtfFile = false;
+	}
+
+	void MainWindow::setVtfFile(VTFLib::CVTFFile *pVTFFile)
+	{
+		m_pVTFFile = pVTFFile;
+
+		m_pFrame->setValue(0);
+		m_pFace->setValue(0);
+		m_pSlice->setValue(0);
+		m_pMipmap->setValue(0);
+
+		m_pFrame->setMaximum(static_cast<int>(pVTFFile->GetFrameCount()) - 1);
+		m_pFace->setMaximum(static_cast<int>(pVTFFile->GetFaceCount()) - 1);
+		m_pSlice->setMaximum(static_cast<int>(pVTFFile->GetDepth()) - 1);
+		m_pMipmap->setMaximum(static_cast<int>(pVTFFile->GetMipmapCount()) - 1);
+
+		if(pVTFFile->GetStartFrame() < pVTFFile->GetFrameCount())
+		{
+			m_pFrame->setValue(static_cast<int>(pVTFFile->GetStartFrame()));
+		}
+
+		if(pVTFFile->GetFrameCount() > 1)
+		{
+			m_pAnimateButton->setEnabled(true);
+			m_pAnimateFps->setEnabled(true);
+		}
+
+		if(pVTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F || pVTFFile->GetFormat() == IMAGE_FORMAT_BC6H)
+		{
+			m_pHdrExposure->setEnabled(true);
+		}
+
+		const vlUInt uiFlags = pVTFFile->GetFlags();
+
+		m_bUpdatingFlags = true;
+		m_pFlags->clear();
+		for(int i = 0; i < FlagCount; i++)
+		{
+			QListWidgetItem *pItem = new QListWidgetItem(QString::fromLatin1(FlagNames[i]), m_pFlags);
+			pItem->setFlags(pItem->flags() | Qt::ItemIsUserCheckable);
+			pItem->setCheckState((uiFlags & (1u << i)) != 0 ? Qt::Checked : Qt::Unchecked);
+		}
+		m_bUpdatingFlags = false;
+
+		m_pFileVersion->setText(QStringLiteral("%1.%2")
+			.arg(pVTFFile->GetMajorVersion()).arg(pVTFFile->GetMinorVersion()));
+		m_pFileSize->setText(tr("%1 KB").arg(
+			QLocale().toString(static_cast<double>(pVTFFile->GetSize()) / 1024.0, 'f', 3)));
+
+		const vlShort sAuxCompressionLevel = pVTFFile->GetAuxCompressionLevel();
+		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
+		{
+			m_pFileCompression->setText(tr("None"));
+		}
+		else
+		{
+			const QString sMethod = pVTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD
+				? tr("Zstandard") : tr("Deflate");
+			m_pFileCompression->setText(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
+				? sMethod
+				: QStringLiteral("%1 (%2)").arg(sMethod).arg(sAuxCompressionLevel));
+		}
+
+		m_pImageWidth->setText(QString::number(pVTFFile->GetWidth()));
+		m_pImageHeight->setText(QString::number(pVTFFile->GetHeight()));
+		m_pImageFormat->setText(imageFormatString(pVTFFile->GetFormat()));
+		m_pImageFrames->setText(QString::number(pVTFFile->GetFrameCount()));
+
+		m_pImageStartFrame->setMaximum(static_cast<int>(pVTFFile->GetFrameCount()) - 1);
+		m_pImageStartFrame->setValue(pVTFFile->GetStartFrame() == 0xffff
+			? 0 : static_cast<int>(pVTFFile->GetStartFrame()));
+
+		m_pImageFaces->setText(QString::number(pVTFFile->GetFaceCount()));
+		m_pImageSlices->setText(QString::number(pVTFFile->GetDepth()));
+		m_pImageMipmaps->setText(QString::number(pVTFFile->GetMipmapCount()));
+		m_pImageBumpmapScale->setValue(pVTFFile->GetBumpmapScale());
+
+		vlSingle sX = 0.0f, sY = 0.0f, sZ = 0.0f;
+		pVTFFile->GetReflectivity(sX, sY, sZ);
+		m_pImageReflectivity->setText(QStringLiteral("%1, %2, %3")
+			.arg(sX, 0, 'f', 3).arg(sY, 0, 'f', 3).arg(sZ, 0, 'f', 3));
+
+		m_pThumbnailWidth->setText(QString::number(pVTFFile->GetThumbnailWidth()));
+		m_pThumbnailHeight->setText(QString::number(pVTFFile->GetThumbnailHeight()));
+		m_pThumbnailFormat->setText(imageFormatString(pVTFFile->GetThumbnailFormat()));
+
+		m_pResourceCount->setText(QString::number(pVTFFile->GetResourceCount()));
+
+		m_pResources->clear();
+		for(vlUInt i = 0; i < pVTFFile->GetResourceCount(); i++)
+		{
+			const vlUInt uiResource = pVTFFile->GetResourceType(i);
+
+			QString sName;
+			switch(uiResource)
+			{
+			case VTF_LEGACY_RSRC_LOW_RES_IMAGE:		sName = tr("Thumbnail Image"); break;
+			case VTF_LEGACY_RSRC_IMAGE:				sName = tr("Image"); break;
+			case VTF_RSRC_SHEET:					sName = tr("Sheet"); break;
+			case VTF_RSRC_CRC:						sName = tr("Cyclic Redundancy Check"); break;
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:		sName = tr("LOD Settings"); break;
+			case VTF_RSRC_TEXTURE_SETTINGS_EX:		sName = tr("Extended Texture Settings"); break;
+			case VTF_RSRC_KEY_VALUE_DATA:			sName = tr("Key/Value Data"); break;
+			default:								sName = tr("Unknown"); break;
+			}
+
+			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
+
+			vlUInt uiSize = 0;
+			vlVoid *lpData = pVTFFile->GetResourceData(uiResource, uiSize);
+
+			switch(uiResource)
+			{
+			case VTF_RSRC_CRC:
+				if(lpData != nullptr)
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				break;
+
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:
+				if(lpData && uiSize == sizeof(SVTFTextureLODControlResource))
+				{
+					const SVTFTextureLODControlResource *pLODControl =
+						static_cast<SVTFTextureLODControlResource *>(lpData);
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
+					break;
+				}
+				[[fallthrough]];
+
+			case VTF_RSRC_KEY_VALUE_DATA:
+				if(lpData && uiSize)
+				{
+					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+
+					if(pVMTFile->Load(lpData, uiSize))
+					{
+						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
+						setResourceInformation(pItem, pVMTFile->GetRoot());
+					}
+
+					delete pVMTFile;
+				}
+				[[fallthrough]];
+
+			default:
+				if(lpData && uiSize == sizeof(vlUInt))
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				else
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
+				}
+				break;
+			}
+
+			pItem->setExpanded(true);
+		}
+
+		m_fImageScale = 1.0f;
+		updateVtfFile();
+
+		// Reveal the tabs the texture populated.
+		if(m_pLeftTabs->indexOf(m_pImageTab) == -1)
+		{
+			m_pLeftTabs->addTab(m_pImageTab, tr("Image"));
+		}
+		if(m_pRightTabs->indexOf(m_pInfoTab) == -1)
+		{
+			m_pRightTabs->addTab(m_pInfoTab, tr("Info"));
+		}
+		if(m_pRightTabs->indexOf(m_pResourcesTab) == -1)
+		{
+			m_pRightTabs->addTab(m_pResourcesTab, tr("Resources"));
+		}
+		updateSidebarsVisible();
+
+		m_pLeftTabs->setCurrentWidget(m_pImageTab);
+		m_pRightTabs->setCurrentWidget(m_pInfoTab);
+
+		m_pCentralStack->setCurrentWidget(m_pImageScrollArea);
+	}
+
+	void MainWindow::setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode)
+	{
+		for(vlUInt i = 0; i < pVMTNode->GetNodeCount(); i++)
+		{
+			VTFLib::Nodes::CVMTNode *pVMTChild = pVMTNode->GetNode(i);
+			const QString sName = QString::fromLatin1(pVMTChild->GetName());
+
+			switch(pVMTChild->GetType())
+			{
+			case NODE_TYPE_GROUP:
+			{
+				QTreeWidgetItem *pChild = new QTreeWidgetItem(pItem, QStringList(sName));
+				setResourceInformation(pChild, static_cast<VTFLib::Nodes::CVMTGroupNode *>(pVMTChild));
+				break;
+			}
+			case NODE_TYPE_STRING:
+			{
+				QTreeWidgetItem *pChild = new QTreeWidgetItem(pItem, QStringList(sName));
+				new QTreeWidgetItem(pChild, QStringList(QString::fromLatin1(
+					static_cast<VTFLib::Nodes::CVMTStringNode *>(pVMTChild)->GetValue())));
+				break;
+			}
+			case NODE_TYPE_INTEGER:
+			{
+				QTreeWidgetItem *pChild = new QTreeWidgetItem(pItem, QStringList(sName));
+				new QTreeWidgetItem(pChild, QStringList(QString::number(
+					static_cast<VTFLib::Nodes::CVMTIntegerNode *>(pVMTChild)->GetValue())));
+				break;
+			}
+			case NODE_TYPE_SINGLE:
+			{
+				QTreeWidgetItem *pChild = new QTreeWidgetItem(pItem, QStringList(sName));
+				new QTreeWidgetItem(pChild, QStringList(QString::number(
+					static_cast<VTFLib::Nodes::CVMTSingleNode *>(pVMTChild)->GetValue())));
+				break;
+			}
+			default:
+				break;
+			}
+		}
+	}
+
+	bool MainWindow::getVtfFile()
+	{
+		m_pVTFFile->SetFlags(0);
+		for(int i = 0; i < m_pFlags->count(); i++)
+		{
+			m_pVTFFile->SetFlag(static_cast<VTFImageFlag>(1u << i),
+				m_pFlags->item(i)->checkState() == Qt::Checked);
+		}
+
+		m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+		m_pVTFFile->SetBumpmapScale(static_cast<vlSingle>(m_pImageBumpmapScale->value()));
+
+		return true;
+	}
+
+	//
+	// VMT.
+	//
+
+	void MainWindow::setVmtFile(VTFLib::CVMTFile *pVMTFile)
+	{
+		m_pVMTFile = pVMTFile;
+
+		validateVmtFile();
+		m_pVmtHighlighter->rehighlight();
+		updateVmtErrorHighlight();
+
+		m_pCentralStack->setCurrentWidget(m_pVmtEdit);
+	}
+
+	bool MainWindow::validateVmtFile()
+	{
+		if(m_pVMTFile == nullptr)
+		{
+			return true;
+		}
+
+		const QByteArray Text = m_pVmtEdit->toPlainText().toLocal8Bit();
+		const vlBool bResult = m_pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()));
+
+		if(bResult)
+		{
+			m_iVmtErrorLine = 0;
+			m_pStatusInfo1->clear();
+		}
+		else
+		{
+			m_iVmtErrorLine = static_cast<int>(m_pVMTFile->GetParseErrorLine());
+			m_pStatusInfo1->setText(lastErrorString());
+		}
+
+		return bResult != vlFalse;
+	}
+
+	bool MainWindow::confirmVmtFile()
+	{
+		if(!validateVmtFile())
+		{
+			return QMessageBox::warning(this, QApplication::applicationName(),
+				tr("This VMT has a syntax error:\n\n%1\n\nSave it anyway?").arg(lastErrorString()),
+				QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+		}
+
+		return true;
+	}
+
+	void MainWindow::updateVmtErrorHighlight()
+	{
+		QList<QTextEdit::ExtraSelection> Selections;
+
+		if(m_iVmtErrorLine > 0 && m_iVmtErrorLine <= m_pVmtEdit->document()->blockCount())
+		{
+			QTextEdit::ExtraSelection Selection;
+			Selection.format.setBackground(VmtColors::ErrorLine);
+			Selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+			Selection.cursor = QTextCursor(m_pVmtEdit->document()->findBlockByNumber(m_iVmtErrorLine - 1));
+			Selection.cursor.clearSelection();
+			Selections.append(Selection);
+		}
+
+		m_pVmtEdit->setExtraSelections(Selections);
+	}
+
+	//
+	// File operations.
+	//
+
+	void MainWindow::newFile()
+	{
+		closeFile();
+
+		VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+
+		m_pVmtEdit->setPlainText(QStringLiteral("\"LightmappedGeneric\"\n{\n}"));
+
+		// Select the shader name so it can be typed over straight away.
+		QTextCursor Cursor = m_pVmtEdit->textCursor();
+		Cursor.setPosition(1);
+		Cursor.setPosition(19, QTextCursor::KeepAnchor);
+		m_pVmtEdit->setTextCursor(Cursor);
+
+		setVmtFile(pVMTFile);
+
+		setFileName(QString());
+
+		m_pSaveAction->setEnabled(true);
+		m_pSaveAsAction->setEnabled(true);
+
+		m_pVmtEdit->setFocus();
+	}
+
+	void MainWindow::open(const QString &sFileName, bool bTemp)
+	{
+		closeFile();
+
+		const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
+
+		if(sFileName.endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive))
+		{
+			VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
+
+			if(pVTFFile->Load(Path.constData()))
+			{
+				setVtfFile(pVTFFile);
+
+				setFileName(bTemp ? QString() : sFileName);
+				if(!bTemp)
+				{
+					addRecentFile(sFileName);
+				}
+
+				m_pSaveAction->setEnabled(true);
+				m_pSaveAsAction->setEnabled(true);
+				m_pExportAction->setEnabled(true);
+				m_pExportAllAction->setEnabled(true);
+				m_pCopyAction->setEnabled(true);
+			}
+			else
+			{
+				delete pVTFFile;
+
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Error loading VTF texture:\n\n%1").arg(lastErrorString()));
+			}
+		}
+		else if(sFileName.endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
+		{
+			VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+
+			pVMTFile->Load(Path.constData());
+
+			QFile File(sFileName);
+			if(!File.open(QIODevice::ReadOnly | QIODevice::Text))
+			{
+				delete pVMTFile;
+
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Error loading VMT material:\n\n%1").arg(File.errorString()));
+				return;
+			}
+
+			m_pVmtEdit->setPlainText(QString::fromLocal8Bit(File.readAll()));
+			File.close();
+
+			setVmtFile(pVMTFile);
+
+			setFileName(bTemp ? QString() : sFileName);
+			if(!bTemp)
+			{
+				addRecentFile(sFileName);
+			}
+
+			m_pSaveAction->setEnabled(true);
+			m_pSaveAsAction->setEnabled(true);
+
+			m_pVmtEdit->setFocus();
+		}
+	}
+
+	void MainWindow::save(const QString &sFileName)
+	{
+		if(sFileName.isEmpty())
+		{
+			return;
+		}
+
+		if(m_pVTFFile != nullptr)
+		{
+			if(!getVtfFile())
+			{
+				return;
+			}
+
+			const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
+
+			if(m_pVTFFile->Save(Path.constData()))
+			{
+				setFileName(sFileName);
+				addRecentFile(sFileName);
+
+				if(m_pAutoCreateVmtFileAction->isChecked())
+				{
+					VmtFileUtility::CreateDefaultMaterial(sFileName, QStringLiteral("LightmappedGeneric"));
+				}
+			}
+			else
+			{
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Error saving VTF texture:\n\n%1").arg(lastErrorString()));
+			}
+		}
+		else if(m_pVMTFile != nullptr)
+		{
+			if(!confirmVmtFile())
+			{
+				return;
+			}
+
+			QFile File(sFileName);
+			if(!File.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+			{
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Error saving VMT material:\n\n%1").arg(File.errorString()));
+				return;
+			}
+
+			File.write(m_pVmtEdit->toPlainText().toLocal8Bit());
+			File.close();
+
+			setFileName(sFileName);
+		}
+	}
+
+	void MainWindow::saveAs()
+	{
+		QString sFileName;
+
+		if(m_pVTFFile != nullptr)
+		{
+			sFileName = QFileDialog::getSaveFileName(this, tr("Save VTF File"),
+				m_sFileName, tr("VTF Files (*.vtf)"));
+		}
+		else if(m_pVMTFile != nullptr)
+		{
+			sFileName = QFileDialog::getSaveFileName(this, tr("Save VMT File"),
+				m_sFileName, tr("VMT Files (*.vmt)"));
+		}
+
+		if(!sFileName.isEmpty())
+		{
+			save(sFileName);
+		}
+	}
+
+	void MainWindow::import(const QStringList &sFileNames)
+	{
+		if(m_pOptionsDialog == nullptr)
+		{
+			m_pOptionsDialog = new VtfOptionsDialog(&m_Options, this);
+		}
+
+		if(m_pOptionsDialog->exec() != QDialog::Accepted)
+		{
+			return;
+		}
+
+		closeFile();
+
+		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
+
+		vlUInt uiWidth = 0, uiHeight = 0;
+		bool bHasAlpha = false;
+
+		std::vector<vlByte *> vImageData;
+
+		for(const QString &sFileName : sFileNames)
+		{
+			if(pVTFFile == nullptr)
+			{
+				break;
+			}
+
+			const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
+
+			if(!ilLoadImage(Path.constData()))
+			{
+				delete pVTFFile;
+				pVTFFile = nullptr;
+
+				QMessageBox::critical(this, QApplication::applicationName(), tr("Error loading image."));
+				break;
+			}
+
+			const ILuint uiImage = static_cast<ILuint>(ilGetInteger(IL_CUR_IMAGE));
+			const vlUInt uiImages = static_cast<vlUInt>(ilGetInteger(IL_NUM_IMAGES)) + 1;
+
+			// Copy every animation frame the file contains.
+			for(vlUInt j = 0; j < uiImages; j++)
+			{
+				ilBindImage(uiImage);
+				ilActiveImage(static_cast<ILuint>(j));
+
+				if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
+				{
+					delete pVTFFile;
+					pVTFFile = nullptr;
+
+					QMessageBox::critical(this, QApplication::applicationName(), tr("Error converting image."));
+					break;
+				}
+
+				if(vImageData.empty())
+				{
+					uiWidth = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH));
+					uiHeight = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT));
+				}
+				else if(uiWidth != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH))
+					|| uiHeight != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT)))
+				{
+					delete pVTFFile;
+					pVTFFile = nullptr;
+
+					QMessageBox::critical(this, QApplication::applicationName(),
+						tr("Error loading image:\n\nAll frames and faces must be the same size."));
+					break;
+				}
+
+				vlByte *lpFrameData = new vlByte[uiWidth * uiHeight * 4];
+				memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
+				vImageData.push_back(lpFrameData);
+
+				bHasAlpha = bHasAlpha || (!m_Options.StripAlpha
+					&& VtfFileUtility::HasAlphaData(lpFrameData, uiWidth, uiHeight));
+			}
+
+			// Leave the base image bound for the next file.
+			ilBindImage(uiImage);
+		}
+
+		if(pVTFFile != nullptr)
+		{
+			const vlUInt uiImages = static_cast<vlUInt>(vImageData.size());
+			vlByte **lpImageData = uiImages != 0 ? &vImageData[0] : nullptr;
+
+			const vlUInt uiFrames = m_Options.TextureType == VtfTextureType::Animated ? uiImages : 1;
+			const vlUInt uiFaces = m_Options.TextureType == VtfTextureType::EnvironmentMap ? uiImages : 1;
+			const vlUInt uiSlices = m_Options.TextureType == VtfTextureType::Volume ? uiImages : 1;
+
+			SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
+			VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
+
+			if(pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse
+				&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
+			{
+				setVtfFile(pVTFFile);
+
+				setFileName(QString());
+
+				m_pSaveAction->setEnabled(true);
+				m_pSaveAsAction->setEnabled(true);
+				m_pExportAction->setEnabled(true);
+				m_pExportAllAction->setEnabled(true);
+				m_pCopyAction->setEnabled(true);
+			}
+			else
+			{
+				delete pVTFFile;
+
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
+			}
+		}
+
+		for(vlByte *lpFrameData : vImageData)
+		{
+			delete[] lpFrameData;
+		}
+	}
+
+	void MainWindow::exportImage(const QString &sFileName)
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
+			m_pVTFFile->GetDepth(), static_cast<vlUInt>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
+
+		std::vector<vlByte> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
+
+		m_pVTFFile->ConvertToRGBA8888(
+			m_pVTFFile->GetData(static_cast<vlUInt>(m_pFrame->value()), static_cast<vlUInt>(m_pFace->value()),
+				static_cast<vlUInt>(m_pSlice->value()), static_cast<vlUInt>(m_pMipmap->value())),
+			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+
+		// DevIL likes image data upside down...
+		m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
+
+		const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
+
+		if(!(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, ImageData.data())
+			&& ilSaveImage(Path.constData())))
+		{
+			QMessageBox::critical(this, QApplication::applicationName(), tr("Error saving image."));
+		}
+	}
+
+	void MainWindow::exportAllImages(const QString &sFileName)
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		const QFileInfo Info(sFileName);
+		const QString sSuffix = Info.completeSuffix().isEmpty()
+			? QString() : QLatin1Char('.') + Info.completeSuffix();
+		const QString sStem = Info.completeSuffix().isEmpty()
+			? sFileName : sFileName.left(sFileName.length() - sSuffix.length());
+
+		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
+			m_pVTFFile->GetDepth(), static_cast<vlUInt>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
+
+		std::vector<vlByte> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
+
+		for(vlUInt i = 0; i < m_pVTFFile->GetFrameCount(); i++)
+		{
+			for(vlUInt j = 0; j < m_pVTFFile->GetFaceCount(); j++)
+			{
+				for(vlUInt k = 0; k < m_pVTFFile->GetDepth(); k++)
+				{
+					m_pVTFFile->ConvertToRGBA8888(
+						m_pVTFFile->GetData(i, j, k, static_cast<vlUInt>(m_pMipmap->value())),
+						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+
+					m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
+
+					const QString sFramePath = QStringLiteral("%1_%2_%3_%4%5")
+						.arg(sStem)
+						.arg(i, 2, 10, QLatin1Char('0'))
+						.arg(j, 2, 10, QLatin1Char('0'))
+						.arg(k, 2, 10, QLatin1Char('0'))
+						.arg(sSuffix);
+
+					const QByteArray Path = QDir::toNativeSeparators(sFramePath).toLocal8Bit();
+
+					if(!(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, ImageData.data())
+						&& ilSaveImage(Path.constData())))
+					{
+						QMessageBox::critical(this, QApplication::applicationName(), tr("Error saving image."));
+					}
+				}
+			}
+		}
+	}
+
+	void MainWindow::closeFile()
+	{
+		m_pSaveAction->setEnabled(false);
+		m_pSaveAsAction->setEnabled(false);
+		m_pExportAction->setEnabled(false);
+		m_pExportAllAction->setEnabled(false);
+		m_pCopyAction->setEnabled(false);
+
+		m_pHdrExposure->setEnabled(false);
+
+		m_pAnimateButton->setText(tr("&Play"));
+		m_pAnimateButton->setEnabled(false);
+		m_pAnimateFps->setEnabled(false);
+		m_pAnimateTimer->stop();
+
+		// "Hide" the tab pages
+		for(QWidget *pTab : { m_pResourcesTab, m_pInfoTab })
+		{
+			const int iIndex = m_pRightTabs->indexOf(pTab);
+			if(iIndex != -1)
+			{
+				m_pRightTabs->removeTab(iIndex);
+				pTab->setParent(this);
+			}
+		}
+		const int iImageIndex = m_pLeftTabs->indexOf(m_pImageTab);
+		if(iImageIndex != -1)
+		{
+			m_pLeftTabs->removeTab(iImageIndex);
+			m_pImageTab->setParent(this);
+		}
+		updateSidebarsVisible();
+
+		m_pImageView->setImage(QImage());
+
+		m_iVmtErrorLine = 0;
+		{
+			const QSignalBlocker Blocker(m_pVmtEdit);
+			m_pVmtEdit->clear();
+		}
+		updateVmtErrorHighlight();
+
+		delete m_pVMTFile;
+		m_pVMTFile = nullptr;
+
+		delete m_pVTFFile;
+		m_pVTFFile = nullptr;
+
+		m_pCentralStack->setCurrentWidget(m_pImageScrollArea);
+
+		setFileName(QString());
+		m_pStatusInfo1->clear();
+		m_pStatusInfo2->clear();
+	}
+
+	void MainWindow::setFileName(const QString &sFileName)
+	{
+		m_sFileName = sFileName;
+
+		m_pStatusFileName->setText(sFileName);
+		setWindowTitle(sFileName.isEmpty()
+			? QApplication::applicationName()
+			: QStringLiteral("%1 - %2").arg(QFileInfo(sFileName).fileName(), QApplication::applicationName()));
+	}
+
+	//
+	// Menu handlers.
+	//
+
+	void MainWindow::onNew()
+	{
+		newFile();
+	}
+
+	void MainWindow::onOpen()
+	{
+		const QString sFileName = QFileDialog::getOpenFileName(this, tr("Open"), QString(),
+			tr("Supported Files (*.vmt *.vtf);;VMT Files (*.vmt);;VTF Files (*.vtf);;All Files (*.*)"));
+
+		if(!sFileName.isEmpty())
+		{
+			open(sFileName, false);
+		}
+	}
+
+	void MainWindow::onSave()
+	{
+		if(!m_sFileName.isEmpty())
+		{
+			save(m_sFileName);
+		}
+		else
+		{
+			saveAs();
+		}
+	}
+
+	void MainWindow::onSaveAs()
+	{
+		saveAs();
+	}
+
+	void MainWindow::onImport()
+	{
+		const QStringList sFileNames = QFileDialog::getOpenFileNames(this, tr("Import"), QString(),
+			tr("All Files (*.*)"));
+
+		if(!sFileNames.isEmpty())
+		{
+			import(sFileNames);
+		}
+	}
+
+	void MainWindow::onExport()
+	{
+		const QString sFileName = QFileDialog::getSaveFileName(this, tr("Export"),
+			QFileInfo(m_sFileName).completeBaseName(),
+			tr("BMP Files (*.bmp);;JPEG Files (*.jpg *.jpeg);;PNG Files (*.png);;TGA Files (*.tga)"));
+
+		if(!sFileName.isEmpty())
+		{
+			exportImage(sFileName);
+		}
+	}
+
+	void MainWindow::onExportAll()
+	{
+		const QString sFileName = QFileDialog::getSaveFileName(this, tr("Export All"),
+			QFileInfo(m_sFileName).completeBaseName(),
+			tr("BMP Files (*.bmp);;JPEG Files (*.jpg *.jpeg);;PNG Files (*.png);;TGA Files (*.tga)"));
+
+		if(!sFileName.isEmpty())
+		{
+			exportAllImages(sFileName);
+		}
+	}
+
+	void MainWindow::onCreateVmtFile()
+	{
+		if(m_pVmtCreateDialog == nullptr)
+		{
+			m_pVmtCreateDialog = new VmtCreateDialog(this);
+		}
+
+		if(m_pVTFFile != nullptr && m_sFileName.endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive))
+		{
+			m_pVmtCreateDialog->setFromTexture(m_sFileName, *m_pVTFFile);
+		}
+
+		m_pVmtCreateDialog->exec();
+	}
+
+	void MainWindow::onConvertFolder()
+	{
+		if(m_pBatchConvertDialog == nullptr)
+		{
+			m_pBatchConvertDialog = new BatchConvertDialog(&m_Options, &m_BatchConvertSettings, this);
+		}
+
+		m_pBatchConvertDialog->exec();
+	}
+
+	void MainWindow::onRecentFile()
+	{
+		QAction *pAction = qobject_cast<QAction *>(sender());
+		if(pAction != nullptr)
+		{
+			open(pAction->data().toString(), false);
+		}
+	}
+
+	void MainWindow::onCopy()
+	{
+		if(!m_pImageView->image().isNull())
+		{
+			QApplication::clipboard()->setImage(m_pImageView->image());
+		}
+	}
+
+	void MainWindow::onPaste()
+	{
+		const QImage Image = QApplication::clipboard()->image();
+
+		if(Image.isNull())
+		{
+			return;
+		}
+
+		if(m_pOptionsDialog == nullptr)
+		{
+			m_pOptionsDialog = new VtfOptionsDialog(&m_Options, this);
+		}
+
+		if(m_pOptionsDialog->exec() != QDialog::Accepted)
+		{
+			return;
+		}
+
+		closeFile();
+
+		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
+
+		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
+
+		const vlUInt uiWidth = static_cast<vlUInt>(Source.width());
+		const vlUInt uiHeight = static_cast<vlUInt>(Source.height());
+
+		std::vector<vlByte> ImageData(static_cast<size_t>(uiWidth) * uiHeight * 4);
+		for(vlUInt j = 0; j < uiHeight; j++)
+		{
+			memcpy(ImageData.data() + static_cast<size_t>(j) * uiWidth * 4,
+				Source.constScanLine(static_cast<int>(j)), static_cast<size_t>(uiWidth) * 4);
+		}
+
+		SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
+
+		if(pVTFFile->Create(uiWidth, uiHeight, ImageData.data(), VTFCreateOptions) != vlFalse
+			&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
+		{
+			setVtfFile(pVTFFile);
+
+			m_pSaveAction->setEnabled(true);
+			m_pSaveAsAction->setEnabled(true);
+			m_pExportAction->setEnabled(true);
+			m_pExportAllAction->setEnabled(true);
+			m_pCopyAction->setEnabled(true);
+		}
+		else
+		{
+			delete pVTFFile;
+
+			QMessageBox::critical(this, QApplication::applicationName(),
+				tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
+		}
+	}
+
+	void MainWindow::onChannelChanged()
+	{
+		updateVtfFile();
+	}
+
+	void MainWindow::onViewOptionChanged()
+	{
+		updateVtfFile();
+	}
+
+	void MainWindow::onAbout()
+	{
+		if(m_pAboutDialog == nullptr)
+		{
+			m_pAboutDialog = new AboutDialog(this);
+		}
+
+		m_pAboutDialog->exec();
+	}
+
+	void MainWindow::onClipboardChanged()
+	{
+		m_pPasteAction->setEnabled(!QApplication::clipboard()->image().isNull());
+	}
+
+	//
+	// Image tab handlers.
+	//
+
+	void MainWindow::onImageParameterChanged()
+	{
+		if(!m_bHdrResetting)
+		{
+			updateVtfFile();
+		}
+	}
+
+	void MainWindow::onAnimateClicked()
+	{
+		if(m_pAnimateTimer->isActive())
+		{
+			m_pAnimateTimer->stop();
+			m_pAnimateButton->setText(tr("&Play"));
+		}
+		else
+		{
+			m_pAnimateTimer->start();
+			m_pAnimateButton->setText(tr("&Stop"));
+		}
+	}
+
+	void MainWindow::onAnimateFpsChanged(int iFps)
+	{
+		if(iFps > 0)
+		{
+			m_pAnimateTimer->setInterval(1000 / iFps);
+		}
+	}
+
+	void MainWindow::onAnimateTick()
+	{
+		if(!isActiveWindow())
+		{
+			return;
+		}
+
+		int iValue = m_pFrame->value() + 1;
+		if(iValue > m_pFrame->maximum())
+		{
+			iValue = m_pFrame->minimum();
+		}
+
+		m_pFrame->setValue(iValue);
+	}
+
+	void MainWindow::onFlagItemChanged(QListWidgetItem *pItem)
+	{
+		if(m_bUpdatingFlags || m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		const int iIndex = m_pFlags->row(pItem);
+
+		if(isReadOnlyFlag(iIndex))
+		{
+			m_bUpdatingFlags = true;
+			pItem->setCheckState((m_pVTFFile->GetFlags() & (1u << iIndex)) != 0 ? Qt::Checked : Qt::Unchecked);
+			m_bUpdatingFlags = false;
+		}
+	}
+
+	void MainWindow::onHdrReset()
+	{
+		m_bHdrResetting = true;
+
+		m_pHdrExposure->setMinimum(0);
+		m_pHdrExposure->setMaximum(8000);
+		m_pHdrExposure->setPageStep(1);
+		m_pHdrExposure->setTickInterval(160);
+		m_pHdrExposure->setValue(2000);
+
+		m_bHdrResetting = false;
+
+		updateVtfFile();
+	}
+
+	//
+	// Zoom and pan.
+	//
+
+	void MainWindow::zoomAt(float fFactor, const QPoint &Anchor)
+	{
+		if(m_pVTFFile == nullptr || m_pImageView->image().isNull())
+		{
+			return;
+		}
+
+		const QSize ImageSize = m_pImageView->image().size();
+
+		if(fFactor > 1.0f && (ImageSize.width() >= 4096 || ImageSize.height() >= 4096))
+		{
+			return;
+		}
+		if(fFactor < 1.0f && ImageSize.width() <= 1 && ImageSize.height() <= 1)
+		{
+			return;
+		}
+
+		QScrollBar *pHorizontal = m_pImageScrollArea->horizontalScrollBar();
+		QScrollBar *pVertical = m_pImageScrollArea->verticalScrollBar();
+
+		const float fOldImageScale = m_fImageScale;
+
+		const float fContentX = static_cast<float>(Anchor.x() + pHorizontal->value());
+		const float fContentY = static_cast<float>(Anchor.y() + pVertical->value());
+
+		m_fImageScale *= fFactor;
+
+		// This may clamp the scale
+		updateVtfFile();
+
+		const float fRatio = m_fImageScale / fOldImageScale;
+
+		pHorizontal->setValue(static_cast<int>(fContentX * fRatio) - Anchor.x());
+		pVertical->setValue(static_cast<int>(fContentY * fRatio) - Anchor.y());
+	}
+
+	void MainWindow::zoom(float fFactor)
+	{
+		const QSize ViewportSize = m_pImageScrollArea->viewport()->size();
+
+		zoomAt(fFactor, QPoint(ViewportSize.width() / 2, ViewportSize.height() / 2));
+	}
+
+	void MainWindow::onZoomIn()
+	{
+		zoom(2.0f);
+	}
+
+	void MainWindow::onZoomOut()
+	{
+		zoom(0.5f);
+	}
+
+	void MainWindow::onZoomReset()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		m_fImageScale = 1.0f;
+		updateVtfFile();
+
+		m_pImageScrollArea->horizontalScrollBar()->setValue(0);
+		m_pImageScrollArea->verticalScrollBar()->setValue(0);
+	}
+
+	void MainWindow::onImageContextMenu(const QPoint &Position)
+	{
+		m_pImageContextMenu->exec(m_pImageView->mapToGlobal(Position));
+	}
+
+	void MainWindow::onVmtContextMenu(const QPoint &Position)
+	{
+		QMenu *pMenu = m_pVmtEdit->createStandardContextMenu(Position);
+
+		pMenu->addSeparator();
+
+		QMenu *pValidate = pMenu->addMenu(tr("&Validate"));
+		QAction *pLoose = pValidate->addAction(tr("&Loose"));
+		connect(pLoose, &QAction::triggered, this, &MainWindow::onValidateLoose);
+		QAction *pStrict = pValidate->addAction(tr("&Strict"));
+		connect(pStrict, &QAction::triggered, this, &MainWindow::onValidateStrict);
+
+		pMenu->exec(m_pVmtEdit->mapToGlobal(Position));
+
+		delete pMenu;
+	}
+
+	void MainWindow::onImageMouseMoved(int iX, int iY)
+	{
+		if(m_bImagePanning)
+		{
+			return;
+		}
+
+		m_pStatusInfo2->setText(QStringLiteral("%1, %2")
+			.arg(static_cast<int>(static_cast<float>(iX) / m_fEffectiveImageScale) + 1)
+			.arg(static_cast<int>(static_cast<float>(iY) / m_fEffectiveImageScale) + 1));
+	}
+
+	bool MainWindow::eventFilter(QObject *pObject, QEvent *pEvent)
+	{
+		const bool bImageArea = pObject == m_pImageScrollArea->viewport() || pObject == m_pImageView;
+
+		if(bImageArea)
+		{
+			switch(pEvent->type())
+			{
+			case QEvent::Wheel:
+			{
+				QWheelEvent *pWheel = static_cast<QWheelEvent *>(pEvent);
+
+				if(m_pVTFFile != nullptr && !m_pImageView->image().isNull() && pWheel->angleDelta().y() != 0)
+				{
+					const QPoint Anchor = m_pImageScrollArea->viewport()->mapFromGlobal(
+						pWheel->globalPosition().toPoint());
+
+					zoomAt(pWheel->angleDelta().y() > 0 ? 2.0f : 0.5f, Anchor);
+					return true;
+				}
+				break;
+			}
+
+			case QEvent::MouseButtonPress:
+			{
+				QMouseEvent *pMouse = static_cast<QMouseEvent *>(pEvent);
+
+				// Alt+drag pans
+				if(m_pVTFFile != nullptr && pMouse->button() == Qt::LeftButton
+					&& (pMouse->modifiers() & Qt::AltModifier))
+				{
+					m_bImagePanning = true;
+					m_ImagePanStartMouse = pMouse->globalPosition().toPoint();
+					m_ImagePanStartScroll = QPoint(
+						m_pImageScrollArea->horizontalScrollBar()->value(),
+						m_pImageScrollArea->verticalScrollBar()->value());
+					m_pImageScrollArea->viewport()->setCursor(Qt::ClosedHandCursor);
+					return true;
+				}
+				break;
+			}
+
+			case QEvent::MouseMove:
+			{
+				if(m_bImagePanning)
+				{
+					QMouseEvent *pMouse = static_cast<QMouseEvent *>(pEvent);
+					const QPoint Delta = pMouse->globalPosition().toPoint() - m_ImagePanStartMouse;
+
+					m_pImageScrollArea->horizontalScrollBar()->setValue(m_ImagePanStartScroll.x() - Delta.x());
+					m_pImageScrollArea->verticalScrollBar()->setValue(m_ImagePanStartScroll.y() - Delta.y());
+					return true;
+				}
+				break;
+			}
+
+			case QEvent::MouseButtonRelease:
+			{
+				if(m_bImagePanning)
+				{
+					m_bImagePanning = false;
+					m_pImageScrollArea->viewport()->unsetCursor();
+					return true;
+				}
+				break;
+			}
+
+			default:
+				break;
+			}
+		}
+
+		return QMainWindow::eventFilter(pObject, pEvent);
+	}
+
+	//
+	// VMT handlers.
+	//
+
+	void MainWindow::onVmtTextChanged()
+	{
+		validateVmtFile();
+		updateVmtErrorHighlight();
+	}
+
+	void MainWindow::onVmtCursorChanged()
+	{
+		const QTextCursor Cursor = m_pVmtEdit->textCursor();
+
+		m_pStatusInfo2->setText(tr("Ln %1, Col %2")
+			.arg(Cursor.blockNumber() + 1)
+			.arg(Cursor.positionInBlock() + 1));
+	}
+
+	void MainWindow::onValidateLoose()
+	{
+		if(validateVmtFile())
+		{
+			QMessageBox::information(this, QApplication::applicationName(), tr("VMT validation successful."));
+		}
+		else
+		{
+			QMessageBox::critical(this, QApplication::applicationName(),
+				tr("Error validating VMT:\n\n%1").arg(lastErrorString()));
+		}
+
+		updateVmtErrorHighlight();
+	}
+
+	void MainWindow::onValidateStrict()
+	{
+		vlSetInteger(VTFLIB_VMT_PARSE_MODE, PARSE_MODE_STRICT);
+		onValidateLoose();
+		vlSetInteger(VTFLIB_VMT_PARSE_MODE, PARSE_MODE_LOOSE);
+	}
+
+	//
+	// Recent files.
+	//
+
+	void MainWindow::addRecentFile(const QString &sFileName)
+	{
+		int iExisting = -1;
+		for(int i = 0; i < m_RecentFiles.count(); i++)
+		{
+			if(m_RecentFiles.at(i).compare(sFileName, Qt::CaseInsensitive) == 0)
+			{
+				iExisting = i;
+				break;
+			}
+		}
+
+		if(iExisting == 0)
+		{
+			return;
+		}
+
+		if(iExisting > 0)
+		{
+			m_RecentFiles.removeAt(iExisting);
+		}
+
+		m_RecentFiles.prepend(sFileName);
+
+		while(m_RecentFiles.count() > m_iMaximumRecentFiles)
+		{
+			m_RecentFiles.removeLast();
+		}
+
+		updateRecentFiles();
+	}
+
+	void MainWindow::updateRecentFiles()
+	{
+		m_pRecentFilesMenu->clear();
+
+		for(const QString &sFileName : m_RecentFiles)
+		{
+			QAction *pAction = m_pRecentFilesMenu->addAction(sFileName);
+			pAction->setData(sFileName);
+			connect(pAction, &QAction::triggered, this, &MainWindow::onRecentFile);
+		}
+
+		m_pRecentFilesMenu->menuAction()->setVisible(!m_RecentFiles.isEmpty());
+	}
+
+	//
+	// Configuration.
+	//
+
+	QString MainWindow::configFilePath() const
+	{
+		const QString sDirectory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+
+		QDir().mkpath(sDirectory);
+
+		return QDir(sDirectory).filePath(QApplication::applicationName() + QStringLiteral(".ini"));
+	}
+
+	bool MainWindow::readConfigFile(const QString &sConfigFile)
+	{
+		QFile File(sConfigFile);
+		if(!File.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			return false;
+		}
+
+		QTextStream Stream(&File);
+
+		QPoint Location = pos();
+		QSize Size = size();
+		bool bMaximized = false;
+		int iSidebarSplit = 258;
+		int iSidebarRightSplit = 258;
+
+		const auto toBool = [](const QString &sValue)
+		{
+			return sValue.compare(QLatin1String("true"), Qt::CaseInsensitive) == 0
+				|| sValue == QLatin1String("1");
+		};
+
+		while(!Stream.atEnd())
+		{
+			const QString sLine = Stream.readLine();
+			const int iIndex = sLine.indexOf(QLatin1Char('='));
+
+			if(iIndex == -1)
+			{
+				continue;
+			}
+
+			const QString sArg = sLine.left(iIndex).trimmed();
+			const QString sVal = sLine.mid(iIndex + 1).trimmed();
+
+			if(sArg.compare(QLatin1String("VTFEdit.AnimationFrameInterval"), Qt::CaseInsensitive) == 0)
+			{
+				const int iInterval = qBound(10, sVal.toInt(), 1000);
+				m_pAnimateTimer->setInterval(iInterval);
+				m_pAnimateFps->setValue(1000 / iInterval);
+			}
+			else if(sArg.compare(QLatin1String("VTFEdit.Mask"), Qt::CaseInsensitive) == 0)
+				m_pMaskAction->setChecked(toBool(sVal));
+			else if(sArg.compare(QLatin1String("VTFEdit.Tile"), Qt::CaseInsensitive) == 0)
+				m_pTileAction->setChecked(toBool(sVal));
+			else if(sArg.compare(QLatin1String("VTFEdit.MipmapFullSize"), Qt::CaseInsensitive) == 0)
+				m_pMipmapFullSizeAction->setChecked(toBool(sVal));
+			else if(sArg.compare(QLatin1String("VTFEdit.AutoCreateVMTFile"), Qt::CaseInsensitive) == 0)
+				m_pAutoCreateVmtFileAction->setChecked(toBool(sVal));
+
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Location.X"), Qt::CaseInsensitive) == 0)
+				Location.setX(sVal.toInt());
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Location.Y"), Qt::CaseInsensitive) == 0)
+				Location.setY(sVal.toInt());
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Size.Width"), Qt::CaseInsensitive) == 0)
+				Size.setWidth(sVal.toInt());
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Size.Height"), Qt::CaseInsensitive) == 0)
+				Size.setHeight(sVal.toInt());
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.WindowState"), Qt::CaseInsensitive) == 0)
+				bMaximized = sVal.compare(QLatin1String("Maximized"), Qt::CaseInsensitive) == 0;
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Sidebar.SplitPosition"), Qt::CaseInsensitive) == 0)
+				iSidebarSplit = sVal.toInt();
+			else if(sArg.compare(QLatin1String("Forms.VTFEdit.SidebarRight.SplitPosition"), Qt::CaseInsensitive) == 0)
+				iSidebarRightSplit = sVal.toInt();
+
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.InputFolder"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.sInputFolder = sVal;
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.OutputFolder"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.sOutputFolder = sVal;
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.ToVTF"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.bToVTF = toBool(sVal);
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.ToVTFFilter"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.sToVTFFilter = sVal;
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.FromVTFFormat"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.sFromVTFFormat = sVal;
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.FromVTFFilter"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.sFromVTFFilter = sVal;
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.Recurse"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.bRecurse = toBool(sVal);
+			else if(sArg.compare(QLatin1String("Forms.BatchConvert.CreateVMTFiles"), Qt::CaseInsensitive) == 0)
+				m_BatchConvertSettings.bCreateVMTFiles = toBool(sVal);
+
+			else if(sArg.compare(QLatin1String("VTFOptions.NormalFormat"), Qt::CaseInsensitive) == 0)
+				m_Options.NormalFormat = static_cast<VTFImageFormat>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.AlphaFormat"), Qt::CaseInsensitive) == 0)
+				m_Options.AlphaFormat = static_cast<VTFImageFormat>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.TextureType"), Qt::CaseInsensitive) == 0)
+				m_Options.TextureType = static_cast<VtfTextureType>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.StripAlpha"), Qt::CaseInsensitive) == 0)
+				m_Options.StripAlpha = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.sRGB"), Qt::CaseInsensitive) == 0)
+				m_Options.sRGB = toBool(sVal);
+
+			else if(sArg.compare(QLatin1String("VTFOptions.Resize"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeImage = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.ResizeMethod"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeMethod = static_cast<VTFResizeMethod>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.ResizeFilter"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeFilter = static_cast<VTFMipmapFilter>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.ResizeClamp"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeClamp = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.ResizeClampWidth"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeClampWidth = sVal.toUInt();
+			else if(sArg.compare(QLatin1String("VTFOptions.ResizeClampHeight"), Qt::CaseInsensitive) == 0)
+				m_Options.ResizeClampHeight = sVal.toUInt();
+
+			else if(sArg.compare(QLatin1String("VTFOptions.GenerateMipmaps"), Qt::CaseInsensitive) == 0)
+				m_Options.GenerateMipmaps = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.MipmapFilter"), Qt::CaseInsensitive) == 0)
+				m_Options.MipmapFilter = static_cast<VTFMipmapFilter>(sVal.toInt());
+
+			else if(sArg.compare(QLatin1String("VTFOptions.Version"), Qt::CaseInsensitive) == 0)
+				m_Options.Version = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.AuxCompressionLevel"), Qt::CaseInsensitive) == 0)
+				m_Options.AuxCompressionLevel = static_cast<vlShort>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.AuxCompressionMethod"), Qt::CaseInsensitive) == 0)
+				m_Options.AuxCompressionMethod = static_cast<vlShort>(sVal.toInt());
+
+			else if(sArg.compare(QLatin1String("VTFOptions.ComputeReflectivity"), Qt::CaseInsensitive) == 0)
+				m_Options.ComputeReflectivity = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.GenerateThumbnail"), Qt::CaseInsensitive) == 0)
+				m_Options.GenerateThumbnail = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.GenerateSphereMap"), Qt::CaseInsensitive) == 0)
+				m_Options.GenerateSphereMap = toBool(sVal);
+
+			else if(sArg.compare(QLatin1String("VTFOptions.CorrectGamma"), Qt::CaseInsensitive) == 0)
+				m_Options.CorrectGamma = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.GammaCorrection"), Qt::CaseInsensitive) == 0)
+				m_Options.GammaCorrection = sVal.toFloat();
+
+			else if(sArg.compare(QLatin1String("VTFOptions.LuminanceWeightR"), Qt::CaseInsensitive) == 0)
+				m_Options.LuminanceWeightR = sVal.toFloat();
+			else if(sArg.compare(QLatin1String("VTFOptions.LuminanceWeightG"), Qt::CaseInsensitive) == 0)
+				m_Options.LuminanceWeightG = sVal.toFloat();
+			else if(sArg.compare(QLatin1String("VTFOptions.LuminanceWeightB"), Qt::CaseInsensitive) == 0)
+				m_Options.LuminanceWeightB = sVal.toFloat();
+
+			else if(sArg.compare(QLatin1String("VTFOptions.CreateLODControlResource"), Qt::CaseInsensitive) == 0)
+				m_Options.CreateLODControlResource = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.LODControlClampU"), Qt::CaseInsensitive) == 0)
+				m_Options.LODControlClampU = sVal.toUInt();
+			else if(sArg.compare(QLatin1String("VTFOptions.LODControlClampV"), Qt::CaseInsensitive) == 0)
+				m_Options.LODControlClampV = sVal.toUInt();
+
+			else if(sArg.compare(QLatin1String("VTFOptions.CreateInformationResource"), Qt::CaseInsensitive) == 0)
+				m_Options.CreateInformationResource = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationAuthor"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationAuthor = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationContact"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationContact = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationVersion"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationVersion = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationModification"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationModification = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationDescription"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationDescription = sVal;
+			else if(sArg.compare(QLatin1String("VTFOptions.InformationComments"), Qt::CaseInsensitive) == 0)
+				m_Options.InformationComments = sVal;
+
+			else if(sArg.compare(QLatin1String("RecentFiles.Maximum"), Qt::CaseInsensitive) == 0)
+				m_iMaximumRecentFiles = qMin(sVal.toInt(), 16);
+			else if(sArg.compare(QLatin1String("RecentFiles.File"), Qt::CaseInsensitive) == 0
+				&& QFileInfo::exists(sVal))
+				addRecentFile(sVal);
+		}
+
+		File.close();
+
+		resize(Size);
+		move(Location);
+		if(bMaximized)
+		{
+			setWindowState(windowState() | Qt::WindowMaximized);
+		}
+
+		m_pSplitter->setSizes({ iSidebarSplit,
+			qMax(1, width() - iSidebarSplit - iSidebarRightSplit), iSidebarRightSplit });
+
+		return true;
+	}
+
+	bool MainWindow::writeConfigFile(const QString &sConfigFile) const
+	{
+		QFile File(sConfigFile);
+		if(!File.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+		{
+			return false;
+		}
+
+		QTextStream Stream(&File);
+
+		const auto boolText = [](bool bValue)
+		{
+			return bValue ? QStringLiteral("True") : QStringLiteral("False");
+		};
+
+		const QList<int> Sizes = m_pSplitter->sizes();
+		const int iSidebarSplit = Sizes.value(0, 258);
+		const int iSidebarRightSplit = Sizes.value(2, 258);
+
+		Stream << "[VTFEdit]\n\n";
+		Stream << "VTFEdit.AnimationFrameInterval = " << m_pAnimateTimer->interval() << "\n";
+		Stream << "VTFEdit.Mask = " << boolText(m_pMaskAction->isChecked()) << "\n";
+		Stream << "VTFEdit.Tile = " << boolText(m_pTileAction->isChecked()) << "\n";
+		Stream << "VTFEdit.MipmapFullSize = " << boolText(m_pMipmapFullSizeAction->isChecked()) << "\n";
+		Stream << "VTFEdit.AutoCreateVMTFile = " << boolText(m_pAutoCreateVmtFileAction->isChecked()) << "\n";
+
+		Stream << "\n[Forms]\n\n";
+		Stream << "Forms.VTFEdit.Location.X = " << normalGeometry().x() << "\n";
+		Stream << "Forms.VTFEdit.Location.Y = " << normalGeometry().y() << "\n";
+		Stream << "Forms.VTFEdit.Size.Width = " << normalGeometry().width() << "\n";
+		Stream << "Forms.VTFEdit.Size.Height = " << normalGeometry().height() << "\n";
+		Stream << "Forms.VTFEdit.WindowState = " << (isMaximized() ? "Maximized" : "Normal") << "\n";
+		Stream << "Forms.VTFEdit.Sidebar.SplitPosition = " << iSidebarSplit << "\n";
+		Stream << "Forms.VTFEdit.SidebarRight.SplitPosition = " << iSidebarRightSplit << "\n";
+
+		Stream << "Forms.BatchConvert.InputFolder = " << m_BatchConvertSettings.sInputFolder << "\n";
+		Stream << "Forms.BatchConvert.OutputFolder = " << m_BatchConvertSettings.sOutputFolder << "\n";
+		Stream << "Forms.BatchConvert.ToVTF = " << boolText(m_BatchConvertSettings.bToVTF) << "\n";
+		Stream << "Forms.BatchConvert.ToVTFFilter = " << m_BatchConvertSettings.sToVTFFilter << "\n";
+		Stream << "Forms.BatchConvert.FromVTFFormat = " << m_BatchConvertSettings.sFromVTFFormat << "\n";
+		Stream << "Forms.BatchConvert.FromVTFFilter = " << m_BatchConvertSettings.sFromVTFFilter << "\n";
+		Stream << "Forms.BatchConvert.Recurse = " << boolText(m_BatchConvertSettings.bRecurse) << "\n";
+		Stream << "Forms.BatchConvert.CreateVMTFiles = " << boolText(m_BatchConvertSettings.bCreateVMTFiles) << "\n";
+
+		Stream << "\n[VTF Options]\n\n";
+		Stream << "VTFOptions.NormalFormat = " << static_cast<int>(m_Options.NormalFormat) << "\n";
+		Stream << "VTFOptions.AlphaFormat = " << static_cast<int>(m_Options.AlphaFormat) << "\n";
+		Stream << "VTFOptions.TextureType = " << static_cast<int>(m_Options.TextureType) << "\n";
+		Stream << "VTFOptions.StripAlpha = " << boolText(m_Options.StripAlpha != vlFalse) << "\n";
+		Stream << "VTFOptions.sRGB = " << boolText(m_Options.sRGB != vlFalse) << "\n";
+
+		Stream << "VTFOptions.Resize = " << boolText(m_Options.ResizeImage != vlFalse) << "\n";
+		Stream << "VTFOptions.ResizeMethod = " << static_cast<int>(m_Options.ResizeMethod) << "\n";
+		Stream << "VTFOptions.ResizeFilter = " << static_cast<int>(m_Options.ResizeFilter) << "\n";
+		Stream << "VTFOptions.ResizeClamp = " << boolText(m_Options.ResizeClamp != vlFalse) << "\n";
+		Stream << "VTFOptions.ResizeClampWidth = " << m_Options.ResizeClampWidth << "\n";
+		Stream << "VTFOptions.ResizeClampHeight = " << m_Options.ResizeClampHeight << "\n";
+
+		Stream << "VTFOptions.GenerateMipmaps = " << boolText(m_Options.GenerateMipmaps != vlFalse) << "\n";
+		Stream << "VTFOptions.MipmapFilter = " << static_cast<int>(m_Options.MipmapFilter) << "\n";
+
+		Stream << "VTFOptions.Version = " << m_Options.Version << "\n";
+		Stream << "VTFOptions.AuxCompressionLevel = " << m_Options.AuxCompressionLevel << "\n";
+		Stream << "VTFOptions.AuxCompressionMethod = " << m_Options.AuxCompressionMethod << "\n";
+
+		Stream << "VTFOptions.ComputeReflectivity = " << boolText(m_Options.ComputeReflectivity != vlFalse) << "\n";
+		Stream << "VTFOptions.GenerateThumbnail = " << boolText(m_Options.GenerateThumbnail != vlFalse) << "\n";
+		Stream << "VTFOptions.GenerateSphereMap = " << boolText(m_Options.GenerateSphereMap != vlFalse) << "\n";
+
+		Stream << "VTFOptions.CorrectGamma = " << boolText(m_Options.CorrectGamma != vlFalse) << "\n";
+		Stream << "VTFOptions.GammaCorrection = " << m_Options.GammaCorrection << "\n";
+
+		Stream << "VTFOptions.LuminanceWeightR = " << m_Options.LuminanceWeightR << "\n";
+		Stream << "VTFOptions.LuminanceWeightG = " << m_Options.LuminanceWeightG << "\n";
+		Stream << "VTFOptions.LuminanceWeightB = " << m_Options.LuminanceWeightB << "\n";
+
+		Stream << "VTFOptions.CreateLODControlResource = " << boolText(m_Options.CreateLODControlResource != vlFalse) << "\n";
+		Stream << "VTFOptions.LODControlClampU = " << m_Options.LODControlClampU << "\n";
+		Stream << "VTFOptions.LODControlClampV = " << m_Options.LODControlClampV << "\n";
+
+		Stream << "VTFOptions.CreateInformationResource = " << boolText(m_Options.CreateInformationResource != vlFalse) << "\n";
+		Stream << "VTFOptions.InformationAuthor = " << m_Options.InformationAuthor << "\n";
+		Stream << "VTFOptions.InformationContact = " << m_Options.InformationContact << "\n";
+		Stream << "VTFOptions.InformationVersion = " << m_Options.InformationVersion << "\n";
+		Stream << "VTFOptions.InformationModification = " << m_Options.InformationModification << "\n";
+		Stream << "VTFOptions.InformationDescription = " << m_Options.InformationDescription << "\n";
+		Stream << "VTFOptions.InformationComments = " << m_Options.InformationComments << "\n";
+
+		Stream << "\n[Recent Files]\n\n";
+		Stream << "RecentFiles.Maximum = " << m_iMaximumRecentFiles << "\n";
+
+		// write oldest first so reading them back rebuilds the same order
+		for(int i = m_RecentFiles.count() - 1; i >= 0; i--)
+		{
+			Stream << "RecentFiles.File = " << m_RecentFiles.at(i) << "\n";
+		}
+
+		File.close();
+
+		return true;
+	}
+
+	//
+	// Window events.
+	//
+
+	void MainWindow::closeEvent(QCloseEvent *pEvent)
+	{
+		writeConfigFile(configFilePath());
+
+		QMainWindow::closeEvent(pEvent);
+	}
+
+	void MainWindow::openCommandLineFile(const QString &sFilePath)
+	{
+		if(!QFileInfo::exists(sFilePath))
+		{
+			return;
+		}
+
+		if(sFilePath.endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive)
+			|| sFilePath.endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
+		{
+			open(sFilePath, false);
+		}
+		else
+		{
+			import(QStringList(sFilePath));
+		}
+	}
+
+	void MainWindow::dragEnterEvent(QDragEnterEvent *pEvent)
+	{
+		if(!pEvent->mimeData()->hasUrls())
+		{
+			return;
+		}
+
+		const QString sFirst = pEvent->mimeData()->urls().first().toLocalFile();
+		if(!sFirst.isEmpty() && !QFileInfo(sFirst).isDir())
+		{
+			pEvent->acceptProposedAction();
+		}
+	}
+
+	void MainWindow::dropEvent(QDropEvent *pEvent)
+	{
+		QStringList sFiles;
+		for(const QUrl &Url : pEvent->mimeData()->urls())
+		{
+			const QString sFile = Url.toLocalFile();
+			if(!sFile.isEmpty())
+			{
+				sFiles.append(sFile);
+			}
+		}
+
+		if(!sFiles.isEmpty())
+		{
+			pEvent->acceptProposedAction();
+			handleDroppedFiles(sFiles);
+		}
+	}
+
+	void MainWindow::handleDroppedFiles(const QStringList &sFiles)
+	{
+		if(sFiles.first().endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive)
+			|| sFiles.first().endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
+		{
+			open(sFiles.first(), false);
+		}
+		else
+		{
+			// Drop order is not defined by the shell
+			// so sort the frames and faces by name
+			QStringList sSorted = sFiles;
+			std::sort(sSorted.begin(), sSorted.end(), [](const QString &sLeft, const QString &sRight)
+			{
+				return sLeft.compare(sRight, Qt::CaseInsensitive) < 0;
+			});
+
+			import(sSorted);
+		}
+	}
+}

@@ -27,6 +27,13 @@ included, but nvDXTLib does not come with the correct .lib files to link with. n
 
 http://developer.nvidia.com/object/dds_utilities_legacy.html
 
+## Building with CMake
+
+```
+cmake -B build -DCMAKE_PREFIX_PATH=<path-to-Qt6> -A x64
+cmake --build build --config Release
+```
+
 ## VTFCmd Usage
 
 ```
