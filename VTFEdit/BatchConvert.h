@@ -625,14 +625,57 @@ namespace VTFEdit
 						if(ilLoadImage(cFile))
 						{
 							bool bHasAlpha = false;
+							bool bError = false;
 
-							if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
+							ILuint uiImage = (ILuint)ilGetInteger(IL_CUR_IMAGE);
+							vlUInt uiImages = (vlUInt)ilGetInteger(IL_NUM_IMAGES) + 1;
+							vlUInt uiWidth = 0, uiHeight = 0;
+
+							std::vector<vlByte *> vImageData;
+
+							for(vlUInt k = 0; k < uiImages; k++)
 							{
-								bHasAlpha = !Options->StripAlpha && CVTFFileUtility::HasAlphaData((const vlByte *)ilGetData(), (vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT));
+								ilBindImage(uiImage);
+								ilActiveImage((ILuint)k);
 
+								if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
+								{
+									this->Log(String::Concat("Error converting ", Files[j]->Name, "."), System::Drawing::Color::Red);
+
+									bError = true;
+
+									break;
+								}
+
+								if(vImageData.empty())
+								{
+									uiWidth = (vlUInt)ilGetInteger(IL_IMAGE_WIDTH);
+									uiHeight = (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT);
+								}
+								else if(uiWidth != (vlUInt)ilGetInteger(IL_IMAGE_WIDTH) || uiHeight != (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT))
+								{
+									this->Log(String::Concat("Error converting ", Files[j]->Name, ". All frames must be the same size."), System::Drawing::Color::Red);
+
+									bError = true;
+
+									break;
+								}
+
+								vlByte *lpFrameData = new vlByte[uiWidth * uiHeight * 4];
+								memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
+								vImageData.push_back(lpFrameData);
+
+								bHasAlpha |= !Options->StripAlpha && CVTFFileUtility::HasAlphaData(lpFrameData, uiWidth, uiHeight);
+							}
+
+							// leave the base image bound for the next file
+							ilBindImage(uiImage);
+
+							if(!bError)
+							{
 								VTFCreateOptions.ImageFormat = bHasAlpha ? Options->AlphaFormat : Options->NormalFormat;
 
-								if(VTFFile.Create((vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT), ilGetData(), VTFCreateOptions) != vlFalse && CVTFFileUtility::CreateResources(Options, &VTFFile))
+								if(VTFFile.Create(uiWidth, uiHeight, (vlUInt)vImageData.size(), 1, 1, &vImageData[0], VTFCreateOptions) != vlFalse && CVTFFileUtility::CreateResources(Options, &VTFFile))
 								{
 									if(!System::IO::Directory::Exists(sOutputFolder))
 									{
@@ -666,9 +709,10 @@ namespace VTFEdit
 									this->Log(String::Concat("Error creating ", Files[j]->Name, ".", (gcnew String(vlGetLastError()))->Replace("\n", " ")), System::Drawing::Color::Red);
 								}
 							}
-							else
+
+							for(vlUInt k = 0; k < (vlUInt)vImageData.size(); k++)
 							{
-								this->Log(String::Concat("Error converting ", Files[j]->Name, "."), System::Drawing::Color::Red);
+								delete []vImageData[k];
 							}
 						}
 						else

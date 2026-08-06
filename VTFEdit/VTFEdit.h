@@ -3352,53 +3352,66 @@ namespace VTFEdit
 			vlUInt uiWidth = 0, uiHeight = 0;
 			bool bHasAlpha = false;
 
-			vlByte **lpImageData = new vlByte *[sFileNames->Length];
-			memset(lpImageData, 0, sizeof(vlByte *) * sFileNames->Length);
+			std::vector<vlByte *> vImageData;
 
 			// Load each frame/face.
-			for(int i = 0; i < sFileNames->Length; i++)
+			for(int i = 0; i < sFileNames->Length && VTFFile != 0; i++)
 			{
 				CUtility::StringToCharPointer(static_cast<System::String ^>(sFileNames[i]), cPath, 512);
 
 				// Load the image and convert it to RGBA.
 				if(ilLoadImage(cPath))
 				{
-					if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
+					ILuint uiImage = (ILuint)ilGetInteger(IL_CUR_IMAGE);
+					vlUInt uiImages = (vlUInt)ilGetInteger(IL_NUM_IMAGES) + 1;
+
+					// Copy every animation frame the file contains.
+					for(vlUInt j = 0; j < uiImages; j++)
 					{
-						// Get the size of the image and make sure it matches the other images.
-						if(i == 0)
+						ilBindImage(uiImage);
+						ilActiveImage((ILuint)j);
+
+						if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
 						{
-							uiWidth = (vlUInt)ilGetInteger(IL_IMAGE_WIDTH);
-							uiHeight = (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT);
+							// Get the size of the image and make sure it matches the other images.
+							if(vImageData.empty())
+							{
+								uiWidth = (vlUInt)ilGetInteger(IL_IMAGE_WIDTH);
+								uiHeight = (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT);
+							}
+							else
+							{
+								if(uiWidth != (vlUInt)ilGetInteger(IL_IMAGE_WIDTH) || uiHeight != (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT))
+								{
+									delete VTFFile;
+									VTFFile = 0;
+
+									MessageBox::Show("Error loading image:\n\nAll frames and faces must be the same size.", Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
+
+									break;
+								}
+							}
+
+							// Copy the image data.
+							vlByte *lpFrameData = new vlByte[uiWidth * uiHeight * 4];
+							memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
+							vImageData.push_back(lpFrameData);
+
+							bHasAlpha |= !this->Options->StripAlpha && CVTFFileUtility::HasAlphaData(lpFrameData, uiWidth, uiHeight);
 						}
 						else
 						{
-							if(uiWidth != (vlUInt)ilGetInteger(IL_IMAGE_WIDTH) || uiHeight != (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT))
-							{
-								delete VTFFile;
-								VTFFile = 0;
+							delete VTFFile;
+							VTFFile = 0;
 
-								MessageBox::Show("Error loading image:\n\nAll frames and faces must be the same size.", Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
+							MessageBox::Show("Error converting image.", Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
 
-								break;
-							}
+							break;
 						}
-
-						// Copy the image data.
-						lpImageData[i] = new vlByte[uiWidth * uiHeight * 4];
-						memcpy(lpImageData[i], ilGetData(), uiWidth * uiHeight * 4);
-
-						bHasAlpha |= !this->Options->StripAlpha && CVTFFileUtility::HasAlphaData(lpImageData[i], uiWidth, uiHeight);
 					}
-					else
-					{
-						delete VTFFile;
-						VTFFile = 0;
 
-						MessageBox::Show("Error converting image.", Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
-
-						break;
-					}
+					// Leave the base image bound for the next file.
+					ilBindImage(uiImage);
 				}
 				else
 				{
@@ -3414,9 +3427,12 @@ namespace VTFEdit
 			// Check that we loaded all images.
 			if(VTFFile != 0)
 			{
-				vlUInt uiFrames = this->Options->TextureType == 0 ? sFileNames->Length : 1;
-				vlUInt uiFaces = this->Options->TextureType == 1 ? sFileNames->Length : 1;
-				vlUInt uiSlices = this->Options->TextureType == 2 ? sFileNames->Length : 1;
+				vlUInt uiImages = (vlUInt)vImageData.size();
+				vlByte **lpImageData = uiImages != 0 ? &vImageData[0] : 0;
+
+				vlUInt uiFrames = this->Options->TextureType == 0 ? uiImages : 1;
+				vlUInt uiFaces = this->Options->TextureType == 1 ? uiImages : 1;
+				vlUInt uiSlices = this->Options->TextureType == 2 ? uiImages : 1;
 
 				SVTFCreateOptions VTFCreateOptions = CVTFFileUtility::GetCreateOptions(this->Options);
 
@@ -3448,11 +3464,10 @@ namespace VTFEdit
 			}
 
 			// Delete all image data.
-			for(int i = 0; i < sFileNames->Length; i++)
+			for(vlUInt i = 0; i < (vlUInt)vImageData.size(); i++)
 			{
-				delete []lpImageData[i];
+				delete []vImageData[i];
 			}
-			delete []lpImageData;
 		}
 
 		private: void Export(System::String ^sFileName)

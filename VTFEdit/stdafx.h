@@ -33,6 +33,7 @@
 #include <memory.h>
 #include <tchar.h>
 #include <richedit.h>
+#include <vector>
 
 #include "..\lib\VTFLib.h"
 #ifdef _DEBUG
