@@ -3310,8 +3310,6 @@ namespace VTFEdit
 				// Load the image and convert it to RGBA.
 				if(ilLoadImage(cPath))
 				{
-					bHasAlpha |= ilGetInteger(IL_IMAGE_FORMAT) == IL_RGBA || ilGetInteger(IL_IMAGE_FORMAT) == IL_BGRA || ilGetInteger(IL_IMAGE_FORMAT) == IL_LUMINANCE_ALPHA;
-
 					if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
 					{
 						// Get the size of the image and make sure it matches the other images.
@@ -3336,6 +3334,8 @@ namespace VTFEdit
 						// Copy the image data.
 						lpImageData[i] = new vlByte[uiWidth * uiHeight * 4];
 						memcpy(lpImageData[i], ilGetData(), uiWidth * uiHeight * 4);
+
+						bHasAlpha |= CVTFFileUtility::HasAlphaData(lpImageData[i], uiWidth, uiHeight);
 					}
 					else
 					{

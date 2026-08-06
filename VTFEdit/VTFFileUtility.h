@@ -30,6 +30,25 @@ namespace VTFEdit
 	public ref class CVTFFileUtility
 	{
 	public:
+		// Returns true if any pixel of an RGBA8888 image is not fully opaque
+		static bool HasAlphaData(const vlByte *lpImageData, vlUInt uiWidth, vlUInt uiHeight)
+		{
+			if(lpImageData == 0)
+			{
+				return false;
+			}
+
+			for(vlUInt i = 3; i < uiWidth * uiHeight * 4; i += 4)
+			{
+				if(lpImageData[i] != 255)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		static SVTFCreateOptions GetCreateOptions(CVTFOptions ^ Options)
 		{
 			SVTFCreateOptions VTFCreateOptions;

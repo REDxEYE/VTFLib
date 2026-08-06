@@ -624,10 +624,12 @@ namespace VTFEdit
 						// Load the image and convert it to RGBA.
 						if(ilLoadImage(cFile))
 						{
-							bool bHasAlpha = ilGetInteger(IL_IMAGE_FORMAT) == IL_RGBA || ilGetInteger(IL_IMAGE_FORMAT) == IL_BGRA || ilGetInteger(IL_IMAGE_FORMAT) == IL_LUMINANCE_ALPHA;
+							bool bHasAlpha = false;
 
 							if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
 							{
+								bHasAlpha = CVTFFileUtility::HasAlphaData((const vlByte *)ilGetData(), (vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT));
+
 								VTFCreateOptions.ImageFormat = bHasAlpha ? Options->AlphaFormat : Options->NormalFormat;
 
 								if(VTFFile.Create((vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT), ilGetData(), VTFCreateOptions) != vlFalse && CVTFFileUtility::CreateResources(Options, &VTFFile))
