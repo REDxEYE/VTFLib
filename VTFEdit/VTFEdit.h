@@ -3335,7 +3335,7 @@ namespace VTFEdit
 						lpImageData[i] = new vlByte[uiWidth * uiHeight * 4];
 						memcpy(lpImageData[i], ilGetData(), uiWidth * uiHeight * 4);
 
-						bHasAlpha |= CVTFFileUtility::HasAlphaData(lpImageData[i], uiWidth, uiHeight);
+						bHasAlpha |= !this->Options->StripAlpha && CVTFFileUtility::HasAlphaData(lpImageData[i], uiWidth, uiHeight);
 					}
 					else
 					{
@@ -4436,6 +4436,7 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.NormalFormat = ", Convert::ToInt32(this->Options->NormalFormat).ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.AlphaFormat = ", Convert::ToInt32(this->Options->AlphaFormat).ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.TextureType = ", this->Options->TextureType.ToString()));
+				ConfigFile->WriteLine(System::String::Concat("VTFOptions.StripAlpha = ", this->Options->StripAlpha.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.sRGB = ", this->Options->sRGB.ToString()));
 
 				ConfigFile->WriteLine(System::String::Concat("VTFOptions.Resize = ", this->Options->ResizeImage.ToString()));
@@ -4633,6 +4634,10 @@ namespace VTFEdit
 						else if(System::String::Compare(sArg, "VTFOptions.TextureType", true) == 0)
 						{
 							this->Options->TextureType = Convert::ToInt32(sVal);
+						}
+						else if(System::String::Compare(sArg, "VTFOptions.StripAlpha", true) == 0)
+						{
+							this->Options->StripAlpha = Convert::ToByte(sVal);
 						}
 						else if(System::String::Compare(sArg, "VTFOptions.sRGB", true) == 0)
 						{

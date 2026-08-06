@@ -628,7 +628,7 @@ namespace VTFEdit
 
 							if(ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
 							{
-								bHasAlpha = CVTFFileUtility::HasAlphaData((const vlByte *)ilGetData(), (vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT));
+								bHasAlpha = !Options->StripAlpha && CVTFFileUtility::HasAlphaData((const vlByte *)ilGetData(), (vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT));
 
 								VTFCreateOptions.ImageFormat = bHasAlpha ? Options->AlphaFormat : Options->NormalFormat;
 

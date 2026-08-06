@@ -165,6 +165,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::Label^ lblInformationModification;
 	private: System::Windows::Forms::Label^ lblInformationVersion;
 private: System::Windows::Forms::CheckBox^ chkSrgb;
+private: System::Windows::Forms::CheckBox^ chkStripAlpha;
 
 	private: System::ComponentModel::IContainer^ components;
 
@@ -199,6 +200,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->btnCancel = (gcnew System::Windows::Forms::Button());
 			this->grpGeneral = (gcnew System::Windows::Forms::GroupBox());
 			this->chkSrgb = (gcnew System::Windows::Forms::CheckBox());
+			this->chkStripAlpha = (gcnew System::Windows::Forms::CheckBox());
 			this->cboAlphaFormat = (gcnew System::Windows::Forms::ComboBox());
 			this->lblAlphaFormat = (gcnew System::Windows::Forms::Label());
 			this->grpMipmaps = (gcnew System::Windows::Forms::GroupBox());
@@ -423,7 +425,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->btnOK->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->btnOK->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->btnOK->Location = System::Drawing::Point(282, 565);
+			this->btnOK->Location = System::Drawing::Point(282, 589);
 			this->btnOK->Name = L"btnOK";
 			this->btnOK->Size = System::Drawing::Size(96, 33);
 			this->btnOK->TabIndex = 0;
@@ -435,7 +437,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->btnCancel->DialogResult = System::Windows::Forms::DialogResult::Cancel;
 			this->btnCancel->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->btnCancel->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->btnCancel->Location = System::Drawing::Point(180, 565);
+			this->btnCancel->Location = System::Drawing::Point(180, 589);
 			this->btnCancel->Name = L"btnCancel";
 			this->btnCancel->Size = System::Drawing::Size(96, 33);
 			this->btnCancel->TabIndex = 1;
@@ -446,6 +448,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			// 
 			this->grpGeneral->ContextMenu = this->mnuReset;
 			this->grpGeneral->Controls->Add(this->chkSrgb);
+			this->grpGeneral->Controls->Add(this->chkStripAlpha);
 			this->grpGeneral->Controls->Add(this->cboAlphaFormat);
 			this->grpGeneral->Controls->Add(this->lblAlphaFormat);
 			this->grpGeneral->Controls->Add(this->cboFormat);
@@ -455,21 +458,34 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpGeneral->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpGeneral->Location = System::Drawing::Point(10, 18);
 			this->grpGeneral->Name = L"grpGeneral";
-			this->grpGeneral->Size = System::Drawing::Size(328, 147);
+			this->grpGeneral->Size = System::Drawing::Size(328, 171);
 			this->grpGeneral->TabIndex = 0;
 			this->grpGeneral->TabStop = false;
 			this->grpGeneral->Text = L"General:";
 			// 
+			// chkStripAlpha
+			//
+			this->chkStripAlpha->AutoSize = true;
+			this->chkStripAlpha->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
+			this->chkStripAlpha->Location = System::Drawing::Point(12, 113);
+			this->chkStripAlpha->Name = L"chkStripAlpha";
+			this->chkStripAlpha->Size = System::Drawing::Size(170, 24);
+			this->chkStripAlpha->TabIndex = 6;
+			this->chkStripAlpha->Text = L"Strip Alpha Channel";
+			this->tipMain->SetToolTip(this->chkStripAlpha, L"Discard the alpha channel of imported images. The colour format is always used"
+				L" , even if the image has alpha data.");
+			this->chkStripAlpha->UseVisualStyleBackColor = true;
+			//
 			// chkSrgb
-			// 
+			//
 			this->chkSrgb->AutoSize = true;
 			this->chkSrgb->Checked = true;
 			this->chkSrgb->CheckState = System::Windows::Forms::CheckState::Checked;
 			this->chkSrgb->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->chkSrgb->Location = System::Drawing::Point(12, 113);
+			this->chkSrgb->Location = System::Drawing::Point(12, 137);
 			this->chkSrgb->Name = L"chkSrgb";
 			this->chkSrgb->Size = System::Drawing::Size(170, 24);
-			this->chkSrgb->TabIndex = 6;
+			this->chkSrgb->TabIndex = 7;
 			this->chkSrgb->Text = L"sRGB Color Space";
 			this->chkSrgb->UseVisualStyleBackColor = true;
 			// 
@@ -506,7 +522,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpMipmaps->Controls->Add(this->chkMipmaps);
 			this->grpMipmaps->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpMipmaps->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
-			this->grpMipmaps->Location = System::Drawing::Point(13, 414);
+			this->grpMipmaps->Location = System::Drawing::Point(13, 438);
 			this->grpMipmaps->Name = L"grpMipmaps";
 			this->grpMipmaps->Size = System::Drawing::Size(335, 97);
 			this->grpMipmaps->TabIndex = 2;
@@ -566,7 +582,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpGeneralOptions->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
 			this->grpGeneralOptions->Location = System::Drawing::Point(10, 9);
 			this->grpGeneralOptions->Name = L"grpGeneralOptions";
-			this->grpGeneralOptions->Size = System::Drawing::Size(351, 399);
+			this->grpGeneralOptions->Size = System::Drawing::Size(351, 423);
 			this->grpGeneralOptions->TabIndex = 2;
 			this->grpGeneralOptions->TabStop = false;
 			this->grpGeneralOptions->Text = L"General Options:";
@@ -585,7 +601,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->grpResize->Controls->Add(this->lblResizeFilter);
 			this->grpResize->Controls->Add(this->chkResize);
 			this->grpResize->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpResize->Location = System::Drawing::Point(12, 171);
+			this->grpResize->Location = System::Drawing::Point(12, 195);
 			this->grpResize->Name = L"grpResize";
 			this->grpResize->Size = System::Drawing::Size(326, 214);
 			this->grpResize->TabIndex = 1;
@@ -788,7 +804,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->tabOptions->Location = System::Drawing::Point(10, 9);
 			this->tabOptions->Name = L"tabOptions";
 			this->tabOptions->SelectedIndex = 0;
-			this->tabOptions->Size = System::Drawing::Size(372, 550);
+			this->tabOptions->Size = System::Drawing::Size(372, 574);
 			this->tabOptions->TabIndex = 3;
 			// 
 			// tabGeneral
@@ -797,7 +813,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->tabGeneral->Controls->Add(this->grpMipmaps);
 			this->tabGeneral->Location = System::Drawing::Point(4, 29);
 			this->tabGeneral->Name = L"tabGeneral";
-			this->tabGeneral->Size = System::Drawing::Size(364, 517);
+			this->tabGeneral->Size = System::Drawing::Size(364, 541);
 			this->tabGeneral->TabIndex = 0;
 			this->tabGeneral->Text = L"General";
 			// 
@@ -807,7 +823,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->tabAdvanced->Controls->Add(this->grpLuminanceWeights);
 			this->tabAdvanced->Location = System::Drawing::Point(4, 29);
 			this->tabAdvanced->Name = L"tabAdvanced";
-			this->tabAdvanced->Size = System::Drawing::Size(364, 517);
+			this->tabAdvanced->Size = System::Drawing::Size(364, 541);
 			this->tabAdvanced->TabIndex = 1;
 			this->tabAdvanced->Text = L"Advanced";
 			// 
@@ -939,7 +955,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->tabResources->Controls->Add(this->grpResourceOptions);
 			this->tabResources->Location = System::Drawing::Point(4, 29);
 			this->tabResources->Name = L"tabResources";
-			this->tabResources->Size = System::Drawing::Size(364, 517);
+			this->tabResources->Size = System::Drawing::Size(364, 541);
 			this->tabResources->TabIndex = 2;
 			this->tabResources->Text = L"Resources";
 			// 
@@ -1136,7 +1152,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 			this->AcceptButton = this->btnOK;
 			this->AutoScaleBaseSize = System::Drawing::Size(8, 19);
 			this->CancelButton = this->btnCancel;
-			this->ClientSize = System::Drawing::Size(391, 610);
+			this->ClientSize = System::Drawing::Size(391, 634);
 			this->Controls->Add(this->tabOptions);
 			this->Controls->Add(this->btnCancel);
 			this->Controls->Add(this->btnOK);
@@ -1449,6 +1465,18 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		void set(vlBool bGenerateSphereMap)
 		{
 			this->chkSphereMap->Checked = bGenerateSphereMap > 0;
+		}
+	}
+
+	public: property vlBool StripAlpha
+	{
+		vlBool get()
+		{
+			return this->chkStripAlpha->Checked == true;
+		}
+		void set(vlBool bStripAlpha)
+		{
+			this->chkStripAlpha->Checked = bStripAlpha > 0;
 		}
 	}
 
@@ -1769,6 +1797,7 @@ private: System::Windows::Forms::CheckBox^ chkSrgb;
 		this->chkReflectivity->Checked = true;
 		this->chkThumbnail->Checked = true;
 		this->chkSphereMap->Checked = true;
+		this->chkStripAlpha->Checked = false;
 		this->chkSrgb->Checked = true;
 
 		this->chkGammaCorrection->Checked = false;
