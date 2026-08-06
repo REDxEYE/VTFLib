@@ -292,7 +292,6 @@ namespace VTFEdit
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->txtOutputFolder->Location = System::Drawing::Point(170, 46);
 			this->txtOutputFolder->Name = L"txtOutputFolder";
-			this->txtOutputFolder->ReadOnly = true;
 			this->txtOutputFolder->Size = System::Drawing::Size(339, 26);
 			this->txtOutputFolder->TabIndex = 4;
 			this->tipMain->SetToolTip(this->txtOutputFolder, L"Destination image folder.");
@@ -324,7 +323,6 @@ namespace VTFEdit
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->txtInputFolder->Location = System::Drawing::Point(170, 18);
 			this->txtInputFolder->Name = L"txtInputFolder";
-			this->txtInputFolder->ReadOnly = true;
 			this->txtInputFolder->Size = System::Drawing::Size(339, 26);
 			this->txtInputFolder->TabIndex = 1;
 			this->tipMain->SetToolTip(this->txtInputFolder, L"Source image folder.");
