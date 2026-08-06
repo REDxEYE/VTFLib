@@ -344,6 +344,12 @@ private:
 public:
 	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(0), NextToken(0), uiCurrentTokenLine(1), uiNextTokenLine(1)
 	{
+
+	}
+
+	// This can throw, so it is kept out of the constructor
+	vlVoid Prime()
+	{
 		this->GetNextToken();
 	}
 
@@ -731,6 +737,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader)
 
 	try
 	{
+		Tokenizer.Prime();
 		this->Root = Parser.Parse();
 	}
 	catch(char *cErrorMessage)
