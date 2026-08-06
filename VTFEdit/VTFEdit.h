@@ -249,6 +249,8 @@ namespace VTFEdit
 	private: System::Windows::Forms::Label ^  lblThumbnailWidth;
 	private: System::Windows::Forms::Label ^  lblThumbnailWidthLabel;
 	private: System::Windows::Forms::Button ^  btnAnimate;
+	private: System::Windows::Forms::Label ^  lblAnimateFPS;
+	private: System::Windows::Forms::NumericUpDown ^  numAnimateFPS;
 	private: System::Windows::Forms::Timer ^  tmrAnimate;
 	private: System::Windows::Forms::GroupBox ^  grpImage;
 	private: System::Windows::Forms::GroupBox ^  grpFlags;
@@ -386,6 +388,8 @@ namespace VTFEdit
 			this->grpResourceInfo = (gcnew System::Windows::Forms::GroupBox());
 			this->lblResourceCount = (gcnew System::Windows::Forms::Label());
 			this->lblResourceCountLabel = (gcnew System::Windows::Forms::Label());
+			this->lblAnimateFPS = (gcnew System::Windows::Forms::Label());
+			this->numAnimateFPS = (gcnew System::Windows::Forms::NumericUpDown());
 			this->tmrAnimate = (gcnew System::Windows::Forms::Timer(this->components));
 			this->dlgSaveVTFFile = (gcnew System::Windows::Forms::SaveFileDialog());
 			this->dlgSaveVMTFile = (gcnew System::Windows::Forms::SaveFileDialog());
@@ -441,6 +445,7 @@ namespace VTFEdit
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numMipmap))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numFace))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numFrame))->BeginInit();
+			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numAnimateFPS))->BeginInit();
 			this->grpFlags->SuspendLayout();
 			this->tabInfo->SuspendLayout();
 			this->grpImageInfo->SuspendLayout();
@@ -926,10 +931,12 @@ namespace VTFEdit
 			this->grpImage->Controls->Add(this->numFrame);
 			this->grpImage->Controls->Add(this->lblFrame);
 			this->grpImage->Controls->Add(this->btnAnimate);
+			this->grpImage->Controls->Add(this->lblAnimateFPS);
+			this->grpImage->Controls->Add(this->numAnimateFPS);
 			this->grpImage->FlatStyle = System::Windows::Forms::FlatStyle::System;
 			this->grpImage->Location = System::Drawing::Point(8, 8);
 			this->grpImage->Name = L"grpImage";
-			this->grpImage->Size = System::Drawing::Size(225, 173);
+			this->grpImage->Size = System::Drawing::Size(225, 201);
 			this->grpImage->TabIndex = 0;
 			this->grpImage->TabStop = false;
 			this->grpImage->Text = L"Image:";
@@ -1051,7 +1058,29 @@ namespace VTFEdit
 			this->btnAnimate->Size = System::Drawing::Size(194, 22);
 			this->btnAnimate->TabIndex = 14;
 			this->btnAnimate->Click += gcnew System::EventHandler(this, &CVTFEdit::btnAnimate_Click);
-			// 
+			//
+			// lblAnimateFPS
+			//
+			this->lblAnimateFPS->Location = System::Drawing::Point(8, 170);
+			this->lblAnimateFPS->Name = L"lblAnimateFPS";
+			this->lblAnimateFPS->Size = System::Drawing::Size(72, 23);
+			this->lblAnimateFPS->TabIndex = 15;
+			this->lblAnimateFPS->Text = L"Framerate:";
+			//
+			// numAnimateFPS
+			//
+			this->numAnimateFPS->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
+				| System::Windows::Forms::AnchorStyles::Right));
+			this->numAnimateFPS->Enabled = false;
+			this->numAnimateFPS->Location = System::Drawing::Point(82, 170);
+			this->numAnimateFPS->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
+			this->numAnimateFPS->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 100, 0, 0, 0 });
+			this->numAnimateFPS->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 24, 0, 0, 0 });
+			this->numAnimateFPS->Name = L"numAnimateFPS";
+			this->numAnimateFPS->Size = System::Drawing::Size(137, 23);
+			this->numAnimateFPS->TabIndex = 16;
+			this->numAnimateFPS->ValueChanged += gcnew System::EventHandler(this, &CVTFEdit::numAnimateFPS_ValueChanged);
+			//
 			// grpFlags
 			// 
 			this->grpFlags->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
@@ -1059,9 +1088,9 @@ namespace VTFEdit
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->grpFlags->Controls->Add(this->lstFlags);
 			this->grpFlags->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpFlags->Location = System::Drawing::Point(8, 178);
+			this->grpFlags->Location = System::Drawing::Point(8, 206);
 			this->grpFlags->Name = L"grpFlags";
-			this->grpFlags->Size = System::Drawing::Size(219, 298);
+			this->grpFlags->Size = System::Drawing::Size(219, 270);
 			this->grpFlags->TabIndex = 1;
 			this->grpFlags->TabStop = false;
 			this->grpFlags->Text = L"Flags:";
@@ -1497,7 +1526,7 @@ namespace VTFEdit
 			// 
 			// tmrAnimate
 			// 
-			this->tmrAnimate->Interval = 42;
+			this->tmrAnimate->Interval = 41;
 			this->tmrAnimate->Tick += gcnew System::EventHandler(this, &CVTFEdit::tmrAnimate_Tick);
 			// 
 			// dlgSaveVTFFile
@@ -1865,6 +1894,7 @@ namespace VTFEdit
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numMipmap))->EndInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numFace))->EndInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numFrame))->EndInit();
+			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numAnimateFPS))->EndInit();
 			this->grpFlags->ResumeLayout(false);
 			this->tabInfo->ResumeLayout(false);
 			this->grpImageInfo->ResumeLayout(false);
@@ -2796,6 +2826,7 @@ namespace VTFEdit
 			if(VTFFile->GetFrameCount() > 1)
 			{
 				this->btnAnimate->Enabled = true;
+				this->numAnimateFPS->Enabled = true;
 			}
 
 			if(VTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F || VTFFile->GetFormat() == IMAGE_FORMAT_BC6H)
@@ -3540,6 +3571,7 @@ namespace VTFEdit
 
 			this->btnAnimate->Text = "&Play";
 			this->btnAnimate->Enabled = false;
+			this->numAnimateFPS->Enabled = false;
 			this->tmrAnimate->Enabled = false;
 
 			// "Hide" the tab pages.
@@ -3859,6 +3891,16 @@ namespace VTFEdit
 				this->tmrAnimate->Enabled = true;
 				this->btnAnimate->Text = "&Stop";
 			}
+		}
+
+		private: System::Void numAnimateFPS_ValueChanged(System::Object ^  sender, System::EventArgs ^  e)
+		{
+			if(this->tmrAnimate == nullptr)
+				return;
+
+			int iFPS = (int)this->numAnimateFPS->Value;
+
+			this->tmrAnimate->Interval = 1000 / iFPS;
 		}
 
 		private: System::Void tmrAnimate_Tick(System::Object ^  sender, System::EventArgs ^  e)
@@ -4663,6 +4705,8 @@ namespace VTFEdit
 							{
 								this->tmrAnimate->Interval = 1000;
 							}
+
+							this->numAnimateFPS->Value = System::Decimal(1000 / this->tmrAnimate->Interval);
 						}
 						else if(System::String::Compare(sArg, "VTFEdit.Mask", true) == 0)
 						{
