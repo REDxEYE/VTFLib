@@ -225,48 +225,21 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 	// Check options.
 	//
 
-	// Check if width is valid (power of 2 and fits in a short).
-	if(!this->IsPowerOfTwo(uiWidth) || uiWidth > 0xffff)
+	if(uiWidth == 0 || uiWidth > 0xffff)
 	{
-		if(uiWidth == 0)
-		{
-			LastError.Set("Invalid image width.  Width must be nonzero.");
-		}
-		else
-		{
-			vlUInt uiNextPowerOfTwo = this->NextPowerOfTwo(uiWidth);
-			LastError.SetFormatted("Invalid image width %u.  Width must be a power of two (nearest powers are %u and %u).", uiWidth, uiNextPowerOfTwo >> 1, uiNextPowerOfTwo);
-		}
+		LastError.SetFormatted("Invalid image width %u.  Width must be nonzero and no greater than %u.", uiWidth, 0xffff);
 		return vlFalse;
 	}
 
-	// Check if height is valid (power of 2 and fits in a short).
-	if(!this->IsPowerOfTwo(uiHeight) || uiHeight > 0xffff)
+	if(uiHeight == 0 || uiHeight > 0xffff)
 	{
-		if(uiHeight == 0)
-		{
-			LastError.Set("Invalid image height.  Height must be nonzero.");
-		}
-		else
-		{
-			vlUInt uiNextPowerOfTwo = this->NextPowerOfTwo(uiHeight);
-			LastError.SetFormatted("Invalid image height %u.  Height must be a power of two (nearest powers are %u and %u).", uiHeight, uiNextPowerOfTwo >> 1, uiNextPowerOfTwo);
-		}
+		LastError.SetFormatted("Invalid image height %u.  Height must be nonzero and no greater than %u.", uiHeight, 0xffff);
 		return vlFalse;
 	}
 
-	// Check if height is valid (power of 2 and fits in a short).
-	if(!this->IsPowerOfTwo(uiSlices) || uiSlices > 0xffff)
+	if(uiSlices == 0 || uiSlices > 0xffff)
 	{
-		if(uiHeight == 0)
-		{
-			LastError.Set("Invalid image depth.  Depth must be nonzero.");
-		}
-		else
-		{
-			vlUInt uiNextPowerOfTwo = this->NextPowerOfTwo(uiSlices);
-			LastError.SetFormatted("Invalid image depth %u.  Depth must be a power of two (nearest powers are %u and %u).", uiSlices, uiNextPowerOfTwo >> 1, uiNextPowerOfTwo);
-		}
+		LastError.SetFormatted("Invalid image depth %u.  Depth must be nonzero and no greater than %u.", uiSlices, 0xffff);
 		return vlFalse;
 	}
 
@@ -279,6 +252,14 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 	if(!this->GetImageFormatInfo(ImageFormat).bIsSupported)
 	{
 		LastError.Set("Image format not supported.");
+		return vlFalse;
+	}
+
+	// block compressed formats
+	if(this->GetImageFormatInfo(ImageFormat).bIsCompressed 
+		&& ((uiWidth > 4 && (uiWidth % 4) != 0) || (uiHeight > 4 && (uiHeight % 4) != 0)))
+	{
+		LastError.SetFormatted("Invalid image size %ux%u.  Compressed formats require dimensions that are a multiple of four.", uiWidth, uiHeight);
 		return vlFalse;
 	}
 
@@ -625,9 +606,6 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 				uiNewHeight = VTFCreateOptions.uiResizeHeight;
 				break;
 			}
-
-			assert((uiNewWidth & (uiNewWidth - 1)) == 0);
-			assert((uiNewHeight & (uiNewHeight - 1)) == 0);
 
 			// Resize the input.
 			if(uiWidth != uiNewWidth || uiHeight != uiNewHeight)
@@ -3372,6 +3350,14 @@ vlBool CVTFFile::ConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWi
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Rounds a dimension up to a whole 4x4 compression block, matching the padding ComputeImageSize() accounts for
+//-----------------------------------------------------------------------------------------------------
+static vlUInt BlockAlign(vlUInt uiSize)
+{
+	return uiSize < 4 ? 4 : ((uiSize + 3) & ~3u);
+}
+
+//-----------------------------------------------------------------------------------------------------
 // DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat)
 //
 // Converts data from a block compressed format (DXTn, BC7) to RGBA8888 format. Data is read from *src
@@ -3379,6 +3365,31 @@ vlBool CVTFFile::ConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWi
 //-----------------------------------------------------------------------------------------------------
 vlBool CVTFFile::DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat)
 {
+	vlBool bHDRSource = GetUncompressedFormat( SourceFormat ) == IMAGE_FORMAT_RGBA16161616F;
+
+	// block compressed formats work on 4x4 blocks
+	// so images whose dimensions are not a multiple of four are stored padded out to whole blocks
+	vlUInt uiPaddedWidth = BlockAlign( uiWidth ), uiPaddedHeight = BlockAlign( uiHeight );
+
+	if( uiPaddedWidth != uiWidth || uiPaddedHeight != uiHeight )
+	{
+		vlUInt uiPixelSize = bHDRSource ? 8 : 4;
+
+		std::vector<vlByte> Padded( uiPaddedWidth * uiPaddedHeight * uiPixelSize );
+
+		if( !CVTFFile::DecompressDXTn( src, Padded.data(), uiPaddedWidth, uiPaddedHeight, SourceFormat ) )
+		{
+			return vlFalse;
+		}
+
+		for( vlUInt i = 0; i < uiHeight; i++ )
+		{
+			memcpy( dst + i * uiWidth * uiPixelSize, Padded.data() + i * uiPaddedWidth * uiPixelSize, uiWidth * uiPixelSize );
+		}
+
+		return vlTrue;
+	}
+
 	CMP_Texture srcTexture = {0};
 	srcTexture.dwSize     = sizeof( srcTexture );
 	srcTexture.dwWidth    = uiWidth;
@@ -3432,6 +3443,31 @@ vlBool CVTFFile::ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt ui
 vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat)
 {
 	vlBool bHDR = GetUncompressedFormat( DestFormat ) == IMAGE_FORMAT_RGBA16161616F;
+
+	// pad images whose dimensions are not a multiple of four out to whole 4x4 blocks
+	vlUInt uiPaddedWidth = BlockAlign( uiWidth ), uiPaddedHeight = BlockAlign( uiHeight );
+
+	if( uiPaddedWidth != uiWidth || uiPaddedHeight != uiHeight )
+	{
+		vlUInt uiPixelSize = bHDR ? 8 : 4;
+
+		std::vector<vlByte> Padded( uiPaddedWidth * uiPaddedHeight * uiPixelSize );
+
+		for( vlUInt i = 0; i < uiPaddedHeight; i++ )
+		{
+			const vlByte *pSourceRow = lpSource + ( i < uiHeight ? i : uiHeight - 1 ) * uiWidth * uiPixelSize;
+			vlByte *pDestRow = Padded.data() + i * uiPaddedWidth * uiPixelSize;
+
+			memcpy( pDestRow, pSourceRow, uiWidth * uiPixelSize );
+
+			for( vlUInt j = uiWidth; j < uiPaddedWidth; j++ )
+			{
+				memcpy( pDestRow + j * uiPixelSize, pSourceRow + ( uiWidth - 1 ) * uiPixelSize, uiPixelSize );
+			}
+		}
+
+		return CVTFFile::CompressDXTn( Padded.data(), lpDest, uiPaddedWidth, uiPaddedHeight, DestFormat );
+	}
 
 	CMP_Texture srcTexture = {0};
 	srcTexture.dwSize     = sizeof( srcTexture );
