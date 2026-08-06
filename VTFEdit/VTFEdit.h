@@ -2842,7 +2842,7 @@ namespace VTFEdit
 			#pragma warning(disable: 4800)
 			this->lstFlags->Items->Add("Point Sample", uiFlags & TEXTUREFLAGS_POINTSAMPLE);
 			this->lstFlags->Items->Add("Trilinear", uiFlags & TEXTUREFLAGS_TRILINEAR);
-			this->lstFlags->Items->Add("Clamp ", uiFlags & TEXTUREFLAGS_CLAMPS);
+			this->lstFlags->Items->Add("Clamp S", uiFlags & TEXTUREFLAGS_CLAMPS);
 			this->lstFlags->Items->Add("Clamp T", uiFlags & TEXTUREFLAGS_CLAMPT);
 			this->lstFlags->Items->Add("Anisotropic", uiFlags & TEXTUREFLAGS_ANISOTROPIC);
 			this->lstFlags->Items->Add("Hint DXT5", uiFlags & TEXTUREFLAGS_HINT_DXT5);
