@@ -37,6 +37,8 @@ Correct vtfcmd usage:
  -prefix <string>         (Output file prefix.)
  -postfix <string>        (Output file postfix.)
  -version <string>        (Ouput version.)
+ -compress <integer>      (Compress image data; -1 default, 0 off, 1-9. Requires version 7.6.)
+ -cmethod <string>        (Compression method: deflate or zstd.)
  -format <string>         (Ouput format to use on non-alpha textures.)
  -alphaformat <string>    (Ouput format to use on alpha textures.)
  -flag <string>           (Output flags to set.)
