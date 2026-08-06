@@ -62,6 +62,7 @@ namespace VTFEdit
 		System::Drawing::Size FormSaveSize;
 		FormWindowState FormSaveWindowState;
 		int iFormSaveSidebarSplitPosition;
+		int iFormSaveSidebarRightSplitPosition;
 
 		CVTFOptions ^Options;
 		CVMTCreate ^VMTCreate;
@@ -89,6 +90,8 @@ namespace VTFEdit
 			this->RecentFiles = gcnew System::Collections::ArrayList();
 
 			this->bFormRestoring = false;
+			this->iFormSaveSidebarSplitPosition = 258;
+			this->iFormSaveSidebarRightSplitPosition = 258;
 
 			this->Options = gcnew CVTFOptions();
 			this->VMTCreate = gcnew CVMTCreate();
@@ -170,6 +173,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::MenuItem ^  btnOptionsMenu;
 	private: System::Windows::Forms::MenuItem ^  btnMask;
 	private: System::Windows::Forms::Splitter ^  splSidebar;
+	private: System::Windows::Forms::Splitter ^  splSidebarRight;
 	private: System::Windows::Forms::StatusBar ^  barStatus;
 	private: System::Windows::Forms::ToolBar ^  barTool;
 	private: System::Windows::Forms::ImageList ^  imgTool;
@@ -196,6 +200,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::MenuItem ^  btnChannelB;
 	private: System::Windows::Forms::MenuItem ^  btnChannelA;
 	private: System::Windows::Forms::TabControl ^  tabSidebar;
+	private: System::Windows::Forms::TabControl ^  tabSidebarRight;
 	private: System::Windows::Forms::TabPage ^  tabImage;
 	private: System::Windows::Forms::TabPage ^  tabInfo;
 	private: System::Windows::Forms::Label ^  lblImageFrames;
@@ -245,6 +250,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::MenuItem ^  btnExit;
 	private: System::Windows::Forms::OpenFileDialog ^  dlgOpenFile;
 	private: System::Windows::Forms::Panel ^  pnlSidebar;
+	private: System::Windows::Forms::Panel ^  pnlSidebarRight;
 	private: System::Windows::Forms::Label ^  lblFrame;
 	private: System::Windows::Forms::NumericUpDown ^  numFrame;
 	private: System::Windows::Forms::Label ^  lblFace;
@@ -300,6 +306,8 @@ namespace VTFEdit
 			this->pnlInfo2 = (gcnew System::Windows::Forms::StatusBarPanel());
 			this->pnlSidebar = (gcnew System::Windows::Forms::Panel());
 			this->tabSidebar = (gcnew System::Windows::Forms::TabControl());
+			this->pnlSidebarRight = (gcnew System::Windows::Forms::Panel());
+			this->tabSidebarRight = (gcnew System::Windows::Forms::TabControl());
 			this->tabImage = (gcnew System::Windows::Forms::TabPage());
 			this->grpImage = (gcnew System::Windows::Forms::GroupBox());
 			this->mnuHDR = (gcnew System::Windows::Forms::ContextMenu());
@@ -401,11 +409,14 @@ namespace VTFEdit
 			this->btnToolPaste = (gcnew System::Windows::Forms::ToolBarButton());
 			this->imgTool = (gcnew System::Windows::Forms::ImageList(this->components));
 			this->splSidebar = (gcnew System::Windows::Forms::Splitter());
+			this->splSidebarRight = (gcnew System::Windows::Forms::Splitter());
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlFileName))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo1))->BeginInit();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo2))->BeginInit();
 			this->pnlSidebar->SuspendLayout();
 			this->tabSidebar->SuspendLayout();
+			this->pnlSidebarRight->SuspendLayout();
+			this->tabSidebarRight->SuspendLayout();
 			this->tabImage->SuspendLayout();
 			this->grpImage->SuspendLayout();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trkHDRExposure))->BeginInit();
@@ -738,8 +749,6 @@ namespace VTFEdit
 				| System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->tabSidebar->Controls->Add(this->tabImage);
-			this->tabSidebar->Controls->Add(this->tabInfo);
-			this->tabSidebar->Controls->Add(this->tabResources);
 			this->tabSidebar->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
 				static_cast<System::Byte>(0)));
 			this->tabSidebar->Location = System::Drawing::Point(8, 8);
@@ -747,7 +756,32 @@ namespace VTFEdit
 			this->tabSidebar->SelectedIndex = 0;
 			this->tabSidebar->Size = System::Drawing::Size(244, 520);
 			this->tabSidebar->TabIndex = 2;
-			// 
+			//
+			// pnlSidebarRight
+			//
+			this->pnlSidebarRight->BackColor = System::Drawing::SystemColors::Control;
+			this->pnlSidebarRight->Controls->Add(this->tabSidebarRight);
+			this->pnlSidebarRight->Dock = System::Windows::Forms::DockStyle::Right;
+			this->pnlSidebarRight->Location = System::Drawing::Point(494, 36);
+			this->pnlSidebarRight->Name = L"pnlSidebarRight";
+			this->pnlSidebarRight->Size = System::Drawing::Size(258, 528);
+			this->pnlSidebarRight->TabIndex = 6;
+			//
+			// tabSidebarRight
+			//
+			this->tabSidebarRight->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
+				| System::Windows::Forms::AnchorStyles::Left)
+				| System::Windows::Forms::AnchorStyles::Right));
+			this->tabSidebarRight->Controls->Add(this->tabInfo);
+			this->tabSidebarRight->Controls->Add(this->tabResources);
+			this->tabSidebarRight->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(0)));
+			this->tabSidebarRight->Location = System::Drawing::Point(6, 8);
+			this->tabSidebarRight->Name = L"tabSidebarRight";
+			this->tabSidebarRight->SelectedIndex = 0;
+			this->tabSidebarRight->Size = System::Drawing::Size(244, 520);
+			this->tabSidebarRight->TabIndex = 0;
+			//
 			// tabImage
 			// 
 			this->tabImage->Controls->Add(this->grpImage);
@@ -1701,7 +1735,20 @@ namespace VTFEdit
 			this->splSidebar->TabIndex = 5;
 			this->splSidebar->TabStop = false;
 			this->splSidebar->SplitterMoved += gcnew System::Windows::Forms::SplitterEventHandler(this, &CVTFEdit::splSidebar_SplitterMoved);
-			// 
+			//
+			// splSidebarRight
+			//
+			this->splSidebarRight->BackColor = System::Drawing::SystemColors::Control;
+			this->splSidebarRight->Dock = System::Windows::Forms::DockStyle::Right;
+			this->splSidebarRight->Location = System::Drawing::Point(490, 36);
+			this->splSidebarRight->MinExtra = 96;
+			this->splSidebarRight->MinSize = 96;
+			this->splSidebarRight->Name = L"splSidebarRight";
+			this->splSidebarRight->Size = System::Drawing::Size(4, 528);
+			this->splSidebarRight->TabIndex = 7;
+			this->splSidebarRight->TabStop = false;
+			this->splSidebarRight->SplitterMoved += gcnew System::Windows::Forms::SplitterEventHandler(this, &CVTFEdit::splSidebarRight_SplitterMoved);
+			//
 			// CVTFEdit
 			// 
 			this->AutoScaleBaseSize = System::Drawing::Size(6, 16);
@@ -1710,6 +1757,8 @@ namespace VTFEdit
 			this->Controls->Add(this->pnlMain);
 			this->Controls->Add(this->splSidebar);
 			this->Controls->Add(this->pnlSidebar);
+			this->Controls->Add(this->splSidebarRight);
+			this->Controls->Add(this->pnlSidebarRight);
 			this->Controls->Add(this->barTool);
 			this->Controls->Add(this->barStatus);
 			this->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8));
@@ -1726,6 +1775,8 @@ namespace VTFEdit
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo2))->EndInit();
 			this->pnlSidebar->ResumeLayout(false);
 			this->tabSidebar->ResumeLayout(false);
+			this->pnlSidebarRight->ResumeLayout(false);
+			this->tabSidebarRight->ResumeLayout(false);
 			this->tabImage->ResumeLayout(false);
 			this->grpImage->ResumeLayout(false);
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trkHDRExposure))->EndInit();
@@ -1865,18 +1916,19 @@ namespace VTFEdit
 			this->txtVMTFile->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &CVTFEdit::Control_DragDrop);
 
 			// "Hide" the tab pages.
-			if(this->tabSidebar->TabPages->Contains(this->tabResources))
+			if(this->tabSidebarRight->TabPages->Contains(this->tabResources))
 			{
-				this->tabSidebar->TabPages->Remove(this->tabResources);
+				this->tabSidebarRight->TabPages->Remove(this->tabResources);
 			}
-			if(this->tabSidebar->TabPages->Contains(this->tabInfo))
+			if(this->tabSidebarRight->TabPages->Contains(this->tabInfo))
 			{
-				this->tabSidebar->TabPages->Remove(this->tabInfo);
+				this->tabSidebarRight->TabPages->Remove(this->tabInfo);
 			}
 			if(this->tabSidebar->TabPages->Contains(this->tabImage))
 			{
 				this->tabSidebar->TabPages->Remove(this->tabImage);
 			}
+			this->UpdateSidebarsVisible();
 
 			this->numImageBumpmapScale->DecimalPlaces = 2;
 			this->numImageBumpmapScale->Increment = System::Decimal(0.01);
@@ -1981,6 +2033,42 @@ namespace VTFEdit
 			this->BackupForm();
 		}
 
+		private: System::Void splSidebarRight_SplitterMoved(System::Object ^  sender, System::Windows::Forms::SplitterEventArgs ^  e)
+		{
+			this->BackupForm();
+		}
+
+		private: void UpdateSidebarVisible(System::Windows::Forms::TabControl ^Tabs, System::Windows::Forms::Panel ^Panel, System::Windows::Forms::Splitter ^Splitter, int iSplitPosition)
+		{
+			bool bVisible = Tabs->TabPages->Count != 0;
+
+			if(bVisible && !Panel->Visible)
+			{
+				Panel->Visible = true;
+				Splitter->Visible = true;
+
+				try
+				{
+					Splitter->SplitPosition = iSplitPosition;
+				}
+				catch(Exception ^)
+				{
+
+				}
+			}
+			else if(!bVisible)
+			{
+				Panel->Visible = false;
+				Splitter->Visible = false;
+			}
+		}
+
+		private: void UpdateSidebarsVisible()
+		{
+			this->UpdateSidebarVisible(this->tabSidebar, this->pnlSidebar, this->splSidebar, this->iFormSaveSidebarSplitPosition);
+			this->UpdateSidebarVisible(this->tabSidebarRight, this->pnlSidebarRight, this->splSidebarRight, this->iFormSaveSidebarRightSplitPosition);
+		}
+
 		private: void BackupForm()
 		{
 			if(!this->bFormRestoring && this->WindowState != FormWindowState::Minimized)
@@ -1989,7 +2077,14 @@ namespace VTFEdit
 				{
 					this->FormSaveLocation = Location;
 					this->FormSaveSize = Size;
-					this->iFormSaveSidebarSplitPosition = this->splSidebar->SplitPosition;
+					if(this->pnlSidebar->Visible)
+					{
+						this->iFormSaveSidebarSplitPosition = this->splSidebar->SplitPosition;
+					}
+					if(this->pnlSidebarRight->Visible)
+					{
+						this->iFormSaveSidebarRightSplitPosition = this->splSidebarRight->SplitPosition;
+					}
 				}
 				this->FormSaveWindowState = this->WindowState;
 			}
@@ -2003,7 +2098,14 @@ namespace VTFEdit
 				this->Location = this->FormSaveLocation;
 				this->Size = this->FormSaveSize;
 				this->WindowState = this->FormSaveWindowState;
-				this->splSidebar->SplitPosition = this->iFormSaveSidebarSplitPosition;
+				if(this->pnlSidebar->Visible)
+				{
+					this->splSidebar->SplitPosition = this->iFormSaveSidebarSplitPosition;
+				}
+				if(this->pnlSidebarRight->Visible)
+				{
+					this->splSidebarRight->SplitPosition = this->iFormSaveSidebarRightSplitPosition;
+				}
 			}
 			catch(Exception ^)
 			{
@@ -2521,16 +2623,18 @@ namespace VTFEdit
 			{
 				this->tabSidebar->TabPages->Add(this->tabImage);
 			}
-			if(!this->tabSidebar->TabPages->Contains(this->tabInfo))
+			if(!this->tabSidebarRight->TabPages->Contains(this->tabInfo))
 			{
-				this->tabSidebar->TabPages->Add(this->tabInfo);
+				this->tabSidebarRight->TabPages->Add(this->tabInfo);
 			}
-			if(!this->tabSidebar->TabPages->Contains(this->tabResources))
+			if(!this->tabSidebarRight->TabPages->Contains(this->tabResources))
 			{
-				this->tabSidebar->TabPages->Add(this->tabResources);
+				this->tabSidebarRight->TabPages->Add(this->tabResources);
 			}
+			this->UpdateSidebarsVisible();
 
 			this->tabSidebar->SelectedTab = this->tabImage;
+			this->tabSidebarRight->SelectedTab = this->tabInfo;
 		}
 
 		private: void SetInformation(System::Windows::Forms::TreeNode ^pNode, VTFLib::Nodes::CVMTGroupNode *pVMTNode)
@@ -3104,18 +3208,19 @@ namespace VTFEdit
 			this->tmrAnimate->Enabled = false;
 
 			// "Hide" the tab pages.
-			if(this->tabSidebar->TabPages->Contains(this->tabResources))
+			if(this->tabSidebarRight->TabPages->Contains(this->tabResources))
 			{
-				this->tabSidebar->TabPages->Remove(this->tabResources);
+				this->tabSidebarRight->TabPages->Remove(this->tabResources);
 			}
-			if(this->tabSidebar->TabPages->Contains(this->tabInfo))
+			if(this->tabSidebarRight->TabPages->Contains(this->tabInfo))
 			{
-				this->tabSidebar->TabPages->Remove(this->tabInfo);
+				this->tabSidebarRight->TabPages->Remove(this->tabInfo);
 			}
 			if(this->tabSidebar->TabPages->Contains(this->tabImage))
 			{
 				this->tabSidebar->TabPages->Remove(this->tabImage);
 			}
+			this->UpdateSidebarsVisible();
 
 			this->picVTFFileTL->Visible = false;
 			this->picVTFFileTR->Visible = false;
@@ -3884,6 +3989,7 @@ namespace VTFEdit
 					ConfigFile->WriteLine("Forms.VTFEdit.WindowState = Normal");
 				}
 				ConfigFile->WriteLine(System::String::Concat("Forms.VTFEdit.Sidebar.SplitPosition = ", this->iFormSaveSidebarSplitPosition.ToString()));
+				ConfigFile->WriteLine(System::String::Concat("Forms.VTFEdit.SidebarRight.SplitPosition = ", this->iFormSaveSidebarRightSplitPosition.ToString()));
 
 				ConfigFile->WriteLine(System::String::Concat("Forms.BatchConvert.InputFolder = ", this->BatchConvert->InputFolder));
 				ConfigFile->WriteLine(System::String::Concat("Forms.BatchConvert.OutputFolder = ", this->BatchConvert->OutputFolder));
@@ -4055,6 +4161,10 @@ namespace VTFEdit
 						else if(System::String::Compare(sArg, "Forms.VTFEdit.Sidebar.SplitPosition", true) == 0)
 						{
 							this->iFormSaveSidebarSplitPosition = Convert::ToInt32(sVal);
+						}
+						else if(System::String::Compare(sArg, "Forms.VTFEdit.SidebarRight.SplitPosition", true) == 0)
+						{
+							this->iFormSaveSidebarRightSplitPosition = Convert::ToInt32(sVal);
 						}
 
 						else if(System::String::Compare(sArg, "Forms.BatchConvert.InputFolder", true) == 0)
