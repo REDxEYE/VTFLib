@@ -24,7 +24,6 @@
 #include "VTFOptions.h"
 #include "VMTCreate.h"
 #include "BatchConvert.h"
-#include "DirectoryItemInfoManager.h"
 #include "Utility.h"
 
 using namespace System;
@@ -64,7 +63,6 @@ namespace VTFEdit
 		FormWindowState FormSaveWindowState;
 		int iFormSaveSidebarSplitPosition;
 
-		CDirectoryItemInfoManager ^DirectoryItemInfoManager;
 		CVTFOptions ^Options;
 		CVMTCreate ^VMTCreate;
 		CBatchConvert ^BatchConvert;
@@ -92,7 +90,6 @@ namespace VTFEdit
 
 			this->bFormRestoring = false;
 
-			this->DirectoryItemInfoManager = gcnew CDirectoryItemInfoManager();
 			this->Options = gcnew CVTFOptions();
 			this->VMTCreate = gcnew CVMTCreate();
 			this->BatchConvert = gcnew CBatchConvert(this->Options);
@@ -104,7 +101,6 @@ namespace VTFEdit
 
 			this->SyntaxHilighter = gcnew CVMTFileUtility::CSyntaxHilighter(this->txtVMTFile);
 
-			this->treFileSystem->ImageList = this->DirectoryItemInfoManager->SmallImageList;
 		}
 
 	private: System::Windows::Forms::MenuItem ^  btnVMTFileValidateStrict;
@@ -132,8 +128,6 @@ namespace VTFEdit
 	private: System::Windows::Forms::Label ^  lblImageSlices;
 	private: System::Windows::Forms::Label ^  lblImageSlicesLabel;
 	private: System::Windows::Forms::StatusBarPanel ^  pnlFileName;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemSpace2;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemDelete;
 	private: System::Windows::Forms::MenuItem ^  btnVMTFileSpace3;
 	private: System::Windows::Forms::MenuItem ^  btnVMTFileValidate;
 	private: System::Windows::Forms::MenuItem ^  btnNew;
@@ -173,21 +167,8 @@ namespace VTFEdit
 	private: System::Windows::Forms::PictureBox ^  picVTFFileBR;
 	private: System::Windows::Forms::MenuItem ^  btnTile;
 	private: System::Windows::Forms::MenuItem ^  btnMipmapFullSize;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemAddGoto;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemSpace1;
-	private: System::Windows::Forms::ContextMenu ^  mnuGoto;
-	private: System::Windows::Forms::MenuItem ^  btnGotoRemove;
-	private: System::Windows::Forms::MenuItem ^  btnGotoClear;
 	private: System::Windows::Forms::MenuItem ^  btnOptionsMenu;
-	private: System::Windows::Forms::ContextMenu ^  mnuFileSystem;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemOpen;
-	private: System::Windows::Forms::MenuItem ^  btnFileSystemShellExecute;
-	private: System::Windows::Forms::GroupBox ^  grpGoto;
-	private: System::Windows::Forms::ComboBox ^  cboGoto;
 	private: System::Windows::Forms::MenuItem ^  btnMask;
-	private: System::Windows::Forms::TabPage ^  tabFileSystem;
-	private: System::Windows::Forms::GroupBox ^  grpFileSystem;
-	private: System::Windows::Forms::TreeView ^  treFileSystem;
 	private: System::Windows::Forms::Splitter ^  splSidebar;
 	private: System::Windows::Forms::StatusBar ^  barStatus;
 	private: System::Windows::Forms::ToolBar ^  barTool;
@@ -319,21 +300,6 @@ namespace VTFEdit
 			this->pnlInfo2 = (gcnew System::Windows::Forms::StatusBarPanel());
 			this->pnlSidebar = (gcnew System::Windows::Forms::Panel());
 			this->tabSidebar = (gcnew System::Windows::Forms::TabControl());
-			this->tabFileSystem = (gcnew System::Windows::Forms::TabPage());
-			this->grpGoto = (gcnew System::Windows::Forms::GroupBox());
-			this->cboGoto = (gcnew System::Windows::Forms::ComboBox());
-			this->mnuGoto = (gcnew System::Windows::Forms::ContextMenu());
-			this->btnGotoRemove = (gcnew System::Windows::Forms::MenuItem());
-			this->btnGotoClear = (gcnew System::Windows::Forms::MenuItem());
-			this->grpFileSystem = (gcnew System::Windows::Forms::GroupBox());
-			this->treFileSystem = (gcnew System::Windows::Forms::TreeView());
-			this->mnuFileSystem = (gcnew System::Windows::Forms::ContextMenu());
-			this->btnFileSystemOpen = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemShellExecute = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemSpace1 = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemAddGoto = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemSpace2 = (gcnew System::Windows::Forms::MenuItem());
-			this->btnFileSystemDelete = (gcnew System::Windows::Forms::MenuItem());
 			this->tabImage = (gcnew System::Windows::Forms::TabPage());
 			this->grpImage = (gcnew System::Windows::Forms::GroupBox());
 			this->mnuHDR = (gcnew System::Windows::Forms::ContextMenu());
@@ -440,9 +406,6 @@ namespace VTFEdit
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo2))->BeginInit();
 			this->pnlSidebar->SuspendLayout();
 			this->tabSidebar->SuspendLayout();
-			this->tabFileSystem->SuspendLayout();
-			this->grpGoto->SuspendLayout();
-			this->grpFileSystem->SuspendLayout();
 			this->tabImage->SuspendLayout();
 			this->grpImage->SuspendLayout();
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trkHDRExposure))->BeginInit();
@@ -774,7 +737,6 @@ namespace VTFEdit
 			this->tabSidebar->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
 				| System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
-			this->tabSidebar->Controls->Add(this->tabFileSystem);
 			this->tabSidebar->Controls->Add(this->tabImage);
 			this->tabSidebar->Controls->Add(this->tabInfo);
 			this->tabSidebar->Controls->Add(this->tabResources);
@@ -785,139 +747,6 @@ namespace VTFEdit
 			this->tabSidebar->SelectedIndex = 0;
 			this->tabSidebar->Size = System::Drawing::Size(244, 520);
 			this->tabSidebar->TabIndex = 2;
-			// 
-			// tabFileSystem
-			// 
-			this->tabFileSystem->Controls->Add(this->grpGoto);
-			this->tabFileSystem->Controls->Add(this->grpFileSystem);
-			this->tabFileSystem->Location = System::Drawing::Point(4, 25);
-			this->tabFileSystem->Name = L"tabFileSystem";
-			this->tabFileSystem->Size = System::Drawing::Size(214, 479);
-			this->tabFileSystem->TabIndex = 2;
-			this->tabFileSystem->Text = L"File System";
-			// 
-			// grpGoto
-			// 
-			this->grpGoto->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
-				| System::Windows::Forms::AnchorStyles::Right));
-			this->grpGoto->Controls->Add(this->cboGoto);
-			this->grpGoto->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpGoto->Location = System::Drawing::Point(8, 8);
-			this->grpGoto->Name = L"grpGoto";
-			this->grpGoto->Size = System::Drawing::Size(158, 47);
-			this->grpGoto->TabIndex = 1;
-			this->grpGoto->TabStop = false;
-			this->grpGoto->Text = L"Goto:";
-			// 
-			// cboGoto
-			// 
-			this->cboGoto->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
-				| System::Windows::Forms::AnchorStyles::Right));
-			this->cboGoto->ContextMenu = this->mnuGoto;
-			this->cboGoto->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-			this->cboGoto->Location = System::Drawing::Point(8, 15);
-			this->cboGoto->Name = L"cboGoto";
-			this->cboGoto->Size = System::Drawing::Size(144, 24);
-			this->cboGoto->TabIndex = 0;
-			this->cboGoto->SelectedIndexChanged += gcnew System::EventHandler(this, &CVTFEdit::cboGoto_SelectedIndexChanged);
-			// 
-			// mnuGoto
-			// 
-			this->mnuGoto->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(2) { this->btnGotoRemove, this->btnGotoClear });
-			this->mnuGoto->Popup += gcnew System::EventHandler(this, &CVTFEdit::mnuGoto_Popup);
-			// 
-			// btnGotoRemove
-			// 
-			this->btnGotoRemove->Index = 0;
-			this->btnGotoRemove->Text = L"&Remove";
-			this->btnGotoRemove->Click += gcnew System::EventHandler(this, &CVTFEdit::btnGotoRemove_Click);
-			// 
-			// btnGotoClear
-			// 
-			this->btnGotoClear->Index = 1;
-			this->btnGotoClear->Text = L"&Clear";
-			this->btnGotoClear->Click += gcnew System::EventHandler(this, &CVTFEdit::btnGotoClear_Click);
-			// 
-			// grpFileSystem
-			// 
-			this->grpFileSystem->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
-				| System::Windows::Forms::AnchorStyles::Left)
-				| System::Windows::Forms::AnchorStyles::Right));
-			this->grpFileSystem->Controls->Add(this->treFileSystem);
-			this->grpFileSystem->FlatStyle = System::Windows::Forms::FlatStyle::System;
-			this->grpFileSystem->Location = System::Drawing::Point(8, 62);
-			this->grpFileSystem->Name = L"grpFileSystem";
-			this->grpFileSystem->Size = System::Drawing::Size(158, 408);
-			this->grpFileSystem->TabIndex = 0;
-			this->grpFileSystem->TabStop = false;
-			this->grpFileSystem->Text = L"File System:";
-			// 
-			// treFileSystem
-			// 
-			this->treFileSystem->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
-				| System::Windows::Forms::AnchorStyles::Left)
-				| System::Windows::Forms::AnchorStyles::Right));
-			this->treFileSystem->ContextMenu = this->mnuFileSystem;
-			this->treFileSystem->HideSelection = false;
-			this->treFileSystem->Location = System::Drawing::Point(8, 15);
-			this->treFileSystem->Name = L"treFileSystem";
-			this->treFileSystem->Size = System::Drawing::Size(144, 385);
-			this->treFileSystem->TabIndex = 0;
-			this->treFileSystem->AfterCollapse += gcnew System::Windows::Forms::TreeViewEventHandler(this, &CVTFEdit::treFileSystem_AfterCollapse);
-			this->treFileSystem->BeforeExpand += gcnew System::Windows::Forms::TreeViewCancelEventHandler(this, &CVTFEdit::treFileSystem_BeforeExpand);
-			this->treFileSystem->AfterExpand += gcnew System::Windows::Forms::TreeViewEventHandler(this, &CVTFEdit::treFileSystem_AfterExpand);
-			this->treFileSystem->DoubleClick += gcnew System::EventHandler(this, &CVTFEdit::treFileSystem_DoubleClick);
-			this->treFileSystem->MouseDown += gcnew System::Windows::Forms::MouseEventHandler(this, &CVTFEdit::treFileSystem_MouseDown);
-			// 
-			// mnuFileSystem
-			// 
-			this->mnuFileSystem->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(6) {
-				this->btnFileSystemOpen,
-					this->btnFileSystemShellExecute, this->btnFileSystemSpace1, this->btnFileSystemAddGoto,
-					this->btnFileSystemSpace2, this->btnFileSystemDelete
-			});
-			this->mnuFileSystem->Popup += gcnew System::EventHandler(this, &CVTFEdit::mnuFileSystem_Popup);
-			// 
-			// btnFileSystemOpen
-			// 
-			this->btnFileSystemOpen->DefaultItem = true;
-			this->btnFileSystemOpen->Index = 0;
-			this->btnFileSystemOpen->Text = L"&Open";
-			this->btnFileSystemOpen->Visible = false;
-			this->btnFileSystemOpen->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemOpen_Click);
-			// 
-			// btnFileSystemShellExecute
-			// 
-			this->btnFileSystemShellExecute->Index = 1;
-			this->btnFileSystemShellExecute->Text = L"&Shell Execute";
-			this->btnFileSystemShellExecute->Visible = false;
-			this->btnFileSystemShellExecute->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemShellExecute_Click);
-			// 
-			// btnFileSystemSpace1
-			// 
-			this->btnFileSystemSpace1->Index = 2;
-			this->btnFileSystemSpace1->Text = L"-";
-			this->btnFileSystemSpace1->Visible = false;
-			// 
-			// btnFileSystemAddGoto
-			// 
-			this->btnFileSystemAddGoto->Index = 3;
-			this->btnFileSystemAddGoto->Text = L"Add &Goto";
-			this->btnFileSystemAddGoto->Visible = false;
-			this->btnFileSystemAddGoto->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemAddGoto_Click);
-			// 
-			// btnFileSystemSpace2
-			// 
-			this->btnFileSystemSpace2->Index = 4;
-			this->btnFileSystemSpace2->Text = L"-";
-			this->btnFileSystemSpace2->Visible = false;
-			// 
-			// btnFileSystemDelete
-			// 
-			this->btnFileSystemDelete->Index = 5;
-			this->btnFileSystemDelete->Text = L"&Delete";
-			this->btnFileSystemDelete->Visible = false;
-			this->btnFileSystemDelete->Click += gcnew System::EventHandler(this, &CVTFEdit::btnFileSystemDelete_Click);
 			// 
 			// tabImage
 			// 
@@ -1897,9 +1726,6 @@ namespace VTFEdit
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pnlInfo2))->EndInit();
 			this->pnlSidebar->ResumeLayout(false);
 			this->tabSidebar->ResumeLayout(false);
-			this->tabFileSystem->ResumeLayout(false);
-			this->grpGoto->ResumeLayout(false);
-			this->grpFileSystem->ResumeLayout(false);
 			this->tabImage->ResumeLayout(false);
 			this->grpImage->ResumeLayout(false);
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->trkHDRExposure))->EndInit();
@@ -1961,297 +1787,6 @@ namespace VTFEdit
 				}
 			}
 		};*/
-
-		//
-		// EDirectoryItemType
-		// The kind of file system object a tree node represents.
-		//
-		private: enum class EDirectoryItemType
-		{
-			Folder,
-			File
-		};
-
-		//
-		// CFileSystemTreeNode
-		// File system tree node base class.
-		//
-		private: ref class CFileSystemTreeNode : public System::Windows::Forms::TreeNode
-		{
-		protected:
-			CVTFEdit ^VTFEdit;
-			CDirectoryItemInfoManager ^DirectoryItemInfoManager;
-
-		public:
-			CFileSystemTreeNode(CVTFEdit ^VTFEdit, CDirectoryItemInfoManager ^DirectoryItemInfoManager)
-			{
-				this->VTFEdit = VTFEdit;
-				this->DirectoryItemInfoManager = DirectoryItemInfoManager;
-			}
-
-		public:
-			// Called when node is expanded.  Should build the node's children.
-			virtual void BuildChildren()
-			{
-
-			}
-
-			// Called after a node is collapsed.  Should change image index.
-			virtual void AfterCollapse()
-			{
-
-			}
-
-			// Called after a node is expanded.  Should change image index.
-			virtual void AfterExpand()
-			{
-
-			}
-
-			// Returns the path to the file system object.
-			property virtual System::String ^ItemPath
-			{
-				System::String^ get()
-				{
-					return "";
-				}
-			}
-		};
-
-		private: delegate void AddDirectoryTreeNodeEventHandler(System::Windows::Forms::TreeNode ^Node, System::IO::DirectoryInfo ^DirectoryInfo);
-
-		private: void AddDirectoryTreeNode(System::Windows::Forms::TreeNode ^Node, System::IO::DirectoryInfo ^DirectoryInfo)
-		{
-			Node->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(DirectoryInfo, this, this->DirectoryItemInfoManager));
-		}
-
-		private: delegate void AddFileTreeNodeEventHandler(System::Windows::Forms::TreeNode ^Node, System::IO::FileInfo ^FileInfo);
-
-		private: void AddFileTreeNode(System::Windows::Forms::TreeNode ^Node, System::IO::FileInfo ^FileInfo)
-		{
-			Node->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(FileInfo, this, this->DirectoryItemInfoManager));
-		}
-
-		//
-		// CDirectoryFileSystemTreeNode
-		// A file system node implimentation for Window's files and folders.
-		//
-		private: ref class CDirectoryFileSystemTreeNode : public CFileSystemTreeNode
-		{
-		private:
-			EDirectoryItemType eDirectoryItemType;
-			System::String ^sItemPath;
-
-		private:
-			System::IO::FileSystemWatcher ^Watcher;
-			bool bTreeBuilt;
-
-		public:
-			CDirectoryFileSystemTreeNode(System::IO::DirectoryInfo ^DirectoryInfo, CVTFEdit ^VTFEdit, CDirectoryItemInfoManager ^DirectoryItemInfoManager) : CFileSystemTreeNode(VTFEdit, DirectoryItemInfoManager)
-			{
-				this->bTreeBuilt = false;
-
-				this->eDirectoryItemType = EDirectoryItemType::Folder;
-				this->sItemPath = DirectoryInfo->FullName;
-				this->Text = DirectoryInfo->Name;
-
-				if(System::String::Compare(DirectoryInfo->Root->FullName, DirectoryInfo->FullName, true) == 0)
-				{
-					this->ImageIndex = this->DirectoryItemInfoManager->GetFolderTypeInfo(DirectoryInfo->FullName, DirectoryInfo->FullName)->IconIndex;
-				}
-				else
-				{
-					this->ImageIndex = this->DirectoryItemInfoManager->GetFolderTypeInfo("Folder")->IconIndex;
-				}
-				this->SelectedImageIndex = this->ImageIndex;
-
-				// Add a dummy node so we can expand the node.
-				this->Nodes->Add(gcnew System::Windows::Forms::TreeNode());
-			}
-
-			CDirectoryFileSystemTreeNode(System::IO::FileInfo ^FileInfo, CVTFEdit ^VTFEdit, CDirectoryItemInfoManager ^DirectoryItemInfoManager) : CFileSystemTreeNode(VTFEdit, DirectoryItemInfoManager)
-			{
-				this->bTreeBuilt = true;
-
-				this->eDirectoryItemType = EDirectoryItemType::File;
-				this->sItemPath = FileInfo->FullName;
-				this->Text = FileInfo->Name;
-
-				this->ImageIndex = this->DirectoryItemInfoManager->GetFileTypeInfo(FileInfo->Name)->IconIndex;
-				this->SelectedImageIndex = this->ImageIndex;
-			}
-
-		public:
-			void BuildChildren() override
-			{
-				if(bTreeBuilt)
-					return;
-
-				// Remove dummy node.
-				this->Nodes->Clear();
-
-				try
-				{
-					System::IO::DirectoryInfo ^DirectoryInfo = gcnew System::IO::DirectoryInfo(this->sItemPath);
-
-					array< System::IO::DirectoryInfo^>^ SubDirectoryInfos = DirectoryInfo->GetDirectories();
-
-					for(int i = 0; i < SubDirectoryInfos->Length; i++)
-					{
-						System::IO::DirectoryInfo ^SubDirectoryInfo = SubDirectoryInfos[i];
-
-						if (!(((SubDirectoryInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubDirectoryInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-						{
-							this->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(SubDirectoryInfo, VTFEdit, this->DirectoryItemInfoManager));
-						}
-					}
-
-					array< System::IO::FileInfo^>^ SubFileInfos = DirectoryInfo->GetFiles();
-
-					for(int i = 0; i < SubFileInfos->Length; i++)
-					{
-						System::IO::FileInfo ^SubFileInfo = SubFileInfos[i];
-
-						if (!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-						{
-							this->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(SubFileInfo, VTFEdit, this->DirectoryItemInfoManager));
-						}
-					}
-
-					if (this->eDirectoryItemType == EDirectoryItemType::Folder)
-					{
-						this->Watcher = gcnew System::IO::FileSystemWatcher(this->sItemPath);
-						this->Watcher->IncludeSubdirectories = false;
-						//this->Watcher->NotifyFilter = System::IO::NotifyFilters::FileName | System::IO::NotifyFilters::DirectoryName;
-
-						this->Watcher->Created += gcnew System::IO::FileSystemEventHandler(this, &CDirectoryFileSystemTreeNode::OnCreated);
-						this->Watcher->Renamed += gcnew System::IO::RenamedEventHandler(this, &CDirectoryFileSystemTreeNode::OnRenamed);
-						this->Watcher->Deleted += gcnew System::IO::FileSystemEventHandler(this, &CDirectoryFileSystemTreeNode::OnDeleted);
-
-						this->Watcher->EnableRaisingEvents = true;
-					}
-				}
-				catch(Exception ^)
-				{
-
-				}
-
-				this->bTreeBuilt = true;
-			}
-		protected:
-			void OnCreated(Object^ s, System::IO::FileSystemEventArgs^ e)
-			{
-				if(System::IO::Directory::Exists(e->FullPath))
-				{
-					System::IO::DirectoryInfo ^SubDirectoryInfo = gcnew System::IO::DirectoryInfo(e->FullPath);
-
-					if(!(((SubDirectoryInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubDirectoryInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-					{
-						array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-						oArgumentst[0] = this;
-						oArgumentst[1] = SubDirectoryInfo;
-						
-						VTFEdit->Invoke(gcnew AddDirectoryTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddDirectoryTreeNode), oArgumentst);
-					}
-				}
-				else if(System::IO::File::Exists(e->FullPath))
-				{
-					System::IO::FileInfo ^SubFileInfo = gcnew System::IO::FileInfo(e->FullPath);
-
-					if(!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-					{
-						array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-						oArgumentst[0] = this;
-						oArgumentst[1] = SubFileInfo;
-
-						VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
-					}
-				}
-			}
-
-			void OnRenamed(Object^ s, System::IO::RenamedEventArgs^ e)
-			{
-				for(int i = 0; i < this->Nodes->Count; i++)
-				{
-					System::Windows::Forms::TreeNode ^Node = static_cast<System::Windows::Forms::TreeNode ^>(this->Nodes[i]);
-					if(System::String::Compare(Node->Text, e->OldName) == 0)
-					{
-						this->Nodes->RemoveAt(i);
-
-						if(System::IO::Directory::Exists(e->FullPath))
-						{
-							System::IO::DirectoryInfo ^SubDirectoryInfo = gcnew System::IO::DirectoryInfo(e->FullPath);
-
-							if (!(((SubDirectoryInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubDirectoryInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-							{
-								array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-								oArgumentst[0] = this;
-								oArgumentst[1] = SubDirectoryInfo;
-								
-								VTFEdit->Invoke(gcnew AddDirectoryTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddDirectoryTreeNode), oArgumentst);
-							}
-						}
-						else if(System::IO::File::Exists(e->FullPath))
-						{
-							System::IO::FileInfo ^SubFileInfo = gcnew System::IO::FileInfo(e->FullPath);
-
-							if(!(((SubFileInfo->Attributes & System::IO::FileAttributes::System) == System::IO::FileAttributes::System) || ((SubFileInfo->Attributes & System::IO::FileAttributes::Hidden) == System::IO::FileAttributes::Hidden)))
-							{
-								array< System::Object^>^ oArgumentst = gcnew array< System::Object^>(2);
-								oArgumentst[0] = this;
-								oArgumentst[1] = SubFileInfo;
-
-								VTFEdit->Invoke(gcnew AddFileTreeNodeEventHandler(this->VTFEdit, &CVTFEdit::AddFileTreeNode), oArgumentst);
-							}
-						}
-
-						break;
-					}
-				}
-			}
-
-			void OnDeleted(Object^ s, System::IO::FileSystemEventArgs^ e)
-			{
-				for(int i = 0; i < this->Nodes->Count; i++)
-				{
-					System::Windows::Forms::TreeNode ^Node = static_cast<System::Windows::Forms::TreeNode ^>(this->Nodes[i]);
-					if(System::String::Compare(Node->Text, e->Name) == 0)
-					{
-						this->Nodes->RemoveAt(i);
-						break;
-					}
-				}
-			}
-
-		public:
-			virtual void AfterCollapse() override
-			{
-				this->ImageIndex--;
-				this->SelectedImageIndex--;
-			}
-
-			virtual void AfterExpand() override
-			{
-				this->ImageIndex++;
-				this->SelectedImageIndex++;
-			}
-
-			property System::String ^ItemPath
-			{
-				System::String^ get() override
-				{
-					return this->sItemPath;
-				}
-			}
-
-			property EDirectoryItemType DirectoryItemType
-			{
-				EDirectoryItemType get()
-				{
-					return this->eDirectoryItemType;
-				}
-			}
-		};
 
 		//
 		// Form events.
@@ -2352,16 +1887,15 @@ namespace VTFEdit
 
 			// Restore options.
 			this->BackupForm();
-			bool bHasConfig = false;
 			System::String ^pNewConfigFile = IO::Path::Combine(GetAppDataFolder(), System::String::Concat(Application::ProductName, ".ini"));
 			System::String ^pOldConfigFile = IO::Path::Combine(Application::StartupPath, System::String::Concat(Application::ProductName, ".ini"));
 			if(IO::File::Exists(pNewConfigFile))
 			{
-				bHasConfig = this->ReadConfigFile(pNewConfigFile);
+				this->ReadConfigFile(pNewConfigFile);
 			}
 			else if(IO::File::Exists(pOldConfigFile))
 			{
-				bHasConfig = this->ReadConfigFile(pOldConfigFile);
+				this->ReadConfigFile(pOldConfigFile);
 			}
 			this->RestoreForm();
 
@@ -2406,51 +1940,6 @@ namespace VTFEdit
 				this->btnPaste->Enabled = this->btnToolPaste->Enabled;
 			}
 
-			// Populate drive list.
-			array<System::String^>^ LogicalDrives = System::Environment::GetLogicalDrives();
-
-			for(int i = 0; i < LogicalDrives->Length; i++)
-			{
-				try
-				{
-					this->treFileSystem->Nodes->Add(gcnew CDirectoryFileSystemTreeNode(gcnew System::IO::DirectoryInfo(LogicalDrives[i]), this, this->DirectoryItemInfoManager));
-				}
-				catch(Exception ^)
-				{
-
-				}
-			}
-
-			if(!bHasConfig)
-			{
-				Microsoft::Win32::RegistryKey ^Steam = Microsoft::Win32::Registry::CurrentUser->OpenSubKey("Software\\Valve\\Steam");
-
-				if(Steam != nullptr)
-				{
-					System::IO::DirectoryInfo^ DirectoryInfo; 
-					Object ^oSourceModInstallPath = Steam->GetValue("SourceModInstallPath");
-
-					if(oSourceModInstallPath->GetType()->Equals(System::String::typeid))
-					{
-						System::String ^sSourceModInstallPath = static_cast<System::String ^>(oSourceModInstallPath);
-						if(sSourceModInstallPath->LastIndexOf("\\") != -1)
-						{
-							try
-							{
-								DirectoryInfo = gcnew System::IO::DirectoryInfo(sSourceModInstallPath->Substring(0, sSourceModInstallPath->LastIndexOf("\\")));
-								this->cboGoto->Items->Add(DirectoryInfo->FullName);
-							}
-							catch(Exception ^)
-							{
-
-							}
-							//this->cboGoto->Items->Add(sSourceModInstallPath);
-						}
-					}
-
-					Steam->Close();
-				}
-			}
 		}
 
 		private: System::Void CVTFEdit_Closing(System::Object ^  sender, System::ComponentModel::CancelEventArgs ^  e)
@@ -4286,238 +3775,6 @@ namespace VTFEdit
 		}*/
 
 		//
-		// Goto
-		//
-
-		private: System::Void cboGoto_SelectedIndexChanged(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->cboGoto->SelectedIndex == -1)
-				return;
-
-			this->Goto(this->cboGoto->Text);
-		}
-
-		//
-		// Goto()
-		// Go to the specified path in the file system tree.
-		//
-		private: void Goto(System::String ^sPath)
-		{
-			array< __wchar_t>^ lpSplit = { '\\', '/' };
-
-			array<System::String ^>^ lpPath = sPath->Split(lpSplit);
-
-			if(lpPath->Length == 0)
-				return;
-
-			lpPath[0] = System::String::Concat(lpPath[0], "\\");
-
-			TreeNodeCollection ^Nodes = this->treFileSystem->Nodes;
-
-			this->treFileSystem->BeginUpdate();
-			for(int i = 0; i < lpPath->Length; i++)
-			{
-				for(int j = 0; j < Nodes->Count; j++)
-				{
-					TreeNode ^Node = static_cast<TreeNode ^>(Nodes[j]);
-
-					if(System::String::Compare(lpPath[i], Node->Text, true) == 0)
-					{
-						if(i == lpPath->Length)
-						{
-							Node->EnsureVisible();
-							this->treFileSystem->SelectedNode = Node;
-							break;
-						}
-						else
-						{
-							Node->Expand();
-							Nodes = Node->Nodes;
-							break;
-						}
-					}
-				}
-			}
-			this->treFileSystem->EndUpdate();
-		}
-
-		private: System::Void btnFileSystemAddGoto_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
-			{
-				//if(static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == DirectoryItemFolder)
-				{
-					TreeNode ^Node = this->treFileSystem->SelectedNode;
-					System::String ^sGoto = Node->Text;
-
-					while(Node->Parent != nullptr)
-					{
-						Node = Node->Parent;
-						sGoto = System::String::Concat(Node->Text, Node->Parent != nullptr ? "\\" : "", sGoto);
-					}
-
-					this->cboGoto->Items->Add(sGoto);
-				}
-			}
-		}
-
-		private: System::Void mnuGoto_Popup(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->btnGotoRemove->Enabled = this->cboGoto->SelectedIndex != -1;
-			this->btnGotoClear->Enabled = this->cboGoto->Items->Count > 0;
-		}
-
-		private: System::Void btnGotoRemove_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->cboGoto->SelectedIndex != -1)
-			{
-				this->cboGoto->Items->Remove(this->cboGoto->SelectedItem);
-			}
-		}
-
-		private: System::Void btnGotoClear_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->cboGoto->Items->Clear();
-		}
-
-		//
-		// Filesystem
-		//
-
-		private: System::Void treFileSystem_DoubleClick(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->btnFileSystemOpen_Click(this->btnFileSystemOpen, System::EventArgs::Empty);
-		}
-
-		private: System::Void treFileSystem_AfterCollapse(System::Object ^  sender, System::Windows::Forms::TreeViewEventArgs ^  e)
-		{
-			static_cast<CFileSystemTreeNode ^>(e->Node)->AfterCollapse();
-		}
-
-		private: System::Void treFileSystem_AfterExpand(System::Object ^  sender, System::Windows::Forms::TreeViewEventArgs ^  e)
-		{
-			static_cast<CFileSystemTreeNode ^>(e->Node)->AfterExpand();
-		}
-
-		private: System::Void treFileSystem_BeforeExpand(System::Object ^  sender, System::Windows::Forms::TreeViewCancelEventArgs ^  e)
-		{
-			static_cast<CFileSystemTreeNode ^>(e->Node)->BuildChildren();
-		}
-
-		private: System::Void treFileSystem_MouseDown(System::Object ^  sender, System::Windows::Forms::MouseEventArgs ^  e)
-		{
-			if(e->Button == System::Windows::Forms::MouseButtons::Left || e->Button == System::Windows::Forms::MouseButtons::Right)
-			{
-				this->treFileSystem->SelectedNode = this->treFileSystem->GetNodeAt(e->X, e->Y);
-			}
-		}
-
-		private: System::Void mnuFileSystem_Popup(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			this->btnFileSystemOpen->Visible = false;
-			this->btnFileSystemShellExecute->Visible = false;
-			this->btnFileSystemSpace1->Visible = false;
-			this->btnFileSystemAddGoto->Visible = false;
-			this->btnFileSystemSpace2->Visible = false;
-			this->btnFileSystemDelete->Visible = false;
-
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
-			{
-				if(static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->DirectoryItemType == EDirectoryItemType::Folder)
-				{
-					this->btnFileSystemShellExecute->Visible = true;
-					this->btnFileSystemSpace1->Visible = true;
-					this->btnFileSystemAddGoto->Visible = true;
-				}
-				else
-				{
-					this->btnFileSystemOpen->Visible = true;
-					this->btnFileSystemShellExecute->Visible = true;
-					this->btnFileSystemSpace2->Visible = true;
-					this->btnFileSystemDelete->Visible = true;
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemOpen_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
-			{
-				System::String ^sItemPath = static_cast<CFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->ItemPath;
-
-				if(!System::IO::File::Exists(sItemPath))
-					return;
-
-				if(sItemPath->ToLower()->EndsWith(".vtf") || sItemPath->ToLower()->EndsWith(".vmt"))
-				{
-					this->Open(sItemPath, false);
-
-					this->tabSidebar->SelectedTab = this->tabFileSystem;
-				}
-				else
-				{
-					array< System::String^>^ sFileNames = { sItemPath };
-					this->Import(sFileNames);
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemShellExecute_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
-			{
-				System::String ^sItemPath = static_cast<CFileSystemTreeNode ^>(this->treFileSystem->SelectedNode)->ItemPath;
-
-				if(!System::IO::File::Exists(sItemPath) && !System::IO::Directory::Exists(sItemPath))
-					return;
-
-				try
-				{
-					System::Diagnostics::Process::Start(sItemPath);
-				}
-				catch(Exception ^ex)
-				{
-					MessageBox::Show(System::String::Concat("Error shell executing directory item:\n\n", ex->Message), Application::ProductName, MessageBoxButtons::OK, MessageBoxIcon::Error);
-				}
-			}
-		}
-
-		private: System::Void btnFileSystemDelete_Click(System::Object ^  sender, System::EventArgs ^  e)
-		{
-			if(this->treFileSystem->SelectedNode == nullptr)
-				return;
-
-			if(this->treFileSystem->SelectedNode->GetType()->Equals(CDirectoryFileSystemTreeNode::typeid))
-			{
-				CDirectoryFileSystemTreeNode ^ Node = static_cast<CDirectoryFileSystemTreeNode ^>(this->treFileSystem->SelectedNode);
-
-				try
-				{
-					if(MessageBox::Show(System::String::Concat("Are you sure you want to permanently delete '", Node->Text, "'?"), Application::ProductName, System::Windows::Forms::MessageBoxButtons::YesNo, System::Windows::Forms::MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes)
-					{
-						System::IO::File::Delete(Node->ItemPath);
-					}
-				}
-				catch(Exception ^e)
-				{
-					MessageBox::Show(System::String::Concat("Error deleting '", Node->Text, "':\n\n", e->Message), Application::ProductName, System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
-				}
-			}
-		}
-
-		//
 		// Helper functions.
 		//
 
@@ -4609,10 +3866,6 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.Tile = ", this->btnTile->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.MipmapFullSize = ", this->btnMipmapFullSize->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.AutoCreateVMTFile = ", this->btnAutoCreateVMTFile->Checked.ToString()));
-				for(int i = 0; i < this->cboGoto->Items->Count; i++)
-				{
-					ConfigFile->WriteLine(System::String::Concat("VTFEdit.Goto = ", static_cast<System::String ^>(this->cboGoto->Items[i])));
-				}
 
 				ConfigFile->WriteLine("");
 				ConfigFile->WriteLine("[Forms]");
@@ -4772,11 +4025,6 @@ namespace VTFEdit
 						{
 							this->btnAutoCreateVMTFile->Checked = Convert::ToBoolean(sVal);
 						}
-						else if(System::String::Compare(sArg, "VTFEdit.Goto", true) == 0)
-						{
-							this->cboGoto->Items->Add(sVal);
-						}
-
 						else if(System::String::Compare(sArg, "Forms.VTFEdit.Location.X", true) == 0)
 						{
 							this->FormSaveLocation.X = Convert::ToInt32(sVal);

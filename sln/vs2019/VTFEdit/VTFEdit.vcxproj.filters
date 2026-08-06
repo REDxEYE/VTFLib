@@ -38,9 +38,6 @@
     <ClInclude Include="..\..\..\VTFEdit\BatchConvert.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\VTFEdit\DirectoryItemInfoManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\VTFEdit\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>

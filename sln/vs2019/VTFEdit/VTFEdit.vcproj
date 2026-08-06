@@ -476,10 +476,6 @@
 				</File>
 			</File>
 			<File
-				RelativePath="..\..\..\VTFEdit\DirectoryItemInfoManager.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\VTFEdit\resource.h"
 				>
 			</File>

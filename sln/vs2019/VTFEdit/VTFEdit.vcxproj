@@ -154,7 +154,6 @@ copy "$(SolutionDir)..\..\thirdparty\bin\DevIL.dll" "$(TargetDir)"
     <ClInclude Include="..\..\..\VTFEdit\BatchConvert.h">
       <FileType>CppForm</FileType>
     </ClInclude>
-    <ClInclude Include="..\..\..\VTFEdit\DirectoryItemInfoManager.h" />
     <ClInclude Include="..\..\..\VTFEdit\resource.h" />
     <ClInclude Include="..\..\..\VTFEdit\stdafx.h" />
     <ClInclude Include="..\..\..\VTFEdit\Utility.h" />
