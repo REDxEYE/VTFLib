@@ -46,6 +46,7 @@ namespace VTFEdit
 
 		bool bHDRReseting;
 		float fImageScale;
+		float fEffectiveImageScale;
 		unsigned char *ucImageData;
 
 		bool bImagePanning;
@@ -80,6 +81,8 @@ namespace VTFEdit
 			this->VTFFile = nullptr;
 
 			this->bHDRReseting = false;
+			this->fImageScale = 1.0f;
+			this->fEffectiveImageScale = 1.0f;
 			this->ucImageData = nullptr;
 
 			this->bImagePanning = false;
@@ -169,6 +172,7 @@ namespace VTFEdit
 	private: System::Windows::Forms::PictureBox ^  picVTFFileBL;
 	private: System::Windows::Forms::PictureBox ^  picVTFFileBR;
 	private: System::Windows::Forms::MenuItem ^  btnTile;
+	private: System::Windows::Forms::MenuItem ^  btnMipmapFullSize;
 	private: System::Windows::Forms::MenuItem ^  btnFileSystemAddGoto;
 	private: System::Windows::Forms::MenuItem ^  btnFileSystemSpace1;
 	private: System::Windows::Forms::ContextMenu ^  mnuGoto;
@@ -300,7 +304,8 @@ namespace VTFEdit
 			this->btnChannelA = (gcnew System::Windows::Forms::MenuItem());
 			this->btnMask = (gcnew System::Windows::Forms::MenuItem());
 			this->btnTile = (gcnew System::Windows::Forms::MenuItem());
-			this->btnToolsMenu = (gcnew System::Windows::Forms::MenuItem());
+			this->btnMipmapFullSize = (gcnew System::Windows::Forms::MenuItem());
+			this->btnToolsMenu =(gcnew System::Windows::Forms::MenuItem());
 			this->btnCreateVMTFile = (gcnew System::Windows::Forms::MenuItem());
 			this->btnConvertFolder = (gcnew System::Windows::Forms::MenuItem());
 			this->btnOptionsMenu = (gcnew System::Windows::Forms::MenuItem());
@@ -592,9 +597,9 @@ namespace VTFEdit
 			// btnViewMenu
 			// 
 			this->btnViewMenu->Index = 2;
-			this->btnViewMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(3) {
+			this->btnViewMenu->MenuItems->AddRange(gcnew cli::array< System::Windows::Forms::MenuItem^  >(4) {
 				this->btnChannelMenu, this->btnMask,
-					this->btnTile
+					this->btnTile, this->btnMipmapFullSize
 			});
 			this->btnViewMenu->Text = L"&View";
 			// 
@@ -661,7 +666,15 @@ namespace VTFEdit
 			this->btnTile->Shortcut = System::Windows::Forms::Shortcut::CtrlT;
 			this->btnTile->Text = L"&Tile";
 			this->btnTile->Click += gcnew System::EventHandler(this, &CVTFEdit::btnTile_Click);
-			// 
+			//
+			// btnMipmapFullSize
+			//
+			this->btnMipmapFullSize->Checked = true;
+			this->btnMipmapFullSize->Index = 3;
+			this->btnMipmapFullSize->Shortcut = System::Windows::Forms::Shortcut::CtrlShiftM;
+			this->btnMipmapFullSize->Text = L"&Zoom Mipmaps";
+			this->btnMipmapFullSize->Click += gcnew System::EventHandler(this, &CVTFEdit::btnMipmapFullSize_Click);
+			//
 			// btnToolsMenu
 			// 
 			this->btnToolsMenu->Index = 3;
@@ -2640,11 +2653,20 @@ namespace VTFEdit
 			this->numSlice->Value = uiSlice;
 			this->numSlice->Maximum = uiDepth;
 
+			float fMipmapScale = 1.0f;
+
+			if(this->btnMipmapFullSize->Checked)
+			{
+				fMipmapScale = (float)(1 << uiMipmap);
+			}
+
+			float fScale = this->fImageScale * fMipmapScale;
+
 			// Don't let the rescaled image get larger than 4096x4096.  .NET crashes...
 			while(true)
 			{
-				uiScaledWidth = (vlUInt)((float)uiWidth * this->fImageScale);
-				uiScaledHeight = (vlUInt)((float)uiHeight * this->fImageScale);
+				uiScaledWidth = (vlUInt)((float)uiWidth * fScale);
+				uiScaledHeight = (vlUInt)((float)uiHeight * fScale);
 
 				if(uiScaledWidth <= 4096 && uiScaledHeight <= 4096)
 				{
@@ -2652,6 +2674,7 @@ namespace VTFEdit
 				}
 
 				this->fImageScale *= 0.5f;
+				fScale = this->fImageScale * fMipmapScale;
 			}
 
 			// Don't let it get smaller than 1 either.
@@ -2670,7 +2693,9 @@ namespace VTFEdit
 			vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
 			this->VTFFile->ConvertToRGBA8888(this->VTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap), lpBuffer, uiWidth, uiHeight, this->VTFFile->GetFormat());
 
-			float fInverseImageScale = 1.0f / this->fImageScale;
+			this->fEffectiveImageScale = fScale;
+
+			float fInverseImageScale = 1.0f / fScale;
 
 			vlUInt uiScaledStride = (uiScaledWidth + 3) / 4 * 4;
 
@@ -3851,6 +3876,13 @@ namespace VTFEdit
 			this->UpdateVTFFile();
 		}
 
+		private: System::Void btnMipmapFullSize_Click(System::Object ^  sender, System::EventArgs ^  e)
+		{
+			this->btnMipmapFullSize->Checked = !this->btnMipmapFullSize->Checked;
+
+			this->UpdateVTFFile();
+		}
+
 		private: System::Void btnAutoCreateVMTFile_Click(System::Object ^  sender, System::EventArgs ^  e)
 		{
 			this->btnAutoCreateVMTFile->Checked = !this->btnAutoCreateVMTFile->Checked;
@@ -3970,8 +4002,8 @@ namespace VTFEdit
 			if(this->UpdateImagePan())
 				return;
 
-			int iX = (int)((float)e->X / this->fImageScale) + 1;
-			int iY = (int)((float)e->Y / this->fImageScale) + 1;
+			int iX = (int)((float)e->X / this->fEffectiveImageScale) + 1;
+			int iY = (int)((float)e->Y / this->fEffectiveImageScale) + 1;
 
 			this->pnlInfo2->Text = System::String::Concat(iX.ToString(), ", ", iY.ToString());
 		}
@@ -4575,6 +4607,7 @@ namespace VTFEdit
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.AnimationFrameInterval = ", this->tmrAnimate->Interval.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.Mask = ", this->btnMask->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.Tile = ", this->btnTile->Checked.ToString()));
+				ConfigFile->WriteLine(System::String::Concat("VTFEdit.MipmapFullSize = ", this->btnMipmapFullSize->Checked.ToString()));
 				ConfigFile->WriteLine(System::String::Concat("VTFEdit.AutoCreateVMTFile = ", this->btnAutoCreateVMTFile->Checked.ToString()));
 				for(int i = 0; i < this->cboGoto->Items->Count; i++)
 				{
@@ -4730,6 +4763,10 @@ namespace VTFEdit
 						else if(System::String::Compare(sArg, "VTFEdit.Tile", true) == 0)
 						{
 							this->btnTile->Checked = Convert::ToBoolean(sVal);
+						}
+						else if(System::String::Compare(sArg, "VTFEdit.MipmapFullSize", true) == 0)
+						{
+							this->btnMipmapFullSize->Checked = Convert::ToBoolean(sVal);
 						}
 						else if(System::String::Compare(sArg, "VTFEdit.AutoCreateVMTFile", true) == 0)
 						{
