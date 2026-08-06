@@ -940,6 +940,7 @@ namespace VTFLib
 	{
 	private:
 		Nodes::CVMTGroupNode *Root;
+		vlUInt ParseErrorLine;
 
 	public:
 		CVMTFile();
