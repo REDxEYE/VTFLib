@@ -535,67 +535,16 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 			case RESIZE_NEAREST_POWER2:
 			case RESIZE_BIGGEST_POWER2:
 			case RESIZE_SMALLEST_POWER2:
-				// Find the best width.
-				if(this->IsPowerOfTwo(uiWidth))
-				{
-					// Width already a power of 2.
-					uiNewWidth = uiWidth;
-				}
-				else
-				{
-					// Find largest power of 2.
-					uiNewWidth = this->NextPowerOfTwo(uiWidth);
-
-					if(VTFCreateOptions.ResizeMethod == RESIZE_NEAREST_POWER2)
-					{
-						if(uiWidth - (uiNewWidth >> 1) < uiNewWidth - uiWidth)
-						{
-							uiNewWidth >>= 1;
-						}
-					}
-					else if(VTFCreateOptions.ResizeMethod == RESIZE_SMALLEST_POWER2)
-					{
-						uiNewWidth >>= 1;
-					}
-
-					if(uiNewWidth == 0)
-					{
-						uiNewWidth = 1;
-					}
-				}
+			case RESIZE_NEAREST_MULTIPLE4:
+			case RESIZE_BIGGEST_MULTIPLE4:
+			case RESIZE_SMALLEST_MULTIPLE4:
+				uiNewWidth = this->ComputeResizedDimension(uiWidth, VTFCreateOptions.ResizeMethod);
 				if(VTFCreateOptions.bResizeClamp && uiNewWidth > VTFCreateOptions.uiResizeClampWidth)
 				{
 					uiNewWidth = VTFCreateOptions.uiResizeClampWidth;
 				}
 
-				// Find the best height.
-				if(this->IsPowerOfTwo(uiHeight))
-				{
-					// Height already a power of 2.
-					uiNewHeight = uiHeight;
-				}
-				else
-				{
-					// Find largest power of 2.
-					uiNewHeight = this->NextPowerOfTwo(uiHeight);
-
-					if(VTFCreateOptions.ResizeMethod == RESIZE_NEAREST_POWER2)
-					{
-						if(uiHeight - (uiNewHeight >> 1) < uiNewHeight - uiHeight)
-						{
-							uiNewHeight >>= 1;
-						}
-					}
-					else if(VTFCreateOptions.ResizeMethod == RESIZE_SMALLEST_POWER2)
-					{
-						uiNewHeight >>= 1;
-					}
-
-					if(uiNewHeight == 0)
-					{
-						uiNewHeight = 1;
-					}
-				}
+				uiNewHeight = this->ComputeResizedDimension(uiHeight, VTFCreateOptions.ResizeMethod);
 				if(VTFCreateOptions.bResizeClamp && uiNewHeight > VTFCreateOptions.uiResizeClampHeight)
 				{
 					uiNewHeight = VTFCreateOptions.uiResizeClampHeight;
@@ -1070,6 +1019,56 @@ vlUInt CVTFFile::NextPowerOfTwo(vlUInt uiSize)
 	uiSize++;
 
 	return uiSize;
+}
+
+vlUInt CVTFFile::ComputeResizedDimension(vlUInt uiSize, VTFResizeMethod ResizeMethod)
+{
+	vlUInt uiBiggest, uiSmallest;
+
+	switch(ResizeMethod)
+	{
+	case RESIZE_NEAREST_POWER2:
+	case RESIZE_BIGGEST_POWER2:
+	case RESIZE_SMALLEST_POWER2:
+		if(this->IsPowerOfTwo(uiSize))
+		{
+			return uiSize;
+		}
+
+		uiBiggest = this->NextPowerOfTwo(uiSize);
+		uiSmallest = uiBiggest >> 1;
+		break;
+	case RESIZE_NEAREST_MULTIPLE4:
+	case RESIZE_BIGGEST_MULTIPLE4:
+	case RESIZE_SMALLEST_MULTIPLE4:
+		if(uiSize % 4 == 0)
+		{
+			return uiSize;
+		}
+
+		uiBiggest = (uiSize + 3) & ~3u;
+		uiSmallest = uiBiggest - 4;
+		break;
+	default:
+		return uiSize;
+	}
+
+	if(uiSmallest == 0)
+	{
+		return uiBiggest;
+	}
+
+	switch(ResizeMethod)
+	{
+	case RESIZE_SMALLEST_POWER2:
+	case RESIZE_SMALLEST_MULTIPLE4:
+		return uiSmallest;
+	case RESIZE_NEAREST_POWER2:
+	case RESIZE_NEAREST_MULTIPLE4:
+		return uiSize - uiSmallest < uiBiggest - uiSize ? uiSmallest : uiBiggest;
+	default:
+		return uiBiggest;
+	}
 }
 
 //

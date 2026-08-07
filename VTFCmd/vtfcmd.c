@@ -765,7 +765,7 @@ void PrintUsage(const vlChar *lpError, ...)
 		Print("         CLAMPU, VERTEXTEXTURE, SSBUMP, BORDER");
 
 		Print("\n");
-		Print("Resize Method:  NEAREST, BIGGEST, SMALLEST\n");
+		Print("Resize Method:  NEAREST, BIGGEST, SMALLEST, NEAREST4, BIGGEST4, SMALLEST4\n");
 
 		Print("\n");
 		Print("Resize Filter:  POINT, BOX, TRIANGLE, QUADRATIC, CUBIC, CATROM, MITCHELL\n");

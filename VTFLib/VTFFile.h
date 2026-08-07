@@ -312,6 +312,7 @@ namespace VTFLib
 	private:
 		vlBool IsPowerOfTwo(vlUInt uiSize);
 		vlUInt NextPowerOfTwo(vlUInt uiSize);
+		vlUInt ComputeResizedDimension(vlUInt uiSize, VTFResizeMethod ResizeMethod);	//!< Rounds a dimension as dictated by the given re-size method.
 
 		vlVoid ComputeResources();	 //!< Computes header VTF directory resources.
 

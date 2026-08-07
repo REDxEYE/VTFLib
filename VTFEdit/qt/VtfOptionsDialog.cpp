@@ -37,7 +37,20 @@ namespace VTFEdit
 {
 	namespace
 	{
-		const char *const ResizeMethodNames[] = { "Nearest Power Of 2", "Biggest Power Of 2", "Smallest Power Of 2" };
+		struct ResizeMethodEntry
+		{
+			const char *pName;
+			VTFResizeMethod Method;
+		};
+
+		const ResizeMethodEntry ResizeMethods[] = {
+			{ "Nearest Power Of 2", RESIZE_NEAREST_POWER2 },
+			{ "Biggest Power Of 2", RESIZE_BIGGEST_POWER2 },
+			{ "Smallest Power Of 2", RESIZE_SMALLEST_POWER2 },
+			{ "Nearest Multiple Of 4", RESIZE_NEAREST_MULTIPLE4 },
+			{ "Biggest Multiple Of 4", RESIZE_BIGGEST_MULTIPLE4 },
+			{ "Smallest Multiple Of 4", RESIZE_SMALLEST_MULTIPLE4 },
+		};
 		const char *const FilterNames[] = { "Box", "NICE" };
 		const char *const VersionNames[] = { "7.6", "7.5", "7.4", "7.3", "7.2", "7.1", "7.0" };
 		const char *const CompressionLevelNames[] = { "None", "Default", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -51,6 +64,14 @@ namespace VTFEdit
 				list << QString::number(i);
 			}
 			return list;
+		}
+
+		void fillResizeMethods(QComboBox *pCombo)
+		{
+			for(const ResizeMethodEntry &Entry : ResizeMethods)
+			{
+				pCombo->addItem(QString::fromLatin1(Entry.pName), static_cast<int>(Entry.Method));
+			}
 		}
 
 		template <int N>
@@ -140,10 +161,10 @@ namespace VTFEdit
 
 		QGroupBox *pResize = new QGroupBox(tr("Resize:"), pTab);
 		QFormLayout *pResizeForm = new QFormLayout(pResize);
-		m_pResize = new QCheckBox(tr("Resize to power of 2"), pResize);
+		m_pResize = new QCheckBox(tr("Resize image"), pResize);
 		m_pResizeMethod = new QComboBox(pResize);
-		fill(m_pResizeMethod, ResizeMethodNames);
-		m_pResizeMethod->setToolTip(tr("The method for choosing which power of 2 to use."));
+		fillResizeMethods(m_pResizeMethod);
+		m_pResizeMethod->setToolTip(tr("The size to round the image dimensions to. DXT compressed formats only require multiples of 4."));
 		m_pResizeFilter = new QComboBox(pResize);
 		fill(m_pResizeFilter, FilterNames);
 		m_pResizeClamp = new QCheckBox(tr("Clamp resize dimensions"), pResize);
@@ -367,7 +388,8 @@ namespace VTFEdit
 		m_pFlagPointSample->setChecked(m_pOptions->FlagPointSample != vlFalse);
 
 		m_pResize->setChecked(m_pOptions->ResizeImage != vlFalse);
-		m_pResizeMethod->setCurrentIndex(static_cast<int>(m_pOptions->ResizeMethod));
+		const int iResizeMethodIndex = m_pResizeMethod->findData(static_cast<int>(m_pOptions->ResizeMethod));
+		m_pResizeMethod->setCurrentIndex(iResizeMethodIndex >= 0 ? iResizeMethodIndex : 0);
 		m_pResizeFilter->setCurrentIndex(m_pOptions->ResizeFilter == MIPMAP_FILTER_NICE ? 1 : 0);
 		m_pResizeClamp->setChecked(m_pOptions->ResizeClamp != vlFalse);
 
@@ -438,7 +460,7 @@ namespace VTFEdit
 		m_pOptions->FlagPointSample = m_pFlagPointSample->isChecked() ? vlTrue : vlFalse;
 
 		m_pOptions->ResizeImage = m_pResize->isChecked() ? vlTrue : vlFalse;
-		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentIndex());
+		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentData().toInt());
 		m_pOptions->ResizeFilter = m_pResizeFilter->currentIndex() == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
 		m_pOptions->ResizeClamp = m_pResizeClamp->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->ResizeClampWidth = m_pMaximumWidth->currentText().toUInt();
