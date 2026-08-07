@@ -42,6 +42,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QIcon>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QLocale>
@@ -435,6 +436,7 @@ namespace VTFEdit
 		m_pVmtEdit = new QPlainTextEdit(this);
 		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
 		m_pVmtEdit->viewport()->setAcceptDrops(false);
+		m_pVmtEdit->installEventFilter(this);
 		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document(), m_VmtEditorSettings.isDark());
 		applyVmtEditorSettings();
 
@@ -1888,6 +1890,38 @@ namespace VTFEdit
 
 	bool MainWindow::eventFilter(QObject *pObject, QEvent *pEvent)
 	{
+		// keep the indentation of the current line when starting a new one
+		if(pObject == m_pVmtEdit && pEvent->type() == QEvent::KeyPress)
+		{
+			QKeyEvent *pKey = static_cast<QKeyEvent *>(pEvent);
+
+			if((pKey->key() == Qt::Key_Return || pKey->key() == Qt::Key_Enter)
+				&& (pKey->modifiers() & ~Qt::KeypadModifier) == Qt::NoModifier
+				&& !m_pVmtEdit->isReadOnly())
+			{
+				QTextCursor Cursor = m_pVmtEdit->textCursor();
+				const QString Line = Cursor.block().text();
+
+				int iIndent = 0;
+				while(iIndent < Line.length() 
+					&& (Line.at(iIndent) == QLatin1Char(' ')
+					|| Line.at(iIndent) == QLatin1Char('\t')))
+				{
+					iIndent++;
+				}
+
+				iIndent = qMin(iIndent, Cursor.positionInBlock());
+
+				Cursor.beginEditBlock();
+				Cursor.insertText(QLatin1String("\n") + Line.left(iIndent));
+				Cursor.endEditBlock();
+
+				m_pVmtEdit->setTextCursor(Cursor);
+				m_pVmtEdit->ensureCursorVisible();
+				return true;
+			}
+		}
+
 		const bool bImageArea = pObject == m_pImageScrollArea->viewport() || pObject == m_pImageView;
 
 		if(bImageArea)
