@@ -50,8 +50,8 @@ namespace VTFEdit
 		QVBoxLayout *pAboutLayout = new QVBoxLayout();
 
 		QLabel *pVersion = new QLabel(tr("VTFEdit++ Version: 4.0.0"), pAbout);
-		QLabel *pLibVersion = new QLabel(
-			tr("VTFLib Version: %1").arg(QString::fromLatin1(vlGetVersionString())), pAbout);
+		////QLabel *pLibVersion = new QLabel(
+		//	tr("VTFLib Version: %1").arg(QString::fromLatin1(vlGetVersionString())), pAbout);
 		QLabel *pAuthor = new QLabel(
 			tr("Author: ficool2, misyltoad, Neil Jedrzejewski & Ryan Gregg"), pAbout);
 		QLabel *pLanguage = new QLabel(tr("Written In: C++"), pAbout);
@@ -63,7 +63,7 @@ namespace VTFEdit
 			"<a href=\"https://ficool2.github.io/HammerPlusPlus-Website\">https://ficool2.github.io/HammerPlusPlus-Website</a><br>"));
 
 		pAboutLayout->addWidget(pVersion);
-		pAboutLayout->addWidget(pLibVersion);
+		//pAboutLayout->addWidget(pLibVersion);
 		pAboutLayout->addWidget(pAuthor);
 		pAboutLayout->addWidget(pLanguage);
 		pAboutLayout->addWidget(pLinks);
