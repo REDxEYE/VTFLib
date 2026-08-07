@@ -23,6 +23,7 @@
 #include "BatchConvertDialog.h"
 #include "ImageView.h"
 #include "VmtCreateDialog.h"
+#include "VmtEditorOptionsDialog.h"
 #include "VmtFileUtility.h"
 #include "VtfFileUtility.h"
 #include "VtfOptionsDialog.h"
@@ -161,6 +162,7 @@ namespace VTFEdit
 		, m_iMaximumRecentFiles(8)
 		, m_pOptionsDialog(nullptr)
 		, m_pVmtCreateDialog(nullptr)
+		, m_pVmtEditorOptionsDialog(nullptr)
 		, m_pBatchConvertDialog(nullptr)
 		, m_pAboutDialog(nullptr)
 		, m_iVmtErrorLine(0)
@@ -292,6 +294,9 @@ namespace VTFEdit
 		m_pAutoCreateVmtFileAction = new QAction(tr("&Auto Create VMT File"), this);
 		m_pAutoCreateVmtFileAction->setCheckable(true);
 
+		m_pVmtEditorOptionsAction = new QAction(tr("VMT &Editor Options..."), this);
+		connect(m_pVmtEditorOptionsAction, &QAction::triggered, this, &MainWindow::onVmtEditorOptions);
+
 		m_pAboutAction = new QAction(tr("&About"), this);
 		connect(m_pAboutAction, &QAction::triggered, this, &MainWindow::onAbout);
 	}
@@ -330,6 +335,8 @@ namespace VTFEdit
 
 		QMenu *pOptionsMenu = menuBar()->addMenu(tr("&Options"));
 		pOptionsMenu->addAction(m_pAutoCreateVmtFileAction);
+		pOptionsMenu->addSeparator();
+		pOptionsMenu->addAction(m_pVmtEditorOptionsAction);
 
 		QMenu *pHelpMenu = menuBar()->addMenu(tr("&Help"));
 		pHelpMenu->addAction(m_pAboutAction);
@@ -427,16 +434,7 @@ namespace VTFEdit
 		// VMT editor page.
 		m_pVmtEdit = new QPlainTextEdit(this);
 		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
-		{
-			QFont VmtFont(QStringLiteral("Consolas"), 12);
-			VmtFont.setFamilies({QStringLiteral("Consolas"), QStringLiteral("Cascadia Mono"),
-				// fallbacks
-				QStringLiteral("DejaVu Sans Mono"), QStringLiteral("Courier New")});
-			VmtFont.setStyleHint(QFont::Monospace, QFont::PreferDefault);
-			VmtFont.setFixedPitch(true);
-			m_pVmtEdit->setFont(VmtFont);
-		}
-		m_pVmtEdit->setTabStopDistance(4 * m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+		applyVmtEditorSettings();
 		{
 			QPalette Palette = m_pVmtEdit->palette();
 			Palette.setColor(QPalette::Base, VmtColors::Background);
@@ -1049,6 +1047,13 @@ namespace VTFEdit
 		}
 
 		m_pVmtEdit->setExtraSelections(Selections);
+	}
+
+	void MainWindow::applyVmtEditorSettings()
+	{
+		m_pVmtEdit->setFont(m_VmtEditorSettings.font());
+		m_pVmtEdit->setTabStopDistance(m_VmtEditorSettings.iTabSize
+			* m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
 	}
 
 	//
@@ -1992,6 +1997,19 @@ namespace VTFEdit
 		vlSetInteger(VTFLIB_VMT_PARSE_MODE, PARSE_MODE_LOOSE);
 	}
 
+	void MainWindow::onVmtEditorOptions()
+	{
+		if(m_pVmtEditorOptionsDialog == nullptr)
+		{
+			m_pVmtEditorOptionsDialog = new VmtEditorOptionsDialog(&m_VmtEditorSettings, this);
+		}
+
+		if(m_pVmtEditorOptionsDialog->exec() == QDialog::Accepted)
+		{
+			applyVmtEditorSettings();
+		}
+	}
+
 	//
 	// Recent files.
 	//
@@ -2104,6 +2122,16 @@ namespace VTFEdit
 				m_pMipmapFullSizeAction->setChecked(toBool(sVal));
 			else if(sArg.compare(QLatin1String("VTFEdit.AutoCreateVMTFile"), Qt::CaseInsensitive) == 0)
 				m_pAutoCreateVmtFileAction->setChecked(toBool(sVal));
+
+			else if(sArg.compare(QLatin1String("VmtEditor.FontFamily"), Qt::CaseInsensitive) == 0)
+			{
+				if(!sVal.isEmpty())
+					m_VmtEditorSettings.sFontFamily = sVal;
+			}
+			else if(sArg.compare(QLatin1String("VmtEditor.FontSize"), Qt::CaseInsensitive) == 0)
+				m_VmtEditorSettings.iFontSize = qBound(4, sVal.toInt(), 72);
+			else if(sArg.compare(QLatin1String("VmtEditor.TabSize"), Qt::CaseInsensitive) == 0)
+				m_VmtEditorSettings.iTabSize = qBound(1, sVal.toInt(), 16);
 
 			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Location.X"), Qt::CaseInsensitive) == 0)
 				Location.setX(sVal.toInt());
@@ -2223,6 +2251,8 @@ namespace VTFEdit
 
 		File.close();
 
+		applyVmtEditorSettings();
+
 		resize(Size);
 		move(Location);
 		if(bMaximized)
@@ -2261,6 +2291,9 @@ namespace VTFEdit
 		Stream << "VTFEdit.Tile = " << boolText(m_pTileAction->isChecked()) << "\n";
 		Stream << "VTFEdit.MipmapFullSize = " << boolText(m_pMipmapFullSizeAction->isChecked()) << "\n";
 		Stream << "VTFEdit.AutoCreateVMTFile = " << boolText(m_pAutoCreateVmtFileAction->isChecked()) << "\n";
+		Stream << "VmtEditor.FontFamily = " << m_VmtEditorSettings.sFontFamily << "\n";
+		Stream << "VmtEditor.FontSize = " << m_VmtEditorSettings.iFontSize << "\n";
+		Stream << "VmtEditor.TabSize = " << m_VmtEditorSettings.iTabSize << "\n";
 
 		Stream << "\n[Forms]\n\n";
 		Stream << "Forms.VTFEdit.Location.X = " << normalGeometry().x() << "\n";

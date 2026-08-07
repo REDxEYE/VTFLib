@@ -20,6 +20,7 @@
 #pragma once
 
 #include "BatchConvertSettings.h"
+#include "VmtEditorSettings.h"
 #include "VtfOptions.h"
 
 #include <QMainWindow>
@@ -52,6 +53,7 @@ namespace VTFEdit
 	class BatchConvertDialog;
 	class ImageView;
 	class VmtCreateDialog;
+	class VmtEditorOptionsDialog;
 	class VmtHighlighter;
 	class VtfOptionsDialog;
 
@@ -104,6 +106,7 @@ namespace VTFEdit
 		void onVmtCursorChanged();
 		void onValidateLoose();
 		void onValidateStrict();
+		void onVmtEditorOptions();
 
 		void onImageContextMenu(const QPoint &Position);
 		void onVmtContextMenu(const QPoint &Position);
@@ -139,6 +142,7 @@ namespace VTFEdit
 		bool confirmVmtFile();
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
 		void updateVmtErrorHighlight();
+		void applyVmtEditorSettings();
 
 		// View.
 		void zoomAt(float fFactor, const QPoint &Anchor);
@@ -176,8 +180,10 @@ namespace VTFEdit
 
 		VtfOptions m_Options;
 		BatchConvertSettings m_BatchConvertSettings;
+		VmtEditorSettings m_VmtEditorSettings;
 		VtfOptionsDialog *m_pOptionsDialog;
 		VmtCreateDialog *m_pVmtCreateDialog;
+		VmtEditorOptionsDialog *m_pVmtEditorOptionsDialog;
 		BatchConvertDialog *m_pBatchConvertDialog;
 		AboutDialog *m_pAboutDialog;
 
@@ -204,6 +210,7 @@ namespace VTFEdit
 		QAction *m_pCreateVmtFileAction;
 		QAction *m_pConvertFolderAction;
 		QAction *m_pAutoCreateVmtFileAction;
+		QAction *m_pVmtEditorOptionsAction;
 		QAction *m_pAboutAction;
 		QMenu *m_pRecentFilesMenu;
 
