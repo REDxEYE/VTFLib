@@ -6,7 +6,7 @@ using namespace VTFLib::IO::Readers;
 
 CFileReader::CFileReader(const vlChar *cFileName)
 {
-    this->hFile = NULL;
+    this->hFile = nullptr;
 
     this->cFileName = new vlChar[strlen(cFileName) + 1];
     strcpy(this->cFileName, cFileName);
@@ -14,13 +14,13 @@ CFileReader::CFileReader(const vlChar *cFileName)
 
 CFileReader::~CFileReader()
 {
-    this->Close();
-    delete []this->cFileName;
+    this->CFileReader::Close();
+    delete[] this->cFileName;
 }
 
 vlBool CFileReader::Opened() const
 {
-    return this->hFile != NULL;
+    return this->hFile != nullptr;
 }
 
 vlBool CFileReader::Open()
@@ -29,7 +29,7 @@ vlBool CFileReader::Open()
 
     this->hFile = fopen(this->cFileName, "rb");
 
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         LastError.Set("Error opening file.", vlTrue);
         return vlFalse;
@@ -40,16 +40,16 @@ vlBool CFileReader::Open()
 
 vlVoid CFileReader::Close()
 {
-    if(this->hFile != NULL)
+    if(this->hFile != nullptr)
     {
         fclose(this->hFile);
-        this->hFile = NULL;
+        this->hFile = nullptr;
     }
 }
 
 vlUInt CFileReader::GetStreamSize() const
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -80,7 +80,7 @@ vlUInt CFileReader::GetStreamSize() const
 
 vlUInt CFileReader::GetStreamPointer() const
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -97,7 +97,7 @@ vlUInt CFileReader::GetStreamPointer() const
 
 vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -133,7 +133,7 @@ vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode)
 
 vlBool CFileReader::Read(vlChar &cChar)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return vlFalse;
     }
@@ -150,7 +150,7 @@ vlBool CFileReader::Read(vlChar &cChar)
 
 vlUInt CFileReader::Read(vlVoid *vData, vlUInt uiBytes)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
