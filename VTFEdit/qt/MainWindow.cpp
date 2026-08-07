@@ -112,19 +112,11 @@ namespace VTFEdit
 			"Vertex Texture",
 			"SSBump", 
 			"Unused [28]",
-			"Border"
+			"Border",
 			"Unused [30]",
 			"Unused [31]"
 		};
 		const int FlagCount = static_cast<int>(sizeof(FlagNames) / sizeof(FlagNames[0]));
-
-		bool isReadOnlyFlag(int iIndex)
-		{
-			return iIndex == 12
-				|| iIndex == 13 
-				|| iIndex == 14
-				|| qstrcmp(FlagNames[iIndex], "Unused") == 0;
-		}
 
 		QString imageFormatString(VTFImageFormat ImageFormat)
 		{
@@ -2335,16 +2327,6 @@ namespace VTFEdit
 	{
 		if(m_bUpdatingFlags || m_pVTFFile == nullptr)
 		{
-			return;
-		}
-
-		const int iIndex = m_pFlags->row(pItem);
-
-		if(isReadOnlyFlag(iIndex))
-		{
-			m_bUpdatingFlags = true;
-			pItem->setCheckState((m_pVTFFile->GetFlags() & (1u << iIndex)) != 0 ? Qt::Checked : Qt::Unchecked);
-			m_bUpdatingFlags = false;
 			return;
 		}
 
