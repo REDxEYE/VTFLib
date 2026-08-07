@@ -180,10 +180,13 @@ namespace VTFEdit
 				bQuoted = !bQuoted;
 			}
 
-			// Unquoted whitespace after the first token separates key from value.
-			if((Character == QLatin1Char(' ') || Character == QLatin1Char('\t')) && !bQuoted && bHadCharThisLine)
+			const bool bWhitespace = Character == QLatin1Char(' ') || Character == QLatin1Char('\t');
+			const bool bLastWhitespace = LastChar == QLatin1Char(' ') || LastChar == QLatin1Char('\t');
+
+			// The first run of unquoted whitespace after the first token separates key from value.
+			if(bWhitespace && !bLastWhitespace && !bQuoted && bHadCharThisLine)
 			{
-				bKey = !bKey;
+				bKey = false;
 			}
 
 			bComment = bComment || (Character == QLatin1Char('/') && NextCharacter == QLatin1Char('/'));
@@ -221,8 +224,7 @@ namespace VTFEdit
 
 			setFormat(i, 1, Color);
 
-			bHadCharThisLine = bHadCharThisLine
-				|| !(Character == QLatin1Char(' ') || Character == QLatin1Char('\t'));
+			bHadCharThisLine = bHadCharThisLine || !bWhitespace;
 
 			LastChar = Character;
 		}
