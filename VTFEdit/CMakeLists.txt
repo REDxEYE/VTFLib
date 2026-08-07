@@ -47,7 +47,7 @@ qt_add_resources(vtfedit "vtfedit_resources"
 )
 
 set_target_properties(vtfedit PROPERTIES
-	OUTPUT_NAME VTFEdit
+	OUTPUT_NAME VTFEdit++
 	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 	INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
 	INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL ON

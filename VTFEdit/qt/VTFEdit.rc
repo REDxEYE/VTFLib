@@ -25,7 +25,7 @@ BEGIN
             VALUE "FileVersion", "3.0.0"
             VALUE "InternalName", "VTFEdit"
             VALUE "LegalCopyright", "Copyright (C) 2026 ficool2, 2020 misyltoad, 2005-2011 Neil Jedrzejewski & Ryan Gregg"
-            VALUE "OriginalFilename", "VTFEdit.exe"
+            VALUE "OriginalFilename", "VTFEdit++.exe"
             VALUE "ProductName", "VTFEdit++"
             VALUE "ProductVersion", "3.0.0"
         END
