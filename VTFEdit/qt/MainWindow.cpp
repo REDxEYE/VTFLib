@@ -462,6 +462,8 @@ namespace VTFEdit
 		m_pSplitter->setStretchFactor(1, 1);
 		m_pSplitter->setStretchFactor(2, 0);
 
+		m_pSplitter->setHandleWidth(6);
+
 		setCentralWidget(m_pSplitter);
 	}
 
