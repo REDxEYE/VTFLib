@@ -30,7 +30,15 @@ qt_add_executable(vtfedit WIN32
 qt_add_resources(vtfedit "vtfedit_resources"
 	PREFIX "/"
 	BASE "${CMAKE_CURRENT_SOURCE_DIR}"
-	FILES app.ico
+	FILES
+		app.ico
+		icons/rgb.png
+		icons/red.png
+		icons/green.png
+		icons/blue.png
+		icons/alpha.png
+		icons/alphamask.png
+		icons/tile.png
 )
 
 set_target_properties(vtfedit PROPERTIES

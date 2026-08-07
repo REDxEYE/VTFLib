@@ -40,6 +40,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QIcon>
 #include <QLabel>
 #include <QListWidget>
 #include <QLocale>
@@ -64,6 +65,7 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QToolBar>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWheelEvent>
@@ -241,18 +243,20 @@ namespace VTFEdit
 		connect(m_pPasteAction, &QAction::triggered, this, &MainWindow::onPaste);
 
 		m_pChannelGroup = new QActionGroup(this);
-		struct { QAction **ppAction; const char *pText; Qt::Key Key; } Channels[] =
+		struct { QAction **ppAction; const char *pText; const char *pIcon; const char *pToolTip; Qt::Key Key; } Channels[] =
 		{
-			{ &m_pChannelRgbAction, "RGB", Qt::Key_C },
-			{ &m_pChannelRAction, "R", Qt::Key_R },
-			{ &m_pChannelGAction, "G", Qt::Key_G },
-			{ &m_pChannelBAction, "B", Qt::Key_B },
-			{ &m_pChannelAAction, "A", Qt::Key_A },
+			{ &m_pChannelRgbAction, "RGB", ":/icons/rgb.png", QT_TR_NOOP("RGB Channels"), Qt::Key_C },
+			{ &m_pChannelRAction, "R", ":/icons/red.png", QT_TR_NOOP("Red Channel"), Qt::Key_R },
+			{ &m_pChannelGAction, "G", ":/icons/green.png", QT_TR_NOOP("Green Channel"), Qt::Key_G },
+			{ &m_pChannelBAction, "B", ":/icons/blue.png", QT_TR_NOOP("Blue Channel"), Qt::Key_B },
+			{ &m_pChannelAAction, "A", ":/icons/alpha.png", QT_TR_NOOP("Alpha Channel"), Qt::Key_A },
 		};
 		for(auto &Channel : Channels)
 		{
 			QAction *pAction = new QAction(QString::fromLatin1(Channel.pText), this);
 			pAction->setCheckable(true);
+			pAction->setIcon(QIcon(QLatin1String(Channel.pIcon)));
+			pAction->setToolTip(tr(Channel.pToolTip));
 			pAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Channel.Key));
 			m_pChannelGroup->addAction(pAction);
 			connect(pAction, &QAction::triggered, this, &MainWindow::onChannelChanged);
@@ -262,11 +266,15 @@ namespace VTFEdit
 
 		m_pMaskAction = new QAction(tr("&Mask"), this);
 		m_pMaskAction->setCheckable(true);
+		m_pMaskAction->setIcon(QIcon(QStringLiteral(":/icons/alphamask.png")));
+		m_pMaskAction->setToolTip(tr("Alpha Mask"));
 		m_pMaskAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
 		connect(m_pMaskAction, &QAction::triggered, this, &MainWindow::onViewOptionChanged);
 
 		m_pTileAction = new QAction(tr("&Tile"), this);
 		m_pTileAction->setCheckable(true);
+		m_pTileAction->setIcon(QIcon(QStringLiteral(":/icons/tile.png")));
+		m_pTileAction->setToolTip(tr("Tile Image"));
 		m_pTileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
 		connect(m_pTileAction, &QAction::triggered, this, &MainWindow::onViewOptionChanged);
 
@@ -338,6 +346,19 @@ namespace VTFEdit
 		pToolBar->addSeparator();
 		pToolBar->addAction(m_pCopyAction);
 		pToolBar->addAction(m_pPasteAction);
+		pToolBar->addSeparator();
+
+		QAction *ViewActions[] =
+		{
+			m_pChannelRgbAction, m_pChannelRAction, m_pChannelGAction,
+			m_pChannelBAction, m_pChannelAAction, m_pMaskAction, m_pTileAction,
+		};
+		for(QAction *pAction : ViewActions)
+		{
+			pToolBar->addAction(pAction);
+			if(QToolButton *pButton = qobject_cast<QToolButton *>(pToolBar->widgetForAction(pAction)))
+				pButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+		}
 	}
 
 	void MainWindow::createStatusBar()
