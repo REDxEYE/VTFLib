@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 		const QStringList Arguments = QApplication::arguments();
 		if(Arguments.count() >= 2)
 		{
-			Window.openCommandLineFile(Arguments.at(1));
+			Window.openCommandLineFiles(Arguments.mid(1));
 		}
 
 		iResult = QApplication::exec();

@@ -21,6 +21,7 @@
 
 #include "BatchConvertSettings.h"
 #include "VmtEditorSettings.h"
+#include "VmtTextEdit.h"
 #include "VtfOptions.h"
 
 #include <QMainWindow>
@@ -37,14 +38,15 @@ class QLabel;
 class QListWidget;
 class QListWidgetItem;
 class QMenu;
-class QPlainTextEdit;
 class QPushButton;
 class QScrollArea;
 class QSlider;
 class QSpinBox;
 class QSplitter;
 class QStackedWidget;
+class QTabBar;
 class QTabWidget;
+class QTextDocument;
 class QTimer;
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -59,6 +61,45 @@ namespace VTFEdit
 	class VmtHighlighter;
 	class VtfOptionsDialog;
 
+	struct Document
+	{
+		VTFLib::CVTFFile *pVTFFile;
+		VTFLib::CVMTFile *pVMTFile;
+
+		QTextDocument *pTextDocument;
+		VmtHighlighter *pHighlighter;
+
+		QString sFileName;
+		QString sUntitledName;
+		bool bModified;
+
+		float fImageScale;
+		int iFrame;
+		int iFace;
+		int iSlice;
+		int iMipmap;
+		int iScrollX;
+		int iScrollY;
+		int iVmtErrorLine;
+
+		Document()
+			: pVTFFile(nullptr)
+			, pVMTFile(nullptr)
+			, pTextDocument(nullptr)
+			, pHighlighter(nullptr)
+			, bModified(false)
+			, fImageScale(1.0f)
+			, iFrame(0)
+			, iFace(0)
+			, iSlice(0)
+			, iMipmap(0)
+			, iScrollX(0)
+			, iScrollY(0)
+			, iVmtErrorLine(0)
+		{
+		}
+	};
+
 	class MainWindow : public QMainWindow
 	{
 		Q_OBJECT
@@ -67,7 +108,7 @@ namespace VTFEdit
 		MainWindow();
 		~MainWindow() override;
 
-		void openCommandLineFile(const QString &sFilePath);
+		void openCommandLineFiles(const QStringList &sFilePaths);
 
 	protected:
 		void closeEvent(QCloseEvent *pEvent) override;
@@ -80,6 +121,15 @@ namespace VTFEdit
 		void onOpen();
 		void onSave();
 		void onSaveAs();
+		void onSaveAll();
+		void onClose();
+		void onCloseAll();
+		void onNextTab();
+		void onPreviousTab();
+		void onTabChanged(int iIndex);
+		void onTabCloseRequested(int iIndex);
+		void onTabMoved(int iFrom, int iTo);
+		void onVtfPropertyChanged();
 		void onImport();
 		void onExport();
 		void onExportAll();
@@ -125,25 +175,41 @@ namespace VTFEdit
 		QWidget *createInfoTab();
 		QWidget *createResourcesTab();
 
+		// Documents and tabs.
+		Document *currentDocument() const;
+		int addDocument(Document *pDocument);
+		void commitCurrentDocument();
+		void activateDocument(int iIndex);
+		void clearWidgets();
+		void hideVtfSidebars();
+		void setupTextDocument(Document *pDocument, const QString &sText);
+		bool maybeSaveDocument(int iIndex);
+		bool closeDocument(int iIndex);
+		QString documentTitle(const Document *pDocument) const;
+		void updateTabText(int iIndex);
+		void setDocumentModified(Document *pDocument, bool bModified);
+		int indexOfFile(const QString &sFileName) const;
+		void updateActions();
+
 		// File operations.
 		void newFile();
 		void open(const QString &sFileName, bool bTemp);
-		void save(const QString &sFileName);
-		void saveAs();
+		bool save(int iIndex, const QString &sFileName);
+		bool saveDocument(int iIndex);
+		bool saveDocumentAs(int iIndex);
 		void import(const QStringList &sFileNames);
 		void createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
 			bool bHasAlpha);
 		void exportImage(const QString &sFileName);
 		void exportAllImages(const QString &sFileName);
-		void closeFile();
 
 		// VTF/VMT plumbing.
 		void updateVtfFile();
-		void setVtfFile(VTFLib::CVTFFile *pVTFFile);
+		void showVtfFile(VTFLib::CVTFFile *pVTFFile);
 		bool getVtfFile();
-		void setVmtFile(VTFLib::CVMTFile *pVMTFile);
+		void showVmtFile(Document *pDocument);
 		bool validateVmtFile();
-		bool confirmVmtFile();
+		bool confirmVmtFile(int iIndex);
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
 		void updateVmtErrorHighlight();
 		void applyVmtEditorSettings();
@@ -160,8 +226,14 @@ namespace VTFEdit
 		bool readConfigFile(const QString &sConfigFile);
 		bool writeConfigFile(const QString &sConfigFile) const;
 
-		void setFileName(const QString &sFileName);
+		void updateWindowTitle();
 		void handleDroppedFiles(const QStringList &sFiles);
+
+		// Open documents, in tab order.
+		std::vector<Document *> m_Documents;
+		int m_iCurrentDocument;
+		int m_iUntitledCounter;
+		bool m_bSwitchingDocument;
 
 		VTFLib::CVMTFile *m_pVMTFile;
 		VTFLib::CVTFFile *m_pVTFFile;
@@ -196,6 +268,11 @@ namespace VTFEdit
 		QAction *m_pOpenAction;
 		QAction *m_pSaveAction;
 		QAction *m_pSaveAsAction;
+		QAction *m_pSaveAllAction;
+		QAction *m_pCloseAction;
+		QAction *m_pCloseAllAction;
+		QAction *m_pNextTabAction;
+		QAction *m_pPreviousTabAction;
 		QAction *m_pImportAction;
 		QAction *m_pExportAction;
 		QAction *m_pExportAllAction;
@@ -218,6 +295,9 @@ namespace VTFEdit
 		QAction *m_pAboutAction;
 		QMenu *m_pRecentFilesMenu;
 
+		// Document tabs.
+		QTabBar *m_pTabBar;
+
 		// Image view.
 		QStackedWidget *m_pCentralStack;
 		QScrollArea *m_pImageScrollArea;
@@ -225,8 +305,8 @@ namespace VTFEdit
 		QMenu *m_pImageContextMenu;
 
 		// VMT editor.
-		QPlainTextEdit *m_pVmtEdit;
-		VmtHighlighter *m_pVmtHighlighter;
+		VmtTextEdit *m_pVmtEdit;
+		QTextDocument *m_pEmptyDocument;
 		int m_iVmtErrorLine;
 
 		// Sidebars.

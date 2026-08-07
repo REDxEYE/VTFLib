@@ -62,7 +62,9 @@
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QStyleHints>
+#include <QTabBar>
 #include <QTabWidget>
+#include <QTextDocument>
 #include <QTextEdit>
 #include <QTextStream>
 #include <QTimer>
@@ -152,7 +154,10 @@ namespace VTFEdit
 	}
 
 	MainWindow::MainWindow()
-		: m_pVMTFile(nullptr)
+		: m_iCurrentDocument(-1)
+		, m_iUntitledCounter(0)
+		, m_bSwitchingDocument(false)
+		, m_pVMTFile(nullptr)
 		, m_pVTFFile(nullptr)
 		, m_fImageScale(1.0f)
 		, m_fEffectiveImageScale(1.0f)
@@ -186,7 +191,8 @@ namespace VTFEdit
 			this, &MainWindow::onClipboardChanged);
 
 		onHdrReset();
-		closeFile();
+		clearWidgets();
+		updateActions();
 
 		readConfigFile(configFilePath());
 		updateRecentFiles();
@@ -195,8 +201,12 @@ namespace VTFEdit
 
 	MainWindow::~MainWindow()
 	{
-		delete m_pVMTFile;
-		delete m_pVTFFile;
+		for(Document *pDocument : m_Documents)
+		{
+			delete pDocument->pVMTFile;
+			delete pDocument->pVTFFile;
+			delete pDocument;
+		}
 	}
 
 	//
@@ -220,6 +230,28 @@ namespace VTFEdit
 		m_pSaveAsAction = new QAction(tr("Save &As..."), this);
 		m_pSaveAsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
 		connect(m_pSaveAsAction, &QAction::triggered, this, &MainWindow::onSaveAs);
+
+		m_pSaveAllAction = new QAction(tr("Save A&ll"), this);
+		m_pSaveAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S));
+		connect(m_pSaveAllAction, &QAction::triggered, this, &MainWindow::onSaveAll);
+
+		m_pCloseAction = new QAction(tr("&Close"), this);
+		m_pCloseAction->setShortcut(QKeySequence::Close);
+		connect(m_pCloseAction, &QAction::triggered, this, &MainWindow::onClose);
+
+		m_pCloseAllAction = new QAction(tr("Close A&ll"), this);
+		m_pCloseAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
+		connect(m_pCloseAllAction, &QAction::triggered, this, &MainWindow::onCloseAll);
+
+		m_pNextTabAction = new QAction(tr("&Next Tab"), this);
+		m_pNextTabAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab));
+		connect(m_pNextTabAction, &QAction::triggered, this, &MainWindow::onNextTab);
+		addAction(m_pNextTabAction);
+
+		m_pPreviousTabAction = new QAction(tr("&Previous Tab"), this);
+		m_pPreviousTabAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab));
+		connect(m_pPreviousTabAction, &QAction::triggered, this, &MainWindow::onPreviousTab);
+		addAction(m_pPreviousTabAction);
 
 		m_pImportAction = new QAction(tr("&Import"), this);
 		m_pImportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
@@ -310,6 +342,10 @@ namespace VTFEdit
 		pFileMenu->addSeparator();
 		pFileMenu->addAction(m_pSaveAction);
 		pFileMenu->addAction(m_pSaveAsAction);
+		pFileMenu->addAction(m_pSaveAllAction);
+		pFileMenu->addSeparator();
+		pFileMenu->addAction(m_pCloseAction);
+		pFileMenu->addAction(m_pCloseAllAction);
 		pFileMenu->addSeparator();
 		pFileMenu->addAction(m_pImportAction);
 		pFileMenu->addAction(m_pExportAction);
@@ -329,6 +365,9 @@ namespace VTFEdit
 		pViewMenu->addAction(m_pMaskAction);
 		pViewMenu->addAction(m_pTileAction);
 		pViewMenu->addAction(m_pMipmapFullSizeAction);
+		pViewMenu->addSeparator();
+		pViewMenu->addAction(m_pNextTabAction);
+		pViewMenu->addAction(m_pPreviousTabAction);
 
 		QMenu *pToolsMenu = menuBar()->addMenu(tr("&Tools"));
 		pToolsMenu->addAction(m_pCreateVmtFileAction);
@@ -433,11 +472,15 @@ namespace VTFEdit
 		}
 
 		// VMT editor page.
-		m_pVmtEdit = new QPlainTextEdit(this);
+		m_pVmtEdit = new VmtTextEdit(this);
 		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
 		m_pVmtEdit->viewport()->setAcceptDrops(false);
 		m_pVmtEdit->installEventFilter(this);
-		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document(), m_VmtEditorSettings.isDark());
+
+		m_pEmptyDocument = new QTextDocument(this);
+		m_pEmptyDocument->setDocumentLayout(new QPlainTextDocumentLayout(m_pEmptyDocument));
+		m_pVmtEdit->setDocument(m_pEmptyDocument);
+
 		applyVmtEditorSettings();
 
 		// Follow the system theme
@@ -469,7 +512,27 @@ namespace VTFEdit
 
 		m_pSplitter->setHandleWidth(6);
 
-		setCentralWidget(m_pSplitter);
+		m_pTabBar = new QTabBar(this);
+		m_pTabBar->setTabsClosable(true);
+		m_pTabBar->setMovable(true);
+		m_pTabBar->setDocumentMode(true);
+		m_pTabBar->setExpanding(false);
+		m_pTabBar->setUsesScrollButtons(true);
+		m_pTabBar->setDrawBase(false);
+		m_pTabBar->hide();
+
+		connect(m_pTabBar, &QTabBar::currentChanged, this, &MainWindow::onTabChanged);
+		connect(m_pTabBar, &QTabBar::tabCloseRequested, this, &MainWindow::onTabCloseRequested);
+		connect(m_pTabBar, &QTabBar::tabMoved, this, &MainWindow::onTabMoved);
+
+		QWidget *pCentral = new QWidget(this);
+		QVBoxLayout *pCentralLayout = new QVBoxLayout(pCentral);
+		pCentralLayout->setContentsMargins(0, 0, 0, 0);
+		pCentralLayout->setSpacing(0);
+		pCentralLayout->addWidget(m_pTabBar);
+		pCentralLayout->addWidget(m_pSplitter, 1);
+
+		setCentralWidget(pCentral);
 	}
 
 	QWidget *MainWindow::createImageTab()
@@ -542,6 +605,7 @@ namespace VTFEdit
 
 		m_pImageStartFrame = new QSpinBox(pImageInfo);
 		m_pImageStartFrame->setRange(0, 0);
+		connect(m_pImageStartFrame, &QSpinBox::valueChanged, this, &MainWindow::onVtfPropertyChanged);
 		pImageForm->addRow(tr("Start:"), m_pImageStartFrame);
 
 		m_pImageFaces = addInfoRow(pImageForm, tr("Faces:"));
@@ -552,6 +616,7 @@ namespace VTFEdit
 		m_pImageBumpmapScale->setDecimals(2);
 		m_pImageBumpmapScale->setSingleStep(0.01);
 		m_pImageBumpmapScale->setRange(-100.0, 100.0);
+		connect(m_pImageBumpmapScale, &QDoubleSpinBox::valueChanged, this, &MainWindow::onVtfPropertyChanged);
 		pImageForm->addRow(tr("Bumpmap:"), m_pImageBumpmapScale);
 
 		m_pImageReflectivity = addInfoRow(pImageForm, tr("Reflectivity:"));
@@ -746,9 +811,12 @@ namespace VTFEdit
 		m_bUpdatingVtfFile = false;
 	}
 
-	void MainWindow::setVtfFile(VTFLib::CVTFFile *pVTFFile)
+	void MainWindow::showVtfFile(VTFLib::CVTFFile *pVTFFile)
 	{
 		m_pVTFFile = pVTFFile;
+
+		const bool bWasSwitching = m_bSwitchingDocument;
+		m_bSwitchingDocument = true;
 
 		m_pFrame->setValue(0);
 		m_pFace->setValue(0);
@@ -765,16 +833,13 @@ namespace VTFEdit
 			m_pFrame->setValue(static_cast<int>(pVTFFile->GetStartFrame()));
 		}
 
-		if(pVTFFile->GetFrameCount() > 1)
-		{
-			m_pAnimateButton->setEnabled(true);
-			m_pAnimateFps->setEnabled(true);
-		}
+		m_pAnimateTimer->stop();
+		m_pAnimateButton->setText(tr("&Play"));
+		m_pAnimateButton->setEnabled(pVTFFile->GetFrameCount() > 1);
+		m_pAnimateFps->setEnabled(pVTFFile->GetFrameCount() > 1);
 
-		if(pVTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F || pVTFFile->GetFormat() == IMAGE_FORMAT_BC6H)
-		{
-			m_pHdrExposure->setEnabled(true);
-		}
+		m_pHdrExposure->setEnabled(pVTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F
+			|| pVTFFile->GetFormat() == IMAGE_FORMAT_BC6H);
 
 		const vlUInt uiFlags = pVTFFile->GetFlags();
 
@@ -907,6 +972,8 @@ namespace VTFEdit
 			pItem->setExpanded(true);
 		}
 
+		m_bSwitchingDocument = bWasSwitching;
+
 		m_fImageScale = 1.0f;
 		updateVtfFile();
 
@@ -975,6 +1042,11 @@ namespace VTFEdit
 
 	bool MainWindow::getVtfFile()
 	{
+		if(m_pVTFFile == nullptr)
+		{
+			return false;
+		}
+
 		m_pVTFFile->SetFlags(0);
 		for(int i = 0; i < m_pFlags->count(); i++)
 		{
@@ -992,12 +1064,13 @@ namespace VTFEdit
 	// VMT.
 	//
 
-	void MainWindow::setVmtFile(VTFLib::CVMTFile *pVMTFile)
+	void MainWindow::showVmtFile(Document *pDocument)
 	{
-		m_pVMTFile = pVMTFile;
+		m_pVMTFile = pDocument->pVMTFile;
+
+		m_pVmtEdit->setDocument(pDocument->pTextDocument);
 
 		validateVmtFile();
-		m_pVmtHighlighter->rehighlight();
 		updateVmtErrorHighlight();
 
 		m_pCentralStack->setCurrentWidget(m_pVmtEdit);
@@ -1027,16 +1100,20 @@ namespace VTFEdit
 		return bResult != vlFalse;
 	}
 
-	bool MainWindow::confirmVmtFile()
+	bool MainWindow::confirmVmtFile(int iIndex)
 	{
-		if(!validateVmtFile())
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		const QByteArray Text = pDocument->pTextDocument->toPlainText().toLocal8Bit();
+		if(pDocument->pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length())))
 		{
-			return QMessageBox::warning(this, QApplication::applicationName(),
-				tr("This VMT has a syntax error:\n\n%1\n\nSave it anyway?").arg(lastErrorString()),
-				QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+			return true;
 		}
 
-		return true;
+		return QMessageBox::warning(this, QApplication::applicationName(),
+			tr("\"%1\" has a syntax error:\n\n%2\n\nSave it anyway?")
+				.arg(documentTitle(pDocument), lastErrorString()),
+			QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
 	}
 
 	void MainWindow::updateVmtErrorHighlight()
@@ -1069,9 +1146,355 @@ namespace VTFEdit
 		Palette.setColor(QPalette::Base, Colors.Background);
 		Palette.setColor(QPalette::Text, Colors.Text);
 		m_pVmtEdit->setPalette(Palette);
+		m_pVmtEdit->setLineNumberColors(Colors.LineNumberBackground, Colors.LineNumber, Colors.LineNumberCurrent);
 
-		m_pVmtHighlighter->setDark(bDark);
+		for(Document *pDocument : m_Documents)
+		{
+			if(pDocument->pTextDocument != nullptr)
+			{
+				pDocument->pTextDocument->setDefaultFont(m_VmtEditorSettings.font());
+			}
+			if(pDocument->pHighlighter != nullptr)
+			{
+				pDocument->pHighlighter->setDark(bDark);
+			}
+		}
+
 		updateVmtErrorHighlight();
+	}
+
+	//
+	// Documents and tabs.
+	//
+
+	Document *MainWindow::currentDocument() const
+	{
+		if(m_iCurrentDocument < 0 || m_iCurrentDocument >= static_cast<int>(m_Documents.size()))
+		{
+			return nullptr;
+		}
+
+		return m_Documents.at(static_cast<size_t>(m_iCurrentDocument));
+	}
+
+	QString MainWindow::documentTitle(const Document *pDocument) const
+	{
+		return pDocument->sFileName.isEmpty()
+			? pDocument->sUntitledName
+			: QFileInfo(pDocument->sFileName).fileName();
+	}
+
+	int MainWindow::indexOfFile(const QString &sFileName) const
+	{
+		if(sFileName.isEmpty())
+		{
+			return -1;
+		}
+
+		const QString sPath = QFileInfo(sFileName).absoluteFilePath();
+
+		for(size_t i = 0; i < m_Documents.size(); i++)
+		{
+			const QString &sOther = m_Documents.at(i)->sFileName;
+
+			if(!sOther.isEmpty()
+				&& QFileInfo(sOther).absoluteFilePath().compare(sPath, Qt::CaseInsensitive) == 0)
+			{
+				return static_cast<int>(i);
+			}
+		}
+
+		return -1;
+	}
+
+	void MainWindow::updateTabText(int iIndex)
+	{
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		// An unsaved document gets an asterisk beside its name.
+		QString sTitle = documentTitle(pDocument);
+		sTitle.replace(QLatin1Char('&'), QLatin1String("&&"));
+		if(pDocument->bModified)
+		{
+			sTitle += QLatin1Char('*');
+		}
+
+		m_pTabBar->setTabText(iIndex, sTitle);
+		m_pTabBar->setTabToolTip(iIndex, pDocument->sFileName.isEmpty()
+			? documentTitle(pDocument) : QDir::toNativeSeparators(pDocument->sFileName));
+
+		if(iIndex == m_iCurrentDocument)
+		{
+			updateWindowTitle();
+		}
+	}
+
+	void MainWindow::setDocumentModified(Document *pDocument, bool bModified)
+	{
+		if(pDocument->bModified == bModified)
+		{
+			return;
+		}
+
+		pDocument->bModified = bModified;
+
+		for(size_t i = 0; i < m_Documents.size(); i++)
+		{
+			if(m_Documents.at(i) == pDocument)
+			{
+				updateTabText(static_cast<int>(i));
+				break;
+			}
+		}
+	}
+
+	void MainWindow::setupTextDocument(Document *pDocument, const QString &sText)
+	{
+		QTextDocument *pTextDocument = new QTextDocument(this);
+		pTextDocument->setDocumentLayout(new QPlainTextDocumentLayout(pTextDocument));
+		pTextDocument->setDefaultFont(m_VmtEditorSettings.font());
+		pTextDocument->setPlainText(sText);
+		pTextDocument->setModified(false);
+
+		pDocument->pTextDocument = pTextDocument;
+		pDocument->pHighlighter = new VmtHighlighter(pTextDocument, m_VmtEditorSettings.isDark());
+
+		connect(pTextDocument, &QTextDocument::modificationChanged, this, [this, pDocument](bool bModified)
+		{
+			setDocumentModified(pDocument, bModified);
+		});
+	}
+
+	int MainWindow::addDocument(Document *pDocument)
+	{
+		if(pDocument->sFileName.isEmpty())
+		{
+			pDocument->sUntitledName = tr("Untitled %1").arg(++m_iUntitledCounter);
+		}
+
+		m_Documents.push_back(pDocument);
+
+		const int iIndex = static_cast<int>(m_Documents.size()) - 1;
+
+		// Adding the first tab makes it current, which activates the document.
+		m_pTabBar->addTab(QString());
+		updateTabText(iIndex);
+		m_pTabBar->show();
+
+		if(m_pTabBar->currentIndex() != iIndex)
+		{
+			m_pTabBar->setCurrentIndex(iIndex);
+		}
+		else if(m_iCurrentDocument != iIndex)
+		{
+			activateDocument(iIndex);
+		}
+
+		updateActions();
+
+		return iIndex;
+	}
+
+	void MainWindow::commitCurrentDocument()
+	{
+		Document *pDocument = currentDocument();
+		if(pDocument == nullptr)
+		{
+			return;
+		}
+
+		pDocument->fImageScale = m_fImageScale;
+		pDocument->iVmtErrorLine = m_iVmtErrorLine;
+
+		if(pDocument->pVTFFile != nullptr)
+		{
+			// push the flags and header fields the user edited back into the texture
+			getVtfFile();
+
+			pDocument->iFrame = m_pFrame->value();
+			pDocument->iFace = m_pFace->value();
+			pDocument->iSlice = m_pSlice->value();
+			pDocument->iMipmap = m_pMipmap->value();
+			pDocument->iScrollX = m_pImageScrollArea->horizontalScrollBar()->value();
+			pDocument->iScrollY = m_pImageScrollArea->verticalScrollBar()->value();
+		}
+	}
+
+	void MainWindow::activateDocument(int iIndex)
+	{
+		m_iCurrentDocument = iIndex;
+
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		m_bSwitchingDocument = true;
+
+		m_pVTFFile = nullptr;
+		m_pVMTFile = nullptr;
+		m_sFileName = pDocument->sFileName;
+		m_iVmtErrorLine = pDocument->iVmtErrorLine;
+		m_fImageScale = pDocument->fImageScale;
+
+		m_pStatusInfo1->clear();
+		m_pStatusInfo2->clear();
+
+		if(pDocument->pVTFFile != nullptr)
+		{
+			m_pVmtEdit->setDocument(m_pEmptyDocument);
+
+			showVtfFile(pDocument->pVTFFile);
+
+			m_pFrame->setValue(pDocument->iFrame);
+			m_pFace->setValue(pDocument->iFace);
+			m_pMipmap->setValue(pDocument->iMipmap);
+			m_pSlice->setValue(pDocument->iSlice);
+
+			m_fImageScale = pDocument->fImageScale;
+			updateVtfFile();
+
+			m_pImageScrollArea->horizontalScrollBar()->setValue(pDocument->iScrollX);
+			m_pImageScrollArea->verticalScrollBar()->setValue(pDocument->iScrollY);
+		}
+		else
+		{
+			m_pAnimateTimer->stop();
+			m_pAnimateButton->setText(tr("&Play"));
+			m_pAnimateButton->setEnabled(false);
+			m_pAnimateFps->setEnabled(false);
+			m_pHdrExposure->setEnabled(false);
+
+			m_pImageView->setImage(QImage());
+
+			hideVtfSidebars();
+
+			showVmtFile(pDocument);
+		}
+
+		m_bSwitchingDocument = false;
+
+		m_pStatusFileName->setText(pDocument->sFileName);
+		updateWindowTitle();
+		updateActions();
+
+		if(pDocument->pVMTFile != nullptr)
+		{
+			onVmtCursorChanged();
+			m_pVmtEdit->setFocus();
+		}
+	}
+
+	bool MainWindow::maybeSaveDocument(int iIndex)
+	{
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		if(!pDocument->bModified)
+		{
+			return true;
+		}
+
+		if(iIndex != m_iCurrentDocument)
+		{
+			m_pTabBar->setCurrentIndex(iIndex);
+		}
+
+		const QMessageBox::StandardButton Button = QMessageBox::warning(this,
+			QApplication::applicationName(),
+			tr("\"%1\" has unsaved changes.\n\nDo you want to save them?").arg(documentTitle(pDocument)),
+			QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+		if(Button == QMessageBox::Save)
+		{
+			return saveDocument(iIndex);
+		}
+
+		return Button == QMessageBox::Discard;
+	}
+
+	bool MainWindow::closeDocument(int iIndex)
+	{
+		if(iIndex < 0 || iIndex >= static_cast<int>(m_Documents.size()))
+		{
+			return true;
+		}
+
+		if(!maybeSaveDocument(iIndex))
+		{
+			return false;
+		}
+
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		if(iIndex == m_iCurrentDocument)
+		{
+			// stop mirroring the document before it goes away
+			m_pVTFFile = nullptr;
+			m_pVMTFile = nullptr;
+			m_iCurrentDocument = -1;
+			m_pVmtEdit->setDocument(m_pEmptyDocument);
+		}
+		else if(iIndex < m_iCurrentDocument)
+		{
+			m_iCurrentDocument--;
+		}
+
+		m_Documents.erase(m_Documents.begin() + iIndex);
+
+		{
+			const QSignalBlocker Blocker(m_pTabBar);
+			m_pTabBar->removeTab(iIndex);
+		}
+
+		delete pDocument->pVTFFile;
+		delete pDocument->pVMTFile;
+		delete pDocument->pHighlighter;
+		delete pDocument->pTextDocument;
+		delete pDocument;
+
+		if(m_iCurrentDocument == -1)
+		{
+			clearWidgets();
+
+			// Fall back to the tab that took its place, or the last one
+			const int iNext = qMin(iIndex, static_cast<int>(m_Documents.size()) - 1);
+			if(iNext >= 0)
+			{
+				const QSignalBlocker Blocker(m_pTabBar);
+				m_pTabBar->setCurrentIndex(iNext);
+				activateDocument(iNext);
+			}
+		}
+		else
+		{
+			const QSignalBlocker Blocker(m_pTabBar);
+			m_pTabBar->setCurrentIndex(m_iCurrentDocument);
+		}
+
+		m_pTabBar->setVisible(!m_Documents.empty());
+
+		updateActions();
+
+		return true;
+	}
+
+	void MainWindow::updateActions()
+	{
+		Document *pDocument = currentDocument();
+
+		const bool bAny = pDocument != nullptr;
+		const bool bVtf = bAny && pDocument->pVTFFile != nullptr;
+		const bool bDocuments = !m_Documents.empty();
+
+		m_pSaveAction->setEnabled(bAny);
+		m_pSaveAsAction->setEnabled(bAny);
+		m_pSaveAllAction->setEnabled(bDocuments);
+		m_pCloseAction->setEnabled(bAny);
+		m_pCloseAllAction->setEnabled(bDocuments);
+
+		m_pExportAction->setEnabled(bVtf);
+		m_pExportAllAction->setEnabled(bVtf);
+		m_pCopyAction->setEnabled(bVtf);
+
+		m_pNextTabAction->setEnabled(m_Documents.size() > 1);
+		m_pPreviousTabAction->setEnabled(m_Documents.size() > 1);
 	}
 
 	//
@@ -1080,11 +1503,12 @@ namespace VTFEdit
 
 	void MainWindow::newFile()
 	{
-		closeFile();
+		Document *pDocument = new Document();
+		pDocument->pVMTFile = new VTFLib::CVMTFile();
 
-		VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+		setupTextDocument(pDocument, QStringLiteral("\"LightmappedGeneric\"\n{\n}"));
 
-		m_pVmtEdit->setPlainText(QStringLiteral("\"LightmappedGeneric\"\n{\n}"));
+		addDocument(pDocument);
 
 		// Select the shader name so it can be typed over straight away.
 		QTextCursor Cursor = m_pVmtEdit->textCursor();
@@ -1092,19 +1516,18 @@ namespace VTFEdit
 		Cursor.setPosition(19, QTextCursor::KeepAnchor);
 		m_pVmtEdit->setTextCursor(Cursor);
 
-		setVmtFile(pVMTFile);
-
-		setFileName(QString());
-
-		m_pSaveAction->setEnabled(true);
-		m_pSaveAsAction->setEnabled(true);
-
 		m_pVmtEdit->setFocus();
 	}
 
 	void MainWindow::open(const QString &sFileName, bool bTemp)
 	{
-		closeFile();
+		// already open? Just show it.
+		const int iExisting = indexOfFile(bTemp ? QString() : sFileName);
+		if(iExisting != -1)
+		{
+			m_pTabBar->setCurrentIndex(iExisting);
+			return;
+		}
 
 		const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
 
@@ -1112,101 +1535,95 @@ namespace VTFEdit
 		{
 			VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
 
-			if(pVTFFile->Load(Path.constData()))
-			{
-				setVtfFile(pVTFFile);
-
-				setFileName(bTemp ? QString() : sFileName);
-				if(!bTemp)
-				{
-					addRecentFile(sFileName);
-				}
-
-				m_pSaveAction->setEnabled(true);
-				m_pSaveAsAction->setEnabled(true);
-				m_pExportAction->setEnabled(true);
-				m_pExportAllAction->setEnabled(true);
-				m_pCopyAction->setEnabled(true);
-			}
-			else
+			if(!pVTFFile->Load(Path.constData()))
 			{
 				delete pVTFFile;
 
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Error loading VTF texture:\n\n%1").arg(lastErrorString()));
+				return;
+			}
+
+			Document *pDocument = new Document();
+			pDocument->pVTFFile = pVTFFile;
+			pDocument->sFileName = bTemp ? QString() : sFileName;
+
+			addDocument(pDocument);
+
+			if(!bTemp)
+			{
+				addRecentFile(sFileName);
 			}
 		}
 		else if(sFileName.endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
 		{
-			VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
-
-			pVMTFile->Load(Path.constData());
-
 			QFile File(sFileName);
 			if(!File.open(QIODevice::ReadOnly | QIODevice::Text))
 			{
-				delete pVMTFile;
-
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Error loading VMT material:\n\n%1").arg(File.errorString()));
 				return;
 			}
 
-			m_pVmtEdit->setPlainText(QString::fromLocal8Bit(File.readAll()));
+			const QString sText = QString::fromLocal8Bit(File.readAll());
 			File.close();
 
-			setVmtFile(pVMTFile);
+			VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+			pVMTFile->Load(Path.constData());
 
-			setFileName(bTemp ? QString() : sFileName);
+			Document *pDocument = new Document();
+			pDocument->pVMTFile = pVMTFile;
+			pDocument->sFileName = bTemp ? QString() : sFileName;
+
+			setupTextDocument(pDocument, sText);
+
+			addDocument(pDocument);
+
 			if(!bTemp)
 			{
 				addRecentFile(sFileName);
 			}
 
-			m_pSaveAction->setEnabled(true);
-			m_pSaveAsAction->setEnabled(true);
-
 			m_pVmtEdit->setFocus();
 		}
 	}
 
-	void MainWindow::save(const QString &sFileName)
+	bool MainWindow::save(int iIndex, const QString &sFileName)
 	{
 		if(sFileName.isEmpty())
 		{
-			return;
+			return false;
 		}
 
-		if(m_pVTFFile != nullptr)
-		{
-			if(!getVtfFile())
-			{
-				return;
-			}
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
 
+		// make sure the widgets have handed their state back first
+		if(iIndex == m_iCurrentDocument)
+		{
+			commitCurrentDocument();
+		}
+
+		if(pDocument->pVTFFile != nullptr)
+		{
 			const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
 
-			if(m_pVTFFile->Save(Path.constData()))
-			{
-				setFileName(sFileName);
-				addRecentFile(sFileName);
-
-				if(m_pAutoCreateVmtFileAction->isChecked())
-				{
-					VmtFileUtility::CreateDefaultMaterial(sFileName, QStringLiteral("LightmappedGeneric"));
-				}
-			}
-			else
+			if(!pDocument->pVTFFile->Save(Path.constData()))
 			{
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Error saving VTF texture:\n\n%1").arg(lastErrorString()));
+				return false;
+			}
+
+			if(m_pAutoCreateVmtFileAction->isChecked())
+			{
+				VmtFileUtility::CreateDefaultMaterial(sFileName, QStringLiteral("LightmappedGeneric"));
 			}
 		}
-		else if(m_pVMTFile != nullptr)
+		else if(pDocument->pVMTFile != nullptr)
 		{
-			if(!confirmVmtFile())
+			if(!confirmVmtFile(iIndex))
 			{
-				return;
+				return false;
 			}
 
 			QFile File(sFileName);
@@ -1214,35 +1631,80 @@ namespace VTFEdit
 			{
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Error saving VMT material:\n\n%1").arg(File.errorString()));
-				return;
+				return false;
 			}
 
-			File.write(m_pVmtEdit->toPlainText().toLocal8Bit());
+			File.write(pDocument->pTextDocument->toPlainText().toLocal8Bit());
 			File.close();
 
-			setFileName(sFileName);
+			pDocument->pTextDocument->setModified(false);
 		}
+		else
+		{
+			return false;
+		}
+
+		pDocument->sFileName = sFileName;
+		setDocumentModified(pDocument, false);
+		updateTabText(iIndex);
+
+		if(iIndex == m_iCurrentDocument)
+		{
+			m_sFileName = sFileName;
+			m_pStatusFileName->setText(sFileName);
+			updateWindowTitle();
+		}
+
+		addRecentFile(sFileName);
+
+		return true;
 	}
 
-	void MainWindow::saveAs()
+	bool MainWindow::saveDocument(int iIndex)
 	{
+		if(iIndex < 0 || iIndex >= static_cast<int>(m_Documents.size()))
+		{
+			return false;
+		}
+
+		const Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
+		if(pDocument->sFileName.isEmpty())
+		{
+			return saveDocumentAs(iIndex);
+		}
+
+		return save(iIndex, pDocument->sFileName);
+	}
+
+	bool MainWindow::saveDocumentAs(int iIndex)
+	{
+		if(iIndex < 0 || iIndex >= static_cast<int>(m_Documents.size()))
+		{
+			return false;
+		}
+
+		const Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
+
 		QString sFileName;
 
-		if(m_pVTFFile != nullptr)
+		if(pDocument->pVTFFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VTF File"),
-				m_sFileName, tr("VTF Files (*.vtf)"));
+				pDocument->sFileName, tr("VTF Files (*.vtf)"));
 		}
-		else if(m_pVMTFile != nullptr)
+		else if(pDocument->pVMTFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VMT File"),
-				m_sFileName, tr("VMT Files (*.vmt)"));
+				pDocument->sFileName, tr("VMT Files (*.vmt)"));
 		}
 
-		if(!sFileName.isEmpty())
+		if(sFileName.isEmpty())
 		{
-			save(sFileName);
+			return false;
 		}
+
+		return save(iIndex, sFileName);
 	}
 
 	void MainWindow::import(const QStringList &sFileNames)
@@ -1256,8 +1718,6 @@ namespace VTFEdit
 		{
 			return;
 		}
-
-		closeFile();
 
 		bool bError = false;
 
@@ -1356,15 +1816,12 @@ namespace VTFEdit
 		if(pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse
 			&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
 		{
-			setVtfFile(pVTFFile);
+			Document *pDocument = new Document();
+			pDocument->pVTFFile = pVTFFile;
 
-			setFileName(QString());
+			pDocument->bModified = true;
 
-			m_pSaveAction->setEnabled(true);
-			m_pSaveAsAction->setEnabled(true);
-			m_pExportAction->setEnabled(true);
-			m_pExportAllAction->setEnabled(true);
-			m_pCopyAction->setEnabled(true);
+			addDocument(pDocument);
 		}
 		else
 		{
@@ -1455,21 +1912,8 @@ namespace VTFEdit
 		}
 	}
 
-	void MainWindow::closeFile()
+	void MainWindow::hideVtfSidebars()
 	{
-		m_pSaveAction->setEnabled(false);
-		m_pSaveAsAction->setEnabled(false);
-		m_pExportAction->setEnabled(false);
-		m_pExportAllAction->setEnabled(false);
-		m_pCopyAction->setEnabled(false);
-
-		m_pHdrExposure->setEnabled(false);
-
-		m_pAnimateButton->setText(tr("&Play"));
-		m_pAnimateButton->setEnabled(false);
-		m_pAnimateFps->setEnabled(false);
-		m_pAnimateTimer->stop();
-
 		// "Hide" the tab pages
 		for(QWidget *pTab : { m_pResourcesTab, m_pInfoTab })
 		{
@@ -1480,44 +1924,61 @@ namespace VTFEdit
 				pTab->setParent(this);
 			}
 		}
+
 		const int iImageIndex = m_pLeftTabs->indexOf(m_pImageTab);
 		if(iImageIndex != -1)
 		{
 			m_pLeftTabs->removeTab(iImageIndex);
 			m_pImageTab->setParent(this);
 		}
+
 		updateSidebarsVisible();
+	}
+
+	void MainWindow::clearWidgets()
+	{
+		m_pVTFFile = nullptr;
+		m_pVMTFile = nullptr;
+
+		m_pHdrExposure->setEnabled(false);
+
+		m_pAnimateButton->setText(tr("&Play"));
+		m_pAnimateButton->setEnabled(false);
+		m_pAnimateFps->setEnabled(false);
+		m_pAnimateTimer->stop();
+
+		hideVtfSidebars();
 
 		m_pImageView->setImage(QImage());
 
 		m_iVmtErrorLine = 0;
-		{
-			const QSignalBlocker Blocker(m_pVmtEdit);
-			m_pVmtEdit->clear();
-		}
+		m_pVmtEdit->setDocument(m_pEmptyDocument);
 		updateVmtErrorHighlight();
-
-		delete m_pVMTFile;
-		m_pVMTFile = nullptr;
-
-		delete m_pVTFFile;
-		m_pVTFFile = nullptr;
 
 		m_pCentralStack->setCurrentWidget(m_pImageScrollArea);
 
-		setFileName(QString());
+		m_sFileName.clear();
+		m_pStatusFileName->clear();
 		m_pStatusInfo1->clear();
 		m_pStatusInfo2->clear();
+
+		updateWindowTitle();
 	}
 
-	void MainWindow::setFileName(const QString &sFileName)
+	void MainWindow::updateWindowTitle()
 	{
-		m_sFileName = sFileName;
+		const Document *pDocument = currentDocument();
 
-		m_pStatusFileName->setText(sFileName);
-		setWindowTitle(sFileName.isEmpty()
-			? QApplication::applicationName()
-			: QStringLiteral("%1 - %2").arg(QFileInfo(sFileName).fileName(), QApplication::applicationName()));
+		if(pDocument == nullptr)
+		{
+			setWindowTitle(QApplication::applicationName());
+			return;
+		}
+
+		setWindowTitle(QStringLiteral("%1%2 - %3")
+			.arg(documentTitle(pDocument),
+				pDocument->bModified ? QStringLiteral("*") : QString(),
+				QApplication::applicationName()));
 	}
 
 	//
@@ -1542,19 +2003,126 @@ namespace VTFEdit
 
 	void MainWindow::onSave()
 	{
-		if(!m_sFileName.isEmpty())
-		{
-			save(m_sFileName);
-		}
-		else
-		{
-			saveAs();
-		}
+		saveDocument(m_iCurrentDocument);
 	}
 
 	void MainWindow::onSaveAs()
 	{
-		saveAs();
+		saveDocumentAs(m_iCurrentDocument);
+	}
+
+	void MainWindow::onSaveAll()
+	{
+		// saving may pop a dialog which can change the current tab
+		// so work by document rather than by index
+		std::vector<Document *> Documents = m_Documents;
+
+		for(Document *pDocument : Documents)
+		{
+			if(!pDocument->bModified)
+			{
+				continue;
+			}
+
+			for(size_t i = 0; i < m_Documents.size(); i++)
+			{
+				if(m_Documents.at(i) == pDocument)
+				{
+					saveDocument(static_cast<int>(i));
+					break;
+				}
+			}
+		}
+	}
+
+	void MainWindow::onClose()
+	{
+		closeDocument(m_iCurrentDocument);
+	}
+
+	void MainWindow::onCloseAll()
+	{
+		while(!m_Documents.empty())
+		{
+			if(!closeDocument(static_cast<int>(m_Documents.size()) - 1))
+			{
+				break;
+			}
+		}
+	}
+
+	void MainWindow::onNextTab()
+	{
+		if(m_Documents.size() > 1)
+		{
+			m_pTabBar->setCurrentIndex((m_pTabBar->currentIndex() + 1) % m_pTabBar->count());
+		}
+	}
+
+	void MainWindow::onPreviousTab()
+	{
+		if(m_Documents.size() > 1)
+		{
+			m_pTabBar->setCurrentIndex((m_pTabBar->currentIndex() + m_pTabBar->count() - 1)
+				% m_pTabBar->count());
+		}
+	}
+
+	void MainWindow::onTabChanged(int iIndex)
+	{
+		if(iIndex == m_iCurrentDocument)
+		{
+			return;
+		}
+
+		commitCurrentDocument();
+
+		if(iIndex < 0 || iIndex >= static_cast<int>(m_Documents.size()))
+		{
+			m_iCurrentDocument = -1;
+			clearWidgets();
+			updateActions();
+			return;
+		}
+
+		activateDocument(iIndex);
+	}
+
+	void MainWindow::onTabCloseRequested(int iIndex)
+	{
+		closeDocument(iIndex);
+	}
+
+	void MainWindow::onTabMoved(int iFrom, int iTo)
+	{
+		if(iFrom == iTo
+			|| iFrom < 0 || iFrom >= static_cast<int>(m_Documents.size())
+			|| iTo < 0 || iTo >= static_cast<int>(m_Documents.size()))
+		{
+			return;
+		}
+
+		Document *pDocument = m_Documents.at(static_cast<size_t>(iFrom));
+		m_Documents.erase(m_Documents.begin() + iFrom);
+		m_Documents.insert(m_Documents.begin() + iTo, pDocument);
+
+		m_iCurrentDocument = m_pTabBar->currentIndex();
+	}
+
+	void MainWindow::onVtfPropertyChanged()
+	{
+		if(m_bSwitchingDocument)
+		{
+			return;
+		}
+
+		if(Document *pDocument = currentDocument())
+		{
+			if(pDocument->pVTFFile != nullptr)
+			{
+				setDocumentModified(pDocument, true);
+			}
+		}
 	}
 
 	void MainWindow::onImport()
@@ -1652,8 +2220,6 @@ namespace VTFEdit
 		{
 			return;
 		}
-
-		closeFile();
 
 		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
 
@@ -1764,7 +2330,10 @@ namespace VTFEdit
 			m_bUpdatingFlags = true;
 			pItem->setCheckState((m_pVTFFile->GetFlags() & (1u << iIndex)) != 0 ? Qt::Checked : Qt::Unchecked);
 			m_bUpdatingFlags = false;
+			return;
 		}
+
+		onVtfPropertyChanged();
 	}
 
 	void MainWindow::onHdrReset()
@@ -2007,6 +2576,11 @@ namespace VTFEdit
 
 	void MainWindow::onVmtCursorChanged()
 	{
+		if(m_pVMTFile == nullptr)
+		{
+			return;
+		}
+
 		const QTextCursor Cursor = m_pVmtEdit->textCursor();
 
 		m_pStatusInfo2->setText(tr("Ln %1, Col %2")
@@ -2428,26 +3002,35 @@ namespace VTFEdit
 
 	void MainWindow::closeEvent(QCloseEvent *pEvent)
 	{
+		// give every unsaved document a chance to be written
+		while(!m_Documents.empty())
+		{
+			if(!closeDocument(static_cast<int>(m_Documents.size()) - 1))
+			{
+				pEvent->ignore();
+				return;
+			}
+		}
+
 		writeConfigFile(configFilePath());
 
 		QMainWindow::closeEvent(pEvent);
 	}
 
-	void MainWindow::openCommandLineFile(const QString &sFilePath)
+	void MainWindow::openCommandLineFiles(const QStringList &sFilePaths)
 	{
-		if(!QFileInfo::exists(sFilePath))
+		QStringList sExisting;
+		for(const QString &sFilePath : sFilePaths)
 		{
-			return;
+			if(QFileInfo::exists(sFilePath))
+			{
+				sExisting.append(sFilePath);
+			}
 		}
 
-		if(sFilePath.endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive)
-			|| sFilePath.endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
+		if(!sExisting.isEmpty())
 		{
-			open(sFilePath, false);
-		}
-		else
-		{
-			import(QStringList(sFilePath));
+			handleDroppedFiles(sExisting);
 		}
 	}
 
@@ -2486,10 +3069,20 @@ namespace VTFEdit
 
 	void MainWindow::handleDroppedFiles(const QStringList &sFiles)
 	{
+		// TODO maybe handle the case of dropping both vtfs/vmts and other files together
+
 		if(sFiles.first().endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive)
 			|| sFiles.first().endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
 		{
-			open(sFiles.first(), false);
+			// each dropped material or texture gets its own tab
+			for(const QString &sFile : sFiles)
+			{
+				if(sFile.endsWith(QLatin1String(".vtf"), Qt::CaseInsensitive)
+					|| sFile.endsWith(QLatin1String(".vmt"), Qt::CaseInsensitive))
+				{
+					open(sFile, false);
+				}
+			}
 		}
 		else
 		{
