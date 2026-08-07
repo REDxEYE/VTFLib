@@ -337,12 +337,13 @@ private:
 private:
 	CToken *CurrentToken;
 	CToken *NextToken;
+	CToken *PendingToken;
 
 	vlUInt uiCurrentTokenLine;
 	vlUInt uiNextTokenLine;
 
 public:
-	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(0), NextToken(0), uiCurrentTokenLine(1), uiNextTokenLine(1)
+	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(0), NextToken(0), PendingToken(0), uiCurrentTokenLine(1), uiNextTokenLine(1)
 	{
 
 	}
@@ -357,6 +358,7 @@ public:
 	{
 		delete this->CurrentToken;
 		delete this->NextToken;
+		delete this->PendingToken;
 	}
 
 public:
@@ -376,10 +378,69 @@ public:
 	}
 
 private:
+	// Consume the rest of a comment
+	CToken *ConsumeComment()
+	{
+		CToken *Token;
+
+		do
+		{
+			Token = this->ByteTokenizer->Next("\n");
+		} while(Token->GetToken() == TOKEN_CHAR);
+
+		return new CToken(Token->GetToken() == TOKEN_EOF ? TOKEN_EOF : TOKEN_NEWLINE);
+	}
+
+	// Read the rest of an unquoted string
+	CToken *ReadUnquotedString(vlChar *cBuffer, vlUInt uiIndex)
+	{
+		while(true)
+		{
+			CToken *Peek = this->ByteTokenizer->Peek();
+
+			if(Peek->GetToken() == TOKEN_CHAR)
+			{
+				cBuffer[uiIndex++] = this->ByteTokenizer->Next()->GetChar();
+			}
+			else if(Peek->GetToken() == TOKEN_FORWARD_SLASH)
+			{
+				this->ByteTokenizer->Next();
+
+				if(this->ByteTokenizer->Peek()->GetToken() == TOKEN_FORWARD_SLASH)
+				{
+					// followed by a comment
+					this->ByteTokenizer->Next();
+					this->PendingToken = this->ConsumeComment();
+					break;
+				}
+
+				cBuffer[uiIndex++] = '/';
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		cBuffer[uiIndex++] = '\0';
+
+		assert(uiIndex <= 4096);
+
+		return new CToken(cBuffer, vlFalse);
+	}
+
 	vlVoid GetNextTokenInternal()
 	{
 		CToken *Token;
-		
+
+		if(this->PendingToken)
+		{
+			this->uiNextTokenLine = this->ByteTokenizer->GetLine();
+			this->NextToken = this->PendingToken;
+			this->PendingToken = 0;
+			return;
+		}
+
 		Token = this->ByteTokenizer->Next();
 
 		// Consume all whitespace.
@@ -395,28 +456,20 @@ private:
 
 		switch(Token->GetToken())
 		{
-		// Comment (these are removed for the parser).
+		// Comment (these are removed for the parser)
+		// or an unquoted string starting with a slash.
 		case TOKEN_FORWARD_SLASH:
-			Token = this->ByteTokenizer->Next();
-
-			if(Token->GetToken() != TOKEN_FORWARD_SLASH)
+			if(this->ByteTokenizer->Peek()->GetToken() != TOKEN_FORWARD_SLASH)
 			{
-				throw "expected comment string";
+				cBuffer[uiIndex++] = Token->GetChar();
+
+				this->NextToken = this->ReadUnquotedString(cBuffer, uiIndex);
+				break;
 			}
 
-			do
-			{
-				Token = this->ByteTokenizer->Next("\n");
-			} while(Token->GetToken() == TOKEN_CHAR);
+			this->ByteTokenizer->Next();
 
-			if(Token->GetToken() == TOKEN_EOF)
-			{
-				this->NextToken = new CToken(TOKEN_EOF);
-			}
-			else
-			{
-				this->NextToken = new CToken(TOKEN_NEWLINE);
-			}
+			this->NextToken = this->ConsumeComment();
 			break;
 		// Quoted string.
 		case TOKEN_QUOTE:
@@ -451,17 +504,7 @@ private:
 		case TOKEN_CHAR:
 			cBuffer[uiIndex++] = Token->GetChar();
 
-			while(this->ByteTokenizer->Peek()->GetToken() == TOKEN_CHAR)
-			{
-				Token = this->ByteTokenizer->Next();
-
-				cBuffer[uiIndex++] = Token->GetChar();
-			}
-			cBuffer[uiIndex++] = '\0';
-
-			assert(uiIndex <= 4096);
-
-			this->NextToken = new CToken(cBuffer, vlFalse);
+			this->NextToken = this->ReadUnquotedString(cBuffer, uiIndex);
 			break;
 		// Let these byte tokens "pass through".
 		case TOKEN_EOF:
