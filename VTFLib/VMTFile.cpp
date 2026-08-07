@@ -670,9 +670,15 @@ private:
 			}
 
 			// If we have an end brace, we found the end of the group.
-			if(Token->GetToken() == TOKEN_CLOSE_BRACE || (uiVMTParseMode == PARSE_MODE_LOOSE && Token->GetToken() == TOKEN_EOF))
+			if(Token->GetToken() == TOKEN_CLOSE_BRACE)
 			{
 				return;
+			}
+
+			// Running out of tokens means the group was never closed.
+			if(Token->GetToken() == TOKEN_EOF)
+			{
+				throw "expected close brace";
 			}
 
 			// If we have a string we could have a pair or nested group.
