@@ -726,6 +726,13 @@ private:
 							strcat(cBuffer, Token->GetString());
 						}
 
+						// match engine behavior
+						if(strpbrk(cBuffer, "[]") != 0)
+						{
+							delete []cName;
+							throw "vector and matrix values must be quoted";
+						}
+
 						vlInt iTest;
 						vlSingle sTest;
 						vlChar cTest[4096];
@@ -765,6 +772,13 @@ private:
 				}
 				else if(Peek->GetToken() == TOKEN_NEWLINE || Peek->GetToken() == TOKEN_OPEN_BRACE)
 				{
+					// match engine behavior
+					const vlChar cFirst = *Token->GetString();
+					if(Peek->GetToken() == TOKEN_OPEN_BRACE && (cFirst == '$' || cFirst == '%'))
+					{
+						throw "vector and matrix values must be quoted";
+					}
+
 					// We have a nested group, parse it.
 					this->Parse(Group->AddGroupNode(Token->GetString()));
 				}
