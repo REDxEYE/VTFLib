@@ -219,6 +219,8 @@ namespace VTFEdit
 		void zoomAt(float fFactor, const QPoint &Anchor);
 		void zoom(float fFactor);
 		void updateSidebarsVisible();
+		void rememberSidebarSizes();
+		void applySidebarSizes();
 
 		// Recent files and configuration.
 		void addRecentFile(const QString &sFileName);
@@ -312,6 +314,8 @@ namespace VTFEdit
 
 		// Sidebars.
 		QSplitter *m_pSplitter;
+		int m_iSidebarSplit;
+		int m_iSidebarRightSplit;
 		QTabWidget *m_pLeftTabs;
 		QTabWidget *m_pRightTabs;
 		QWidget *m_pImageTab;

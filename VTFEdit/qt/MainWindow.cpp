@@ -166,6 +166,8 @@ namespace VTFEdit
 		, m_pBatchConvertDialog(nullptr)
 		, m_pAboutDialog(nullptr)
 		, m_iVmtErrorLine(0)
+		, m_iSidebarSplit(258)
+		, m_iSidebarRightSplit(258)
 	{
 		setWindowTitle(QApplication::applicationName());
 		setAcceptDrops(true);
@@ -506,6 +508,11 @@ namespace VTFEdit
 
 		m_pSplitter->setHandleWidth(6);
 
+		connect(m_pSplitter, &QSplitter::splitterMoved, this, [this](int, int)
+		{
+			rememberSidebarSizes();
+		});
+
 		m_pTabBar = new QTabBar(this);
 		m_pTabBar->setTabsClosable(true);
 		m_pTabBar->setMovable(true);
@@ -657,8 +664,45 @@ namespace VTFEdit
 
 	void MainWindow::updateSidebarsVisible()
 	{
-		m_pLeftTabs->setVisible(m_pLeftTabs->count() != 0);
-		m_pRightTabs->setVisible(m_pRightTabs->count() != 0);
+		// hidden sidebar sits at zero width in the splitter
+		// so remember the  widths before hiding and restore them when the sidebar comes back
+		rememberSidebarSizes();
+
+		const bool bLeft = m_pLeftTabs->count() != 0;
+		const bool bRight = m_pRightTabs->count() != 0;
+		const bool bChanged = bLeft != m_pLeftTabs->isVisibleTo(m_pSplitter)
+			|| bRight != m_pRightTabs->isVisibleTo(m_pSplitter);
+
+		m_pLeftTabs->setVisible(bLeft);
+		m_pRightTabs->setVisible(bRight);
+
+		if(bChanged)
+		{
+			applySidebarSizes();
+		}
+	}
+
+	void MainWindow::rememberSidebarSizes()
+	{
+		const QList<int> Sizes = m_pSplitter->sizes();
+
+		if(m_pLeftTabs->isVisibleTo(m_pSplitter) && Sizes.value(0, 0) > 0)
+		{
+			m_iSidebarSplit = Sizes.value(0);
+		}
+		if(m_pRightTabs->isVisibleTo(m_pSplitter) && Sizes.value(2, 0) > 0)
+		{
+			m_iSidebarRightSplit = Sizes.value(2);
+		}
+	}
+
+	void MainWindow::applySidebarSizes()
+	{
+		const int iLeft = m_pLeftTabs->isVisibleTo(m_pSplitter) ? m_iSidebarSplit : 0;
+		const int iRight = m_pRightTabs->isVisibleTo(m_pSplitter) ? m_iSidebarRightSplit : 0;
+
+		m_pSplitter->setSizes({ iLeft,
+			qMax(1, m_pSplitter->width() - iLeft - iRight), iRight });
 	}
 
 	//
@@ -2887,8 +2931,9 @@ namespace VTFEdit
 			setWindowState(windowState() | Qt::WindowMaximized);
 		}
 
-		m_pSplitter->setSizes({ iSidebarSplit,
-			qMax(1, width() - iSidebarSplit - iSidebarRightSplit), iSidebarRightSplit });
+		m_iSidebarSplit = iSidebarSplit > 0 ? iSidebarSplit : 258;
+		m_iSidebarRightSplit = iSidebarRightSplit > 0 ? iSidebarRightSplit : 258;
+		applySidebarSizes();
 
 		return true;
 	}
@@ -2908,9 +2953,10 @@ namespace VTFEdit
 			return bValue ? QStringLiteral("True") : QStringLiteral("False");
 		};
 
+		// hidden sidebars report a zero width
 		const QList<int> Sizes = m_pSplitter->sizes();
-		const int iSidebarSplit = Sizes.value(0, 258);
-		const int iSidebarRightSplit = Sizes.value(2, 258);
+		const int iSidebarSplit = Sizes.value(0, 0) > 0 ? Sizes.value(0) : m_iSidebarSplit;
+		const int iSidebarRightSplit = Sizes.value(2, 0) > 0 ? Sizes.value(2) : m_iSidebarRightSplit;
 
 		Stream << "[VTFEdit]\n\n";
 		Stream << "VTFEdit.AnimationFrameInterval = " << m_pAnimateTimer->interval() << "\n";
