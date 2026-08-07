@@ -1070,6 +1070,8 @@ namespace VTFEdit
 
 		m_pVmtEdit->setDocument(pDocument->pTextDocument);
 
+		applyVmtTabStopDistance();
+
 		validateVmtFile();
 		updateVmtErrorHighlight();
 
@@ -1133,11 +1135,16 @@ namespace VTFEdit
 		m_pVmtEdit->setExtraSelections(Selections);
 	}
 
+	void MainWindow::applyVmtTabStopDistance()
+	{
+		m_pVmtEdit->setTabStopDistance(m_VmtEditorSettings.iTabSize
+			* m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+	}
+
 	void MainWindow::applyVmtEditorSettings()
 	{
 		m_pVmtEdit->setFont(m_VmtEditorSettings.font());
-		m_pVmtEdit->setTabStopDistance(m_VmtEditorSettings.iTabSize
-			* m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+		applyVmtTabStopDistance();
 
 		const bool bDark = m_VmtEditorSettings.isDark();
 		const VmtColors::Scheme &Colors = VmtColors::Get(bDark);

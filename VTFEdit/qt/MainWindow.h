@@ -212,6 +212,7 @@ namespace VTFEdit
 		bool confirmVmtFile(int iIndex);
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
 		void updateVmtErrorHighlight();
+		void applyVmtTabStopDistance();
 		void applyVmtEditorSettings();
 
 		// View.
