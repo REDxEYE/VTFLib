@@ -752,8 +752,12 @@ private:
 					vlBool bNeedNewline = Token->GetToken() != TOKEN_QUOTED_STRING;
 					if(bNeedNewline)
 					{
-						Token = this->Tokenizer->Next();
-						if(Token->GetToken() != TOKEN_NEWLINE)
+						EToken Next = this->Tokenizer->Peek()->GetToken();
+						if(Next == TOKEN_NEWLINE)
+						{
+							this->Tokenizer->Next();
+						}
+						else if(Next != TOKEN_CLOSE_BRACE && Next != TOKEN_EOF)
 						{
 							throw "expected newline";
 						}
