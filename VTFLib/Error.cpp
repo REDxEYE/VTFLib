@@ -56,20 +56,20 @@ vlVoid CError::Set(const vlChar *cErrorMessage, vlBool bSystemError)
 
 		if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, uiLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpMessage, 0, NULL))
 		{
-			sprintf(cBuffer, "Error:\n%s\n\nSystem Error: 0x%.8x:\n%s", cErrorMessage, uiLastError, lpMessage); 
+			sprintf(cBuffer, "%s\n\nSystem Error: 0x%.8x:\n%s", cErrorMessage, uiLastError, lpMessage); 
 
 			LocalFree(lpMessage);
 		}
 		else
 		{
-			sprintf(cBuffer, "Error:\n%s\n\nSystem Error: 0x%.8x.", cErrorMessage, uiLastError); 
+			sprintf(cBuffer, "%s\n\nSystem Error: 0x%.8x.", cErrorMessage, uiLastError); 
 		}
 
 		
 	}
 	else
 	{
-		sprintf(cBuffer, "Error:\n%s", cErrorMessage); 
+		sprintf(cBuffer, "%s", cErrorMessage); 
 	}
 	
 	this->cErrorMessage = new vlChar[strlen(cBuffer) + 1];
