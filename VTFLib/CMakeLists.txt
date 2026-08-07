@@ -26,7 +26,10 @@ add_library(vtflib SHARED
 )
 
 set_target_properties(vtflib PROPERTIES
-	OUTPUT_NAME VTFLib
+	# Deliberately not "VTFLib"!
+	# third-party VTF shell extensions get loaded into our process by the shell
+	# and would attempt to use our VTFLib, which has a fatal ABI mismatch
+	OUTPUT_NAME VTFLib++
 	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 

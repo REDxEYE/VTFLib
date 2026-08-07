@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	if(vlGetVersion() != VL_VERSION)
 	{
 		QMessageBox::critical(nullptr, QApplication::applicationName(),
-			QObject::tr("Invalid VTFLib.dll version number."));
+			QObject::tr("Invalid VTFLib++.dll version number."));
 		return 1;
 	}
 
