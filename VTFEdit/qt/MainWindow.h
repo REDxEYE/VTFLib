@@ -27,6 +27,8 @@
 #include <QPoint>
 #include <QStringList>
 
+#include <vector>
+
 class QAction;
 class QActionGroup;
 class QCheckBox;
@@ -129,6 +131,8 @@ namespace VTFEdit
 		void save(const QString &sFileName);
 		void saveAs();
 		void import(const QStringList &sFileNames);
+		void createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
+			bool bHasAlpha);
 		void exportImage(const QString &sFileName);
 		void exportAllImages(const QString &sFileName);
 		void closeFile();

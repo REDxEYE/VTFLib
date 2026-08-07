@@ -1256,7 +1256,7 @@ namespace VTFEdit
 
 		closeFile();
 
-		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
+		bool bError = false;
 
 		vlUInt uiWidth = 0, uiHeight = 0;
 		bool bHasAlpha = false;
@@ -1265,7 +1265,7 @@ namespace VTFEdit
 
 		for(const QString &sFileName : sFileNames)
 		{
-			if(pVTFFile == nullptr)
+			if(bError)
 			{
 				break;
 			}
@@ -1274,8 +1274,7 @@ namespace VTFEdit
 
 			if(!ilLoadImage(Path.constData()))
 			{
-				delete pVTFFile;
-				pVTFFile = nullptr;
+				bError = true;
 
 				QMessageBox::critical(this, QApplication::applicationName(), tr("Error loading image."));
 				break;
@@ -1292,8 +1291,7 @@ namespace VTFEdit
 
 				if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
 				{
-					delete pVTFFile;
-					pVTFFile = nullptr;
+					bError = true;
 
 					QMessageBox::critical(this, QApplication::applicationName(), tr("Error converting image."));
 					break;
@@ -1307,8 +1305,7 @@ namespace VTFEdit
 				else if(uiWidth != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH))
 					|| uiHeight != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT)))
 				{
-					delete pVTFFile;
-					pVTFFile = nullptr;
+					bError = true;
 
 					QMessageBox::critical(this, QApplication::applicationName(),
 						tr("Error loading image:\n\nAll frames and faces must be the same size."));
@@ -1327,43 +1324,51 @@ namespace VTFEdit
 			ilBindImage(uiImage);
 		}
 
-		if(pVTFFile != nullptr)
+		if(!bError)
 		{
-			const vlUInt uiImages = static_cast<vlUInt>(vImageData.size());
-			vlByte **lpImageData = uiImages != 0 ? &vImageData[0] : nullptr;
-
-			const vlUInt uiFrames = m_Options.TextureType == VtfTextureType::Animated ? uiImages : 1;
-			const vlUInt uiFaces = m_Options.TextureType == VtfTextureType::EnvironmentMap ? uiImages : 1;
-			const vlUInt uiSlices = m_Options.TextureType == VtfTextureType::Volume ? uiImages : 1;
-
-			SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
-			VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
-
-			if(pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse
-				&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
-			{
-				setVtfFile(pVTFFile);
-
-				setFileName(QString());
-
-				m_pSaveAction->setEnabled(true);
-				m_pSaveAsAction->setEnabled(true);
-				m_pExportAction->setEnabled(true);
-				m_pExportAllAction->setEnabled(true);
-				m_pCopyAction->setEnabled(true);
-			}
-			else
-			{
-				delete pVTFFile;
-
-				QMessageBox::critical(this, QApplication::applicationName(),
-					tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
-			}
+			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
 		}
 
 		for(vlByte *lpFrameData : vImageData)
 		{
 			delete[] lpFrameData;
+		}
+	}
+
+	void MainWindow::createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
+		bool bHasAlpha)
+	{
+		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
+
+		const vlUInt uiImages = static_cast<vlUInt>(vImageData.size());
+		vlByte **lpImageData = uiImages != 0 ? const_cast<vlByte **>(&vImageData[0]) : nullptr;
+
+		const vlUInt uiFrames = m_Options.TextureType == VtfTextureType::Animated ? uiImages : 1;
+		const vlUInt uiFaces = m_Options.TextureType == VtfTextureType::EnvironmentMap ? uiImages : 1;
+		const vlUInt uiSlices = m_Options.TextureType == VtfTextureType::Volume ? uiImages : 1;
+
+		SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
+		VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
+
+		if(pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse
+			&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
+		{
+			setVtfFile(pVTFFile);
+
+			setFileName(QString());
+
+			m_pSaveAction->setEnabled(true);
+			m_pSaveAsAction->setEnabled(true);
+			m_pExportAction->setEnabled(true);
+			m_pExportAllAction->setEnabled(true);
+			m_pCopyAction->setEnabled(true);
+		}
+		else
+		{
+			delete pVTFFile;
+
+			QMessageBox::critical(this, QApplication::applicationName(),
+				tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
 		}
 	}
 
@@ -1649,38 +1654,22 @@ namespace VTFEdit
 
 		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
 
-		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
-
 		const vlUInt uiWidth = static_cast<vlUInt>(Source.width());
 		const vlUInt uiHeight = static_cast<vlUInt>(Source.height());
 
-		std::vector<vlByte> ImageData(static_cast<size_t>(uiWidth) * uiHeight * 4);
+		vlByte *lpImageData = new vlByte[static_cast<size_t>(uiWidth) * uiHeight * 4];
 		for(vlUInt j = 0; j < uiHeight; j++)
 		{
-			memcpy(ImageData.data() + static_cast<size_t>(j) * uiWidth * 4,
+			memcpy(lpImageData + static_cast<size_t>(j) * uiWidth * 4,
 				Source.constScanLine(static_cast<int>(j)), static_cast<size_t>(uiWidth) * 4);
 		}
 
-		SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
+		const bool bHasAlpha = !m_Options.StripAlpha
+			&& VtfFileUtility::HasAlphaData(lpImageData, uiWidth, uiHeight);
 
-		if(pVTFFile->Create(uiWidth, uiHeight, ImageData.data(), VTFCreateOptions) != vlFalse
-			&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
-		{
-			setVtfFile(pVTFFile);
+		createFromImages(std::vector<vlByte *>{ lpImageData }, uiWidth, uiHeight, bHasAlpha);
 
-			m_pSaveAction->setEnabled(true);
-			m_pSaveAsAction->setEnabled(true);
-			m_pExportAction->setEnabled(true);
-			m_pExportAllAction->setEnabled(true);
-			m_pCopyAction->setEnabled(true);
-		}
-		else
-		{
-			delete pVTFFile;
-
-			QMessageBox::critical(this, QApplication::applicationName(),
-				tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
-		}
+		delete[] lpImageData;
 	}
 
 	void MainWindow::onChannelChanged()
