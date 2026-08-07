@@ -9,7 +9,7 @@ VTFLib includes two GPL example applications, VTFCmd and VTFEdit++. VTFCmd is a 
 * **Title**: VTFLib
 * **Version**: 2.0.0 (VTFEdit++ 4.0.0)
 * **Written In**: C/C++
-* **Original authors**: [Neil 'Jed' Jedrzejewski](https://github.com/NeilJed) & [Ryan Gregg](http://nemesis.thewavelength.net/), 'misyltoad'](https://github.com/misyltoad)
+* **Original authors**: [Neil 'Jed' Jedrzejewski](https://github.com/NeilJed) & [Ryan Gregg](http://nemesis.thewavelength.net/), ['misyltoad'](https://github.com/misyltoad)
 * **Maintainer**: [ficool2](https://github.com/ficool2)
 * **Homepage**: https://ficool2.github.io/HammerPlusPlus-Website
 
