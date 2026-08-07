@@ -434,6 +434,7 @@ namespace VTFEdit
 		// VMT editor page.
 		m_pVmtEdit = new QPlainTextEdit(this);
 		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+		m_pVmtEdit->viewport()->setAcceptDrops(false);
 		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document(), m_VmtEditorSettings.isDark());
 		applyVmtEditorSettings();
 
