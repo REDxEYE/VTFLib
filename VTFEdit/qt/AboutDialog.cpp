@@ -55,6 +55,9 @@ namespace VTFEdit
 		QLabel *pAuthor = new QLabel(
 			tr("Author: ficool2, misyltoad, Neil Jedrzejewski & Ryan Gregg"), pAbout);
 		QLabel *pLanguage = new QLabel(tr("Written In: C++"), pAbout);
+		QLabel *pBuildDate = new QLabel(
+			tr("Date: %1").arg(QString::fromLatin1(__DATE__)),
+			pAbout);
 
 		QLabel *pLinks = new QLabel(pAbout);
 		pLinks->setTextFormat(Qt::RichText);
@@ -66,6 +69,7 @@ namespace VTFEdit
 		//pAboutLayout->addWidget(pLibVersion);
 		pAboutLayout->addWidget(pAuthor);
 		pAboutLayout->addWidget(pLanguage);
+		pAboutLayout->addWidget(pBuildDate);
 		pAboutLayout->addWidget(pLinks);
 
 		QLabel *pQt = new QLabel(pAbout);
