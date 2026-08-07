@@ -53,7 +53,7 @@ namespace VTFEdit
 		////QLabel *pLibVersion = new QLabel(
 		//	tr("VTFLib Version: %1").arg(QString::fromLatin1(vlGetVersionString())), pAbout);
 		QLabel *pAuthor = new QLabel(
-			tr("Author: ficool2, misyltoad, Neil Jedrzejewski & Ryan Gregg"), pAbout);
+			tr("Authors: ficool2, misyltoad, Neil Jedrzejewski & Ryan Gregg"), pAbout);
 		QLabel *pLanguage = new QLabel(tr("Written In: C++"), pAbout);
 		QLabel *pBuildDate = new QLabel(
 			tr("Date: %1").arg(QString::fromLatin1(__DATE__)),
