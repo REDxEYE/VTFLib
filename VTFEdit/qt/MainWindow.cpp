@@ -1820,8 +1820,14 @@ namespace VTFEdit
 		SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
 		VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
 
-		if(pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse
-			&& VtfFileUtility::CreateResources(m_Options, pVTFFile))
+		const bool bCreated =
+			pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse;
+		if(bCreated)
+		{
+			VtfFileUtility::ApplyFlags(m_Options, pVTFFile);
+		}
+
+		if(bCreated && VtfFileUtility::CreateResources(m_Options, pVTFFile))
 		{
 			Document *pDocument = new Document();
 			pDocument->pVTFFile = pVTFFile;
@@ -2800,6 +2806,14 @@ namespace VTFEdit
 				m_Options.AlphaFormat = static_cast<VTFImageFormat>(sVal.toInt());
 			else if(sArg.compare(QLatin1String("VTFOptions.TextureType"), Qt::CaseInsensitive) == 0)
 				m_Options.TextureType = static_cast<VtfTextureType>(sVal.toInt());
+			else if(sArg.compare(QLatin1String("VTFOptions.FlagClampS"), Qt::CaseInsensitive) == 0)
+				m_Options.FlagClampS = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.FlagClampT"), Qt::CaseInsensitive) == 0)
+				m_Options.FlagClampT = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.FlagNoLOD"), Qt::CaseInsensitive) == 0)
+				m_Options.FlagNoLOD = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.FlagPointSample"), Qt::CaseInsensitive) == 0)
+				m_Options.FlagPointSample = toBool(sVal);
 			else if(sArg.compare(QLatin1String("VTFOptions.StripAlpha"), Qt::CaseInsensitive) == 0)
 				m_Options.StripAlpha = toBool(sVal);
 			else if(sArg.compare(QLatin1String("VTFOptions.sRGB"), Qt::CaseInsensitive) == 0)
@@ -2949,6 +2963,10 @@ namespace VTFEdit
 		Stream << "VTFOptions.NormalFormat = " << static_cast<int>(m_Options.NormalFormat) << "\n";
 		Stream << "VTFOptions.AlphaFormat = " << static_cast<int>(m_Options.AlphaFormat) << "\n";
 		Stream << "VTFOptions.TextureType = " << static_cast<int>(m_Options.TextureType) << "\n";
+		Stream << "VTFOptions.FlagClampS = " << boolText(m_Options.FlagClampS != vlFalse) << "\n";
+		Stream << "VTFOptions.FlagClampT = " << boolText(m_Options.FlagClampT != vlFalse) << "\n";
+		Stream << "VTFOptions.FlagNoLOD = " << boolText(m_Options.FlagNoLOD != vlFalse) << "\n";
+		Stream << "VTFOptions.FlagPointSample = " << boolText(m_Options.FlagPointSample != vlFalse) << "\n";
 		Stream << "VTFOptions.StripAlpha = " << boolText(m_Options.StripAlpha != vlFalse) << "\n";
 		Stream << "VTFOptions.sRGB = " << boolText(m_Options.sRGB != vlFalse) << "\n";
 

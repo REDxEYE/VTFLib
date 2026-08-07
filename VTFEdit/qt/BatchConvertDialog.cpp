@@ -342,9 +342,14 @@ namespace VTFEdit
 					{
 						VTFCreateOptions.ImageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;
 
-						if(VTFFile.Create(uiWidth, uiHeight, static_cast<vlUInt>(vImageData.size()), 1, 1,
-								&vImageData[0], VTFCreateOptions) != vlFalse
-							&& VtfFileUtility::CreateResources(*m_pOptions, &VTFFile))
+						const bool bCreated = VTFFile.Create(uiWidth, uiHeight, static_cast<vlUInt>(vImageData.size()),
+							1, 1, &vImageData[0], VTFCreateOptions) != vlFalse;
+						if(bCreated)
+						{
+							VtfFileUtility::ApplyFlags(*m_pOptions, &VTFFile);
+						}
+
+						if(bCreated && VtfFileUtility::CreateResources(*m_pOptions, &VTFFile))
 						{
 							QDir().mkpath(sOutputFolder);
 

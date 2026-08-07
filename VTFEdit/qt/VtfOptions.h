@@ -48,6 +48,11 @@ namespace VTFEdit
 		VTFImageFormat AlphaFormat;
 		VtfTextureType TextureType;
 
+		vlBool FlagClampS;
+		vlBool FlagClampT;
+		vlBool FlagNoLOD;
+		vlBool FlagPointSample;
+
 		vlBool ResizeImage;
 		VTFResizeMethod ResizeMethod;
 		VTFMipmapFilter ResizeFilter;

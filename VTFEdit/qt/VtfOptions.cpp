@@ -103,6 +103,11 @@ namespace VTFEdit
 		AlphaFormat = IMAGE_FORMAT_DXT5;
 		TextureType = VtfTextureType::Animated;
 
+		FlagClampS = vlFalse;
+		FlagClampT = vlFalse;
+		FlagNoLOD = vlFalse;
+		FlagPointSample = vlFalse;
+
 		ResizeImage = vlTrue;
 		ResizeMethod = RESIZE_NEAREST_POWER2;
 		ResizeFilter = MIPMAP_FILTER_NICE;

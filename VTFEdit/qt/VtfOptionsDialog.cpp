@@ -24,7 +24,9 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
@@ -114,6 +116,27 @@ namespace VTFEdit
 		pGeneralForm->addRow(tr("Normal Format:"), m_pFormat);
 		pGeneralForm->addRow(tr("Alpha Format:"), m_pAlphaFormat);
 		pGeneralForm->addRow(tr("Texture Type:"), m_pTextureType);
+
+		m_pFlagClampS = new QCheckBox(tr("Clamp S"), pGeneral);
+		m_pFlagClampS->setToolTip(tr("Clamps the texture horizontally instead of tiling it."));
+		m_pFlagClampT = new QCheckBox(tr("Clamp T"), pGeneral);
+		m_pFlagClampT->setToolTip(tr("Clamps the texture vertically instead of tiling it."));
+		m_pFlagNoLOD = new QCheckBox(tr("No LOD"), pGeneral);
+		m_pFlagNoLOD->setToolTip(tr("Makes the texture ignore the user's texture detail setting."));
+		m_pFlagPointSample = new QCheckBox(tr("Point Sample"), pGeneral);
+		m_pFlagPointSample->setToolTip(tr("Disables texture filtering, giving the texture a blocky appearance."));
+		QWidget *pFlags = new QWidget(pGeneral);
+		QGridLayout *pFlagsGrid = new QGridLayout(pFlags);
+		pFlagsGrid->setContentsMargins(0, 0, 0, 0);
+		pFlagsGrid->addWidget(m_pFlagClampS, 0, 0);
+		pFlagsGrid->addWidget(m_pFlagClampT, 0, 1);
+		pFlagsGrid->addWidget(m_pFlagNoLOD, 1, 0);
+		pFlagsGrid->addWidget(m_pFlagPointSample, 1, 1);
+		pFlagsGrid->setColumnStretch(0, 1);
+		pFlagsGrid->setColumnStretch(1, 1);
+
+		pGeneralForm->addRow(new QLabel(tr("Flags:"), pGeneral));
+		pGeneralForm->addRow(pFlags);
 
 		QGroupBox *pResize = new QGroupBox(tr("Resize:"), pTab);
 		QFormLayout *pResizeForm = new QFormLayout(pResize);
@@ -338,6 +361,11 @@ namespace VTFEdit
 
 		m_pTextureType->setCurrentIndex(static_cast<int>(m_pOptions->TextureType));
 
+		m_pFlagClampS->setChecked(m_pOptions->FlagClampS != vlFalse);
+		m_pFlagClampT->setChecked(m_pOptions->FlagClampT != vlFalse);
+		m_pFlagNoLOD->setChecked(m_pOptions->FlagNoLOD != vlFalse);
+		m_pFlagPointSample->setChecked(m_pOptions->FlagPointSample != vlFalse);
+
 		m_pResize->setChecked(m_pOptions->ResizeImage != vlFalse);
 		m_pResizeMethod->setCurrentIndex(static_cast<int>(m_pOptions->ResizeMethod));
 		m_pResizeFilter->setCurrentIndex(m_pOptions->ResizeFilter == MIPMAP_FILTER_NICE ? 1 : 0);
@@ -403,6 +431,11 @@ namespace VTFEdit
 		m_pOptions->AlphaFormat = m_pAlphaFormat->currentIndex() >= 0
 			? AlphaImageFormats[m_pAlphaFormat->currentIndex()] : IMAGE_FORMAT_NONE;
 		m_pOptions->TextureType = static_cast<VtfTextureType>(m_pTextureType->currentIndex());
+
+		m_pOptions->FlagClampS = m_pFlagClampS->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->FlagClampT = m_pFlagClampT->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->FlagNoLOD = m_pFlagNoLOD->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->FlagPointSample = m_pFlagPointSample->isChecked() ? vlTrue : vlFalse;
 
 		m_pOptions->ResizeImage = m_pResize->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentIndex());

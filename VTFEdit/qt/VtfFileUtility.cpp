@@ -101,6 +101,14 @@ namespace VTFEdit
 			return VTFCreateOptions;
 		}
 
+		void ApplyFlags(const VtfOptions &Options, VTFLib::CVTFFile *pVTFFile)
+		{
+			pVTFFile->SetFlag(TEXTUREFLAGS_CLAMPS, Options.FlagClampS);
+			pVTFFile->SetFlag(TEXTUREFLAGS_CLAMPT, Options.FlagClampT);
+			pVTFFile->SetFlag(TEXTUREFLAGS_NOLOD, Options.FlagNoLOD);
+			pVTFFile->SetFlag(TEXTUREFLAGS_POINTSAMPLE, Options.FlagPointSample);
+		}
+
 		bool CreateResources(const VtfOptions &Options, VTFLib::CVTFFile *pVTFFile)
 		{
 			bool bResult = true;

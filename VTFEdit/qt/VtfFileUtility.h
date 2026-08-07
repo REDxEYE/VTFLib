@@ -30,6 +30,8 @@ namespace VTFEdit
 
 		SVTFCreateOptions GetCreateOptions(const VtfOptions &Options);
 
+		void ApplyFlags(const VtfOptions &Options, VTFLib::CVTFFile *pVTFFile);
+
 		bool CreateResources(const VtfOptions &Options, VTFLib::CVTFFile *pVTFFile);
 	}
 }

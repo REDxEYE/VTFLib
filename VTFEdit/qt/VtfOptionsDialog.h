@@ -58,6 +58,11 @@ namespace VTFEdit
 		QComboBox *m_pAlphaFormat;
 		QComboBox *m_pTextureType;
 
+		QCheckBox *m_pFlagClampS;
+		QCheckBox *m_pFlagClampT;
+		QCheckBox *m_pFlagNoLOD;
+		QCheckBox *m_pFlagPointSample;
+
 		QCheckBox *m_pResize;
 		QComboBox *m_pResizeMethod;
 		QComboBox *m_pResizeFilter;
