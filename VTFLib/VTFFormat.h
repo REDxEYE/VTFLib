@@ -360,7 +360,7 @@ struct SVTFHeader_70 : public SVTFFileHeader
 
 	The complete header for v7.0 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_70_A : public SVTFHeader_70 {};
+struct VL_ALIGN(16) SVTFHeader_70_A : public SVTFHeader_70 {};
 
 //! VTFHeader_71 struct.
 /*!
@@ -377,7 +377,7 @@ struct SVTFHeader_71 : public SVTFHeader_70
 
 	The complete header for v7.1 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_71_A : public SVTFHeader_71 {};
+struct VL_ALIGN(16) SVTFHeader_71_A : public SVTFHeader_71 {};
 
 //! VTFHeader_72 struct.
 /*!
@@ -394,7 +394,7 @@ struct SVTFHeader_72 : public SVTFHeader_71
 
 	The complete header for v7.2 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_72_A : public SVTFHeader_72 {};
+struct VL_ALIGN(16) SVTFHeader_72_A : public SVTFHeader_72 {};
 
 //! VTFHeader_73 struct.
 /*!
@@ -412,7 +412,7 @@ struct SVTFHeader_73 : public SVTFHeader_72
 
 	The complete header for v7.3 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_73_A : public SVTFHeader_73 {};
+struct VL_ALIGN(16) SVTFHeader_73_A : public SVTFHeader_73 {};
 
 //! VTFHeader_74 struct.
 /*!
@@ -429,7 +429,7 @@ struct SVTFHeader_74 : public SVTFHeader_73
 
 	The complete header for v7.4 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_74_A : public SVTFHeader_74 {};
+struct VL_ALIGN(16) SVTFHeader_74_A : public SVTFHeader_74 {};
 
 //! VTFHeader_75 struct.
 /*!
@@ -446,7 +446,7 @@ struct SVTFHeader_75 : public SVTFHeader_74
 
 	The complete header for v7.5 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_75_A : public SVTFHeader_75 {};
+struct VL_ALIGN(16) SVTFHeader_75_A : public SVTFHeader_75 {};
 
 //! VTFHeader_76 struct.
 /*!
@@ -463,7 +463,7 @@ struct SVTFHeader_76 : public SVTFHeader_75
 
 	The complete header for v7.6 of the VTF file format aligned to 16 bytes.
 */
-__declspec(align(16)) struct SVTFHeader_76_A : public SVTFHeader_76 {};
+struct VL_ALIGN(16) SVTFHeader_76_A : public SVTFHeader_76 {};
 
 struct SVTFResource
 {

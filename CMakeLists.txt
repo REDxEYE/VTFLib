@@ -5,15 +5,20 @@ project(VTFLib
 	LANGUAGES C CXX
 )
 
-if(NOT WIN32)
-	message(FATAL_ERROR "Only Windows is supported")
-endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(VTFLIB_BUILD_VTFCMD "Build VTFCmd" ON)
 option(VTFLIB_BUILD_VTFEDIT "Build VTFEdit" ON)
+
+
+if(NOT WIN32)
+	message(WARNING "VTFCMD and VTFEDIT only supported on Windows")
+	SET(VTFLIB_BUILD_VTFCMD OFF)
+	SET(VTFLIB_BUILD_VTFEDIT OFF)
+endif()
 
 foreach(config "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY${config} "${CMAKE_BINARY_DIR}/bin")

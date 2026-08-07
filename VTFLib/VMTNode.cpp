@@ -11,6 +11,8 @@
 
 #include "VMTNode.h"
 
+#include <cstring>
+
 using namespace VTFLib::Nodes;
 
 CVMTNode::CVMTNode(const vlChar *cName)

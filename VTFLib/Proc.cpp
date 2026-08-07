@@ -78,30 +78,30 @@ VTFLIB_API vlVoid *vlGetProc(VLProc Proc)
 	switch(Proc)
 	{
 	case PROC_READ_CLOSE:
-		return pReadCloseProc;
+		return reinterpret_cast<vlVoid *>(pReadCloseProc);
 	case PROC_READ_OPEN:
-		return pReadOpenProc;
+		return reinterpret_cast<vlVoid *>(pReadOpenProc);
 	case PROC_READ_READ:
-		return pReadReadProc;
+		return reinterpret_cast<vlVoid *>(pReadReadProc);
 	case PROC_READ_SEEK:
-		return pReadSeekProc;
+		return reinterpret_cast<vlVoid *>(pReadSeekProc);
 	case PROC_READ_SIZE:
-		return pReadSizeProc;
+		return reinterpret_cast<vlVoid *>(pReadSizeProc);
 	case PROC_READ_TELL:
-		return pReadTellProc;
+		return reinterpret_cast<vlVoid *>(pReadTellProc);
 	case PROC_WRITE_CLOSE:
-		return pWriteCloseProc;
+		return reinterpret_cast<vlVoid *>(pWriteCloseProc);
 	case PROC_WRITE_OPEN:
-		return pWriteOpenProc;
+		return reinterpret_cast<vlVoid *>(pWriteOpenProc);
 	case PROC_WRITE_WRITE:
-		return pWriteWriteProc;
+		return reinterpret_cast<vlVoid *>(pWriteWriteProc);
 	case PROC_WRITE_SEEK:
-		return pWriteSeekProc;
+		return reinterpret_cast<vlVoid *>(pWriteSeekProc);
 	case PROC_WRITE_SIZE:
-		return pWriteSizeProc;
+		return reinterpret_cast<vlVoid *>(pWriteSizeProc);
 	case PROC_WRITE_TELL:
-		return pWriteTellProc;
+		return reinterpret_cast<vlVoid *>(pWriteTellProc);
 	default:
-		return 0;
+		return nullptr;
 	}
 }

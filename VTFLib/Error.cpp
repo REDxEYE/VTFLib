@@ -49,29 +49,65 @@ vlVoid CError::SetFormatted(const vlChar *cFormat, ...)
 vlVoid CError::Set(const vlChar *cErrorMessage, vlBool bSystemError)
 {
 	vlChar cBuffer[2048];
+
 	if(bSystemError)
 	{
+#ifdef _WIN32
 		LPSTR lpMessage = NULL;
-		vlUInt uiLastError = GetLastError(); 
+		vlUInt uiLastError = GetLastError();
 
-		if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, uiLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpMessage, 0, NULL))
+		if(FormatMessageA(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,
+			uiLastError,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			reinterpret_cast<LPSTR>(&lpMessage),
+			0,
+			NULL))
 		{
-			sprintf(cBuffer, "%s\n\nSystem Error: 0x%.8x:\n%s", cErrorMessage, uiLastError, lpMessage); 
+			snprintf(
+				cBuffer,
+				sizeof(cBuffer),
+				"%s\n\nSystem Error: 0x%.8x:\n%s",
+				cErrorMessage,
+				uiLastError,
+				lpMessage
+			);
 
 			LocalFree(lpMessage);
 		}
 		else
 		{
-			sprintf(cBuffer, "%s\n\nSystem Error: 0x%.8x.", cErrorMessage, uiLastError); 
+			snprintf(
+				cBuffer,
+				sizeof(cBuffer),
+				"%s\n\nSystem Error: 0x%.8x.",
+				cErrorMessage,
+				uiLastError
+			);
 		}
+#else
+		const int iError = errno;
 
-		
+		snprintf(
+			cBuffer,
+			sizeof(cBuffer),
+			"%s\n\nSystem Error: %d:\n%s",
+			cErrorMessage,
+			iError,
+			strerror(iError)
+		);
+#endif
 	}
 	else
 	{
-		sprintf(cBuffer, "%s", cErrorMessage); 
+		snprintf(cBuffer, sizeof(cBuffer), "%s", cErrorMessage);
 	}
-	
+
+
+
+	delete[] this->cErrorMessage;
+
 	this->cErrorMessage = new vlChar[strlen(cBuffer) + 1];
 	strcpy(this->cErrorMessage, cBuffer);
 }

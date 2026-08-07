@@ -20,10 +20,18 @@
 #ifndef STDAFX_H
 #define STDAFX_H
 
-#ifdef VTFLIB_EXPORTS
-#	define VTFLIB_API __declspec(dllexport)
+#include <cstdint>
+
+#if defined(_WIN32)
+#	ifdef VTFLIB_EXPORTS
+#		define VTFLIB_API __declspec(dllexport)
+#	else
+#		define VTFLIB_API __declspec(dllimport)
+#	endif
+#elif defined(__GNUC__) || defined(__clang__)
+#	define VTFLIB_API __attribute__((visibility("default")))
 #else
-#	define VTFLIB_API __declspec(dllimport)
+#	define VTFLIB_API
 #endif
 
 // Custom data types
@@ -40,10 +48,10 @@ typedef float			vlSingle;			//!< Floating point number
 typedef double			vlDouble;			//!< Double number
 typedef void			vlVoid;				//!< Void value.
 
-typedef unsigned __int8		vlUInt8;
-typedef unsigned __int16	vlUInt16;
-typedef unsigned __int32	vlUInt32;
-typedef unsigned __int64	vlUInt64;
+typedef  uint8_t		vlUInt8;
+typedef  uint16_t		vlUInt16;
+typedef  uint32_t		vlUInt32;
+typedef  uint64_t		vlUInt64;
 
 typedef vlSingle		vlFloat;			//!< Floating point number (same as vlSingled).
 
@@ -59,6 +67,8 @@ typedef vlSingle		vlFloat;			//!< Floating point number (same as vlSingled).
 #	endif
 #endif
 
+#if WIN32
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdlib.h>
@@ -72,5 +82,33 @@ typedef vlSingle		vlFloat;			//!< Floating point number (same as vlSingled).
 #else
 #	define STATIC_ASSERT(condition, message) typedef char __C_ASSERT__[(condition) ? 1 : -1]
 #endif
+#else
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstdio>
+#include <cerrno>
+#include <cassert>
+#include <cctype>
+typedef char*  LPSTR;
+#define stricmp strcasecmp
+#define _stricmp strcasecmp
+typedef FILE *HANDLE;
+
+#define FILE_BEGIN   0
+#define FILE_CURRENT 1
+#define FILE_END     2
+#endif
+
+#if defined(_MSC_VER)
+#	define VL_ALIGN(n) __declspec(align(n))
+#elif defined(__GNUC__) || defined(__clang__)
+#	define VL_ALIGN(n) __attribute__((aligned(n)))
+#else
+#	define VL_ALIGN(n)
+#endif
+
+#define STATIC_ASSERT(condition, message) static_assert(condition, message)
 
 #endif

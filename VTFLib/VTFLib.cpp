@@ -262,19 +262,35 @@ VTFLIB_API vlVoid vlSetFloat(VTFLibOption Option, vlSingle sValue)
 // DllMain()
 // DLL entry point.
 //
+#ifdef _WIN32
+
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 {
 	switch(dwReason)
 	{
-	case DLL_PROCESS_ATTACH:
-		break;
-	case DLL_THREAD_ATTACH:
-		break;
-	case DLL_THREAD_DETACH:
-		break;
-	case DLL_PROCESS_DETACH:
-		vlShutdown();
-		break;
+		case DLL_PROCESS_ATTACH:
+			break;
+
+		case DLL_THREAD_ATTACH:
+			break;
+
+		case DLL_THREAD_DETACH:
+			break;
+
+		case DLL_PROCESS_DETACH:
+			vlShutdown();
+			break;
 	}
-    return TRUE;
+
+	return TRUE;
 }
+
+#else
+
+__attribute__((destructor))
+static void VTFLibUnload()
+{
+	vlShutdown();
+}
+
+#endif
