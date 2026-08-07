@@ -733,6 +733,14 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 		this->SetStartFrame(VTFCreateOptions.uiStartFrame);
 		this->SetBumpmapScale(VTFCreateOptions.sBumpScale);
 
+		// The engine does not load DXT1_ONEBITALPHA textures correctly
+		// but it does handle plain DXT1 with the one bit alpha flag set
+		if(this->Header->ImageFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA)
+		{
+			this->Header->ImageFormat = IMAGE_FORMAT_DXT1;
+			this->Header->Flags |= TEXTUREFLAGS_ONEBITALPHA;
+		}
+
 		return vlTrue;
 	}
 	catch(...)
