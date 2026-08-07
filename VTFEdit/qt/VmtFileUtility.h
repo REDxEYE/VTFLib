@@ -48,6 +48,9 @@ namespace VTFEdit
 			QColor Key;
 			QColor Value;
 			QColor ErrorLine;
+			QColor LineNumberBackground;
+			QColor LineNumber;
+			QColor LineNumberCurrent;
 		};
 
 		const Scheme &Get(bool bDark);

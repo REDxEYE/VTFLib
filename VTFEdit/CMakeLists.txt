@@ -19,6 +19,8 @@ qt_add_executable(vtfedit WIN32
 	qt/VmtEditorOptionsDialog.cpp
 	qt/VmtEditorOptionsDialog.h
 	qt/VmtEditorSettings.h
+	qt/VmtTextEdit.cpp
+	qt/VmtTextEdit.h
 	qt/VmtCreateDialog.cpp
 	qt/VmtCreateDialog.h
 	qt/BatchConvertDialog.cpp

@@ -124,6 +124,9 @@ namespace VTFEdit
 				QColor(204, 102, 102),	// Key
 				QColor(129, 162, 190),	// Value
 				QColor(90, 40, 40),		// ErrorLine
+				QColor(35, 37, 39),		// LineNumberBackground
+				QColor(105, 108, 106),	// LineNumber
+				QColor(197, 200, 198),	// LineNumberCurrent
 			};
 
 			// Tomorrow
@@ -138,6 +141,9 @@ namespace VTFEdit
 				QColor(200, 40, 41),	// Key
 				QColor(66, 113, 174),	// Value
 				QColor(255, 215, 215),	// ErrorLine
+				QColor(240, 240, 240),	// LineNumberBackground
+				QColor(160, 160, 158),	// LineNumber
+				QColor(77, 77, 76),		// LineNumberCurrent
 			};
 
 			return bDark ? Dark : Light;

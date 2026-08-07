@@ -19,45 +19,35 @@
 
 #pragma once
 
-#include "VmtEditorSettings.h"
-#include "VmtTextEdit.h"
-
-#include <QDialog>
-
-class QCheckBox;
-class QComboBox;
-class QFontComboBox;
-class QSpinBox;
+#include <QColor>
+#include <QPlainTextEdit>
 
 namespace VTFEdit
 {
-	class VmtHighlighter;
-
-	class VmtEditorOptionsDialog : public QDialog
+	class VmtTextEdit : public QPlainTextEdit
 	{
 		Q_OBJECT
 
 	public:
-		explicit VmtEditorOptionsDialog(VmtEditorSettings *pSettings, QWidget *pParent = nullptr);
+		explicit VmtTextEdit(QWidget *pParent = nullptr);
 
-		int exec();
+		void setLineNumberColors(const QColor &Background, const QColor &Text, const QColor &CurrentText);
+
+		int lineNumberAreaWidth() const;
+		void lineNumberAreaPaintEvent(QPaintEvent *pEvent);
+
+	protected:
+		void resizeEvent(QResizeEvent *pEvent) override;
+		void changeEvent(QEvent *pEvent) override;
 
 	private slots:
-		void onResetClicked();
-		void updatePreview();
+		void updateLineNumberAreaWidth();
+		void updateLineNumberArea(const QRect &Rect, int iDy);
 
 	private:
-		void settingsToControls(const VmtEditorSettings &Settings);
-		void controlsToSettings();
-
-		VmtEditorSettings *m_pSettings;
-
-		QFontComboBox *m_pFontFamily;
-		QCheckBox *m_pMonospaceOnly;
-		QSpinBox *m_pFontSize;
-		QSpinBox *m_pTabSize;
-		QComboBox *m_pTheme;
-		VmtTextEdit *m_pPreview;
-		VmtHighlighter *m_pPreviewHighlighter;
+		QWidget *m_pLineNumberArea;
+		QColor m_LineNumberBackground;
+		QColor m_LineNumberText;
+		QColor m_LineNumberCurrentText;
 	};
 }

@@ -85,7 +85,8 @@ namespace VTFEdit
 
 		QGroupBox *pPreview = new QGroupBox(tr("Preview:"), this);
 		QVBoxLayout *pPreviewLayout = new QVBoxLayout(pPreview);
-		m_pPreview = new QPlainTextEdit(QString::fromLatin1(PreviewText), pPreview);
+		m_pPreview = new VmtTextEdit(pPreview);
+		m_pPreview->setPlainText(QString::fromLatin1(PreviewText));
 		m_pPreview->setReadOnly(true);
 		m_pPreview->setLineWrapMode(QPlainTextEdit::NoWrap);
 		m_pPreview->setMinimumHeight(120);
@@ -155,6 +156,7 @@ namespace VTFEdit
 		Palette.setColor(QPalette::Base, Colors.Background);
 		Palette.setColor(QPalette::Text, Colors.Text);
 		m_pPreview->setPalette(Palette);
+		m_pPreview->setLineNumberColors(Colors.LineNumberBackground, Colors.LineNumber, Colors.LineNumberCurrent);
 
 		m_pPreviewHighlighter->setDark(bDark);
 	}
