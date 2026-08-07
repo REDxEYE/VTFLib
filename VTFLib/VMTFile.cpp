@@ -550,13 +550,21 @@ class CParser
 private:
 	CTokenizer *Tokenizer;
 
+	// Line to blame for the last error (0 blames the token instead)
+	vlUInt uiErrorLine;
+
 public:
-	CParser(CTokenizer *Tokenizer) : Tokenizer(Tokenizer)
+	CParser(CTokenizer *Tokenizer) : Tokenizer(Tokenizer), uiErrorLine(0)
 	{
 
 	}
 
 public:
+	vlUInt GetErrorLine() const
+	{
+		return this->uiErrorLine;
+	}
+
 	CVMTGroupNode *Parse()
 	{
 		CToken *Token;
@@ -659,6 +667,8 @@ private:
 			throw "expected open brace";
 		}
 
+		const vlUInt uiOpenBraceLine = this->Tokenizer->GetLine();
+
 		// Parse remaining tokens.
 		while(true)
 		{
@@ -675,10 +685,12 @@ private:
 				return;
 			}
 
-			// Running out of tokens means the group was never closed.
+			// Running out of tokens means this group was never closed.
+			// Blame the open brace, not the end of the file.
 			if(Token->GetToken() == TOKEN_EOF)
 			{
-				throw "expected close brace";
+				this->uiErrorLine = uiOpenBraceLine;
+				throw "group is missing a close brace";
 			}
 
 			// If we have a string we could have a pair or nested group.
@@ -791,8 +803,14 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader)
 	}
 	catch(char *cErrorMessage)
 	{
-		this->ParseErrorLine = Tokenizer.GetLine();
-		LastError.SetFormatted("Error parsing material on line %u (%s).", Tokenizer.GetLine(), cErrorMessage);
+		vlUInt uiLine = Parser.GetErrorLine();
+		if(uiLine == 0)
+		{
+			uiLine = Tokenizer.GetLine();
+		}
+
+		this->ParseErrorLine = uiLine;
+		LastError.SetFormatted("Error parsing material on line %u (%s).", uiLine, cErrorMessage);
 	}
 
 	Reader->Close();
