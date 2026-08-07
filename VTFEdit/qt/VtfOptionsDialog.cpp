@@ -44,7 +44,7 @@ namespace VTFEdit
 		QStringList powerOfTwoList()
 		{
 			QStringList list;
-			for(int i = 1; i <= 4096; i *= 2)
+			for(int i = 1; i <= 16384; i *= 2)
 			{
 				list << QString::number(i);
 			}
