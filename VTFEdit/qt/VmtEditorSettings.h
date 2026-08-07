@@ -20,16 +20,39 @@
 #pragma once
 
 #include <QFont>
+#include <QGuiApplication>
 #include <QString>
 #include <QStringList>
+#include <QStyleHints>
 
 namespace VTFEdit
 {
+	enum class VmtEditorTheme
+	{
+		System,
+		Light,
+		Dark,
+	};
+
 	struct VmtEditorSettings
 	{
 		QString sFontFamily = QStringLiteral("Consolas");
 		int iFontSize = 10;
 		int iTabSize = 4;
+		VmtEditorTheme eTheme = VmtEditorTheme::System;
+
+		bool isDark() const
+		{
+			switch(eTheme)
+			{
+			case VmtEditorTheme::Light:
+				return false;
+			case VmtEditorTheme::Dark:
+				return true;
+			default:
+				return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+			}
+		}
 
 		QFont font() const
 		{

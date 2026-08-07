@@ -19,7 +19,10 @@
 
 #include "VmtEditorOptionsDialog.h"
 
+#include "VmtFileUtility.h"
+
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFontComboBox>
 #include <QFontDatabase>
@@ -48,7 +51,7 @@ namespace VTFEdit
 	{
 		setWindowTitle(tr("VMT Editor Options"));
 
-		QGroupBox *pFont = new QGroupBox(tr("Font:"), this);
+		QGroupBox *pFont = new QGroupBox(tr("Editor:"), this);
 		QFormLayout *pForm = new QFormLayout(pFont);
 
 		m_pFontFamily = new QFontComboBox(pFont);
@@ -68,10 +71,17 @@ namespace VTFEdit
 		m_pTabSize->setSuffix(tr(" spaces"));
 		m_pTabSize->setToolTip(tr("The width of a tab character, in spaces."));
 
+		m_pTheme = new QComboBox(pFont);
+		m_pTheme->addItem(tr("Follow system theme"), static_cast<int>(VmtEditorTheme::System));
+		m_pTheme->addItem(tr("Light"), static_cast<int>(VmtEditorTheme::Light));
+		m_pTheme->addItem(tr("Dark"), static_cast<int>(VmtEditorTheme::Dark));
+		m_pTheme->setToolTip(tr("The colour scheme used by the VMT editor."));
+
 		pForm->addRow(tr("Font:"), m_pFontFamily);
 		pForm->addRow(QString(), m_pMonospaceOnly);
 		pForm->addRow(tr("Size:"), m_pFontSize);
 		pForm->addRow(tr("Tab Size:"), m_pTabSize);
+		pForm->addRow(tr("Theme:"), m_pTheme);
 
 		QGroupBox *pPreview = new QGroupBox(tr("Preview:"), this);
 		QVBoxLayout *pPreviewLayout = new QVBoxLayout(pPreview);
@@ -79,6 +89,7 @@ namespace VTFEdit
 		m_pPreview->setReadOnly(true);
 		m_pPreview->setLineWrapMode(QPlainTextEdit::NoWrap);
 		m_pPreview->setMinimumHeight(120);
+		m_pPreviewHighlighter = new VmtHighlighter(m_pPreview->document());
 		pPreviewLayout->addWidget(m_pPreview);
 
 		QDialogButtonBox *pButtons = new QDialogButtonBox(
@@ -96,6 +107,7 @@ namespace VTFEdit
 		connect(m_pFontFamily, &QFontComboBox::currentFontChanged, this, &VmtEditorOptionsDialog::updatePreview);
 		connect(m_pFontSize, &QSpinBox::valueChanged, this, &VmtEditorOptionsDialog::updatePreview);
 		connect(m_pTabSize, &QSpinBox::valueChanged, this, &VmtEditorOptionsDialog::updatePreview);
+		connect(m_pTheme, &QComboBox::currentIndexChanged, this, &VmtEditorOptionsDialog::updatePreview);
 		connect(m_pMonospaceOnly, &QCheckBox::toggled, this, [this](bool bChecked)
 		{
 			const QFont Current = m_pFontFamily->currentFont();
@@ -132,6 +144,19 @@ namespace VTFEdit
 		m_pPreview->setFont(Font);
 		m_pPreview->setTabStopDistance(
 			m_pTabSize->value() * m_pPreview->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+
+		VmtEditorSettings Preview;
+		Preview.eTheme = static_cast<VmtEditorTheme>(m_pTheme->currentData().toInt());
+
+		const bool bDark = Preview.isDark();
+		const VmtColors::Scheme &Colors = VmtColors::Get(bDark);
+
+		QPalette Palette = m_pPreview->palette();
+		Palette.setColor(QPalette::Base, Colors.Background);
+		Palette.setColor(QPalette::Text, Colors.Text);
+		m_pPreview->setPalette(Palette);
+
+		m_pPreviewHighlighter->setDark(bDark);
 	}
 
 	void VmtEditorOptionsDialog::settingsToControls(const VmtEditorSettings &Settings)
@@ -144,6 +169,7 @@ namespace VTFEdit
 
 		m_pFontSize->setValue(Settings.iFontSize);
 		m_pTabSize->setValue(Settings.iTabSize);
+		m_pTheme->setCurrentIndex(m_pTheme->findData(static_cast<int>(Settings.eTheme)));
 
 		updatePreview();
 	}
@@ -153,5 +179,6 @@ namespace VTFEdit
 		m_pSettings->sFontFamily = m_pFontFamily->currentFont().family();
 		m_pSettings->iFontSize = m_pFontSize->value();
 		m_pSettings->iTabSize = m_pTabSize->value();
+		m_pSettings->eTheme = static_cast<VmtEditorTheme>(m_pTheme->currentData().toInt());
 	}
 }

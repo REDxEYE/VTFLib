@@ -24,12 +24,15 @@
 #include <QDialog>
 
 class QCheckBox;
+class QComboBox;
 class QFontComboBox;
 class QPlainTextEdit;
 class QSpinBox;
 
 namespace VTFEdit
 {
+	class VmtHighlighter;
+
 	class VmtEditorOptionsDialog : public QDialog
 	{
 		Q_OBJECT
@@ -53,6 +56,8 @@ namespace VTFEdit
 		QCheckBox *m_pMonospaceOnly;
 		QSpinBox *m_pFontSize;
 		QSpinBox *m_pTabSize;
+		QComboBox *m_pTheme;
 		QPlainTextEdit *m_pPreview;
+		VmtHighlighter *m_pPreviewHighlighter;
 	};
 }

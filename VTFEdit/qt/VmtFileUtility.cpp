@@ -108,13 +108,61 @@ namespace VTFEdit
 		}
 	}
 
-	VmtHighlighter::VmtHighlighter(QTextDocument *pDocument)
-		: QSyntaxHighlighter(pDocument)
+	namespace VmtColors
 	{
+		const Scheme &Get(bool bDark)
+		{
+			// Tomorrow Night
+			static const Scheme Dark =
+			{
+				QColor(29, 31, 33),		// Background
+				QColor(197, 200, 198),	// Text
+				QColor(181, 189, 104),	// Comment
+				QColor(197, 200, 198),	// Punctuation
+				QColor(222, 147, 144),	// KeyDollar
+				QColor(138, 190, 183),	// KeyPercent
+				QColor(204, 102, 102),	// Key
+				QColor(129, 162, 190),	// Value
+				QColor(90, 40, 40),		// ErrorLine
+			};
+
+			// Tomorrow
+			static const Scheme Light =
+			{
+				QColor(255, 255, 255),	// Background
+				QColor(77, 77, 76),		// Text
+				QColor(113, 140, 0),	// Comment
+				QColor(77, 77, 76),		// Punctuation
+				QColor(245, 135, 31),	// KeyDollar
+				QColor(62, 153, 159),	// KeyPercent
+				QColor(200, 40, 41),	// Key
+				QColor(66, 113, 174),	// Value
+				QColor(255, 215, 215),	// ErrorLine
+			};
+
+			return bDark ? Dark : Light;
+		}
+	}
+
+	VmtHighlighter::VmtHighlighter(QTextDocument *pDocument, bool bDark)
+		: QSyntaxHighlighter(pDocument)
+		, m_bDark(bDark)
+	{
+	}
+
+	void VmtHighlighter::setDark(bool bDark)
+	{
+		if(m_bDark != bDark)
+		{
+			m_bDark = bDark;
+			rehighlight();
+		}
 	}
 
 	void VmtHighlighter::highlightBlock(const QString &sText)
 	{
+		const VmtColors::Scheme &Colors = VmtColors::Get(m_bDark);
+
 		bool bQuoted = previousBlockState() == 1;
 		bool bKey = true;
 		bool bHadCharThisLine = false;
@@ -143,32 +191,32 @@ namespace VTFEdit
 			QColor Color;
 			if(bComment)
 			{
-				Color = VmtColors::Comment;
+				Color = Colors.Comment;
 			}
 			else if(Character == QLatin1Char('{') || Character == QLatin1Char('}') || bValidQuote)
 			{
-				Color = VmtColors::Punctuation;
+				Color = Colors.Punctuation;
 			}
 			else if(bKey)
 			{
 				const bool bAtTokenStart = !bHadCharThisLine || LastChar == QLatin1Char('"');
 				if(Character == QLatin1Char('$') && bAtTokenStart)
 				{
-					Color = VmtColors::KeyDollar;
+					Color = Colors.KeyDollar;
 				}
 				else if(Character == QLatin1Char('%') && bAtTokenStart)
 				{
-					Color = VmtColors::KeyPercent;
+					Color = Colors.KeyPercent;
 				}
 				else
 				{
-					Color = VmtColors::Key;
+					Color = Colors.Key;
 				}
 			}
 			else
 			{
 				Color = (Character == QLatin1Char('[') || Character == QLatin1Char(']'))
-					? VmtColors::Punctuation : VmtColors::Value;
+					? Colors.Punctuation : Colors.Value;
 			}
 
 			setFormat(i, 1, Color);

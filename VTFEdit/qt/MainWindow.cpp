@@ -434,14 +434,18 @@ namespace VTFEdit
 		// VMT editor page.
 		m_pVmtEdit = new QPlainTextEdit(this);
 		m_pVmtEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document(), m_VmtEditorSettings.isDark());
 		applyVmtEditorSettings();
+
+		// Follow the system theme
+		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme)
 		{
-			QPalette Palette = m_pVmtEdit->palette();
-			Palette.setColor(QPalette::Base, VmtColors::Background);
-			Palette.setColor(QPalette::Text, VmtColors::Text);
-			m_pVmtEdit->setPalette(Palette);
-		}
-		m_pVmtHighlighter = new VmtHighlighter(m_pVmtEdit->document());
+			if(m_VmtEditorSettings.eTheme == VmtEditorTheme::System)
+			{
+				applyVmtEditorSettings();
+			}
+		});
+
 		connect(m_pVmtEdit, &QPlainTextEdit::textChanged, this, &MainWindow::onVmtTextChanged);
 		connect(m_pVmtEdit, &QPlainTextEdit::cursorPositionChanged, this, &MainWindow::onVmtCursorChanged);
 
@@ -1039,7 +1043,7 @@ namespace VTFEdit
 		if(m_iVmtErrorLine > 0 && m_iVmtErrorLine <= m_pVmtEdit->document()->blockCount())
 		{
 			QTextEdit::ExtraSelection Selection;
-			Selection.format.setBackground(VmtColors::ErrorLine);
+			Selection.format.setBackground(VmtColors::Get(m_VmtEditorSettings.isDark()).ErrorLine);
 			Selection.format.setProperty(QTextFormat::FullWidthSelection, true);
 			Selection.cursor = QTextCursor(m_pVmtEdit->document()->findBlockByNumber(m_iVmtErrorLine - 1));
 			Selection.cursor.clearSelection();
@@ -1054,6 +1058,17 @@ namespace VTFEdit
 		m_pVmtEdit->setFont(m_VmtEditorSettings.font());
 		m_pVmtEdit->setTabStopDistance(m_VmtEditorSettings.iTabSize
 			* m_pVmtEdit->fontMetrics().horizontalAdvance(QLatin1Char(' ')));
+
+		const bool bDark = m_VmtEditorSettings.isDark();
+		const VmtColors::Scheme &Colors = VmtColors::Get(bDark);
+
+		QPalette Palette = m_pVmtEdit->palette();
+		Palette.setColor(QPalette::Base, Colors.Background);
+		Palette.setColor(QPalette::Text, Colors.Text);
+		m_pVmtEdit->setPalette(Palette);
+
+		m_pVmtHighlighter->setDark(bDark);
+		updateVmtErrorHighlight();
 	}
 
 	//
@@ -2132,6 +2147,15 @@ namespace VTFEdit
 				m_VmtEditorSettings.iFontSize = qBound(4, sVal.toInt(), 72);
 			else if(sArg.compare(QLatin1String("VmtEditor.TabSize"), Qt::CaseInsensitive) == 0)
 				m_VmtEditorSettings.iTabSize = qBound(1, sVal.toInt(), 16);
+			else if(sArg.compare(QLatin1String("VmtEditor.Theme"), Qt::CaseInsensitive) == 0)
+			{
+				if(sVal.compare(QLatin1String("Light"), Qt::CaseInsensitive) == 0)
+					m_VmtEditorSettings.eTheme = VmtEditorTheme::Light;
+				else if(sVal.compare(QLatin1String("Dark"), Qt::CaseInsensitive) == 0)
+					m_VmtEditorSettings.eTheme = VmtEditorTheme::Dark;
+				else
+					m_VmtEditorSettings.eTheme = VmtEditorTheme::System;
+			}
 
 			else if(sArg.compare(QLatin1String("Forms.VTFEdit.Location.X"), Qt::CaseInsensitive) == 0)
 				Location.setX(sVal.toInt());
@@ -2294,6 +2318,9 @@ namespace VTFEdit
 		Stream << "VmtEditor.FontFamily = " << m_VmtEditorSettings.sFontFamily << "\n";
 		Stream << "VmtEditor.FontSize = " << m_VmtEditorSettings.iFontSize << "\n";
 		Stream << "VmtEditor.TabSize = " << m_VmtEditorSettings.iTabSize << "\n";
+		Stream << "VmtEditor.Theme = " << (m_VmtEditorSettings.eTheme == VmtEditorTheme::Light
+			? QStringLiteral("Light") : m_VmtEditorSettings.eTheme == VmtEditorTheme::Dark
+			? QStringLiteral("Dark") : QStringLiteral("System")) << "\n";
 
 		Stream << "\n[Forms]\n\n";
 		Stream << "Forms.VTFEdit.Location.X = " << normalGeometry().x() << "\n";

@@ -37,15 +37,20 @@ namespace VTFEdit
 
 	namespace VmtColors
 	{
-		const QColor Background(29, 31, 33);
-		const QColor Text(197, 200, 198);
-		const QColor Comment(181, 189, 104);
-		const QColor Punctuation(197, 200, 198);
-		const QColor KeyDollar(222, 147, 144);
-		const QColor KeyPercent(138, 190, 183);
-		const QColor Key(204, 102, 102);
-		const QColor Value(129, 162, 190);
-		const QColor ErrorLine(90, 40, 40);
+		struct Scheme
+		{
+			QColor Background;
+			QColor Text;
+			QColor Comment;
+			QColor Punctuation;
+			QColor KeyDollar;
+			QColor KeyPercent;
+			QColor Key;
+			QColor Value;
+			QColor ErrorLine;
+		};
+
+		const Scheme &Get(bool bDark);
 	}
 
 	class VmtHighlighter : public QSyntaxHighlighter
@@ -53,9 +58,14 @@ namespace VTFEdit
 		Q_OBJECT
 
 	public:
-		explicit VmtHighlighter(QTextDocument *pDocument);
+		explicit VmtHighlighter(QTextDocument *pDocument, bool bDark = true);
+
+		void setDark(bool bDark);
 
 	protected:
 		void highlightBlock(const QString &sText) override;
+
+	private:
+		bool m_bDark;
 	};
 }
