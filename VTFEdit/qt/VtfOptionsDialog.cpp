@@ -368,12 +368,16 @@ namespace VTFEdit
 
 	void VtfOptionsDialog::optionsToControls()
 	{
-		for(int i = 0; i < 15; i++)
+		for(int i = 0; i < NormalImageFormatCount; i++)
 		{
 			if(NormalImageFormats[i] == m_pOptions->NormalFormat)
 			{
 				m_pFormat->setCurrentIndex(i);
 			}
+		}
+
+		for(int i = 0; i < AlphaImageFormatCount; i++)
+		{
 			if(AlphaImageFormats[i] == m_pOptions->AlphaFormat)
 			{
 				m_pAlphaFormat->setCurrentIndex(i);

@@ -25,11 +25,14 @@
 
 namespace VTFEdit
 {
-	extern const VTFImageFormat NormalImageFormats[15];
-	extern const char *const NormalImageFormatNames[15];
+	static const int NormalImageFormatCount = 17;
+	static const int AlphaImageFormatCount = 15;
 
-	extern const VTFImageFormat AlphaImageFormats[15];
-	extern const char *const AlphaImageFormatNames[15];
+	extern const VTFImageFormat NormalImageFormats[NormalImageFormatCount];
+	extern const char *const NormalImageFormatNames[NormalImageFormatCount];
+
+	extern const VTFImageFormat AlphaImageFormats[AlphaImageFormatCount];
+	extern const char *const AlphaImageFormatNames[AlphaImageFormatCount];
 
 	enum class VtfTextureType
 	{

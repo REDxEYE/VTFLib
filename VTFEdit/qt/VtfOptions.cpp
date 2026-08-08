@@ -21,7 +21,7 @@
 
 namespace VTFEdit
 {
-	const VTFImageFormat NormalImageFormats[15] =
+	const VTFImageFormat NormalImageFormats[NormalImageFormatCount] =
 	{
 		IMAGE_FORMAT_RGB888,
 		IMAGE_FORMAT_BGR888,
@@ -37,10 +37,12 @@ namespace VTFEdit
 		IMAGE_FORMAT_UV88,
 		IMAGE_FORMAT_UVLX8888,
 		IMAGE_FORMAT_R8,
-		IMAGE_FORMAT_BC6H
+		IMAGE_FORMAT_BC6H,
+		IMAGE_FORMAT_ATI1N,
+		IMAGE_FORMAT_ATI2N
 	};
 
-	const char *const NormalImageFormatNames[15] =
+	const char *const NormalImageFormatNames[NormalImageFormatCount] =
 	{
 		"RGB888",
 		"BGR888", 
@@ -55,11 +57,13 @@ namespace VTFEdit
 		"BGRX5551",
 		"UV88", 
 		"UVLX8888", 
-		"R8", 
-		"BC6H"
+		"R8",
+		"BC6H",
+		"BC4 (ATI1N)",
+		"BC5 (ATI2N)"
 	};
 
-	const VTFImageFormat AlphaImageFormats[15] =
+	const VTFImageFormat AlphaImageFormats[AlphaImageFormatCount] =
 	{
 		IMAGE_FORMAT_RGBA8888,
 		IMAGE_FORMAT_ABGR8888, 
@@ -78,7 +82,7 @@ namespace VTFEdit
 		IMAGE_FORMAT_BC7
 	};
 
-	const char *const AlphaImageFormatNames[15] =
+	const char *const AlphaImageFormatNames[AlphaImageFormatCount] =
 	{
 		"RGBA8888", 
 		"ABGR8888", 
