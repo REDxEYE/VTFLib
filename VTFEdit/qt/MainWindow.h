@@ -160,6 +160,9 @@ namespace VTFEdit
 		void onValidateStrict();
 		void onVmtEditorOptions();
 
+		void onEditSheet();
+		void onRemoveSheet();
+
 		void onImageContextMenu(const QPoint &Position);
 		void onVmtContextMenu(const QPoint &Position);
 		void onImageMouseMoved(int iX, int iY);
@@ -211,6 +214,8 @@ namespace VTFEdit
 		bool validateVmtFile();
 		bool confirmVmtFile(int iIndex);
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
+		void updateResourceList();
+		void updateSheetActions();
 		void updateVmtErrorHighlight();
 		void applyVmtTabStopDistance();
 		void applyVmtEditorSettings();
@@ -354,6 +359,8 @@ namespace VTFEdit
 		// Resources tab controls.
 		QLabel *m_pResourceCount;
 		QTreeWidget *m_pResources;
+		QPushButton *m_pEditSheetButton;
+		QPushButton *m_pRemoveSheetButton;
 
 		// Status bar.
 		QLabel *m_pStatusFileName;

@@ -8,6 +8,10 @@ qt_add_executable(vtfedit WIN32
 	qt/MainWindow.h
 	qt/ImageView.cpp
 	qt/ImageView.h
+	qt/SheetFile.cpp
+	qt/SheetFile.h
+	qt/SheetDialog.cpp
+	qt/SheetDialog.h
 	qt/VtfOptions.cpp
 	qt/VtfOptions.h
 	qt/VtfOptionsDialog.cpp

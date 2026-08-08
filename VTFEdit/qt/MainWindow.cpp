@@ -22,6 +22,7 @@
 #include "AboutDialog.h"
 #include "BatchConvertDialog.h"
 #include "ImageView.h"
+#include "SheetDialog.h"
 #include "VmtCreateDialog.h"
 #include "VmtEditorOptionsDialog.h"
 #include "VmtFileUtility.h"
@@ -41,6 +42,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QKeyEvent>
 #include <QLabel>
@@ -652,8 +654,20 @@ namespace VTFEdit
 		m_pResources->setColumnCount(1);
 		pResourcesLayout->addWidget(m_pResources);
 
+		QGroupBox *pSheet = new QGroupBox(tr("Sprite Sheet:"), pTab);
+		QHBoxLayout *pSheetLayout = new QHBoxLayout(pSheet);
+
+		m_pEditSheetButton = new QPushButton(tr("&Create..."), pSheet);
+		connect(m_pEditSheetButton, &QPushButton::clicked, this, &MainWindow::onEditSheet);
+		pSheetLayout->addWidget(m_pEditSheetButton);
+
+		m_pRemoveSheetButton = new QPushButton(tr("&Remove"), pSheet);
+		connect(m_pRemoveSheetButton, &QPushButton::clicked, this, &MainWindow::onRemoveSheet);
+		pSheetLayout->addWidget(m_pRemoveSheetButton);
+
 		pLayout->addWidget(pResourceInfo);
 		pLayout->addWidget(pResources, 1);
+		pLayout->addWidget(pSheet);
 
 		return pTab;
 	}
@@ -933,82 +947,7 @@ namespace VTFEdit
 		m_pThumbnailHeight->setText(QString::number(pVTFFile->GetThumbnailHeight()));
 		m_pThumbnailFormat->setText(imageFormatString(pVTFFile->GetThumbnailFormat()));
 
-		m_pResourceCount->setText(QString::number(pVTFFile->GetResourceCount()));
-
-		m_pResources->clear();
-		for(vlUInt i = 0; i < pVTFFile->GetResourceCount(); i++)
-		{
-			const vlUInt uiResource = pVTFFile->GetResourceType(i);
-
-			QString sName;
-			switch(uiResource)
-			{
-			case VTF_LEGACY_RSRC_LOW_RES_IMAGE:		sName = tr("Thumbnail Image"); break;
-			case VTF_LEGACY_RSRC_IMAGE:				sName = tr("Image"); break;
-			case VTF_RSRC_SHEET:					sName = tr("Sheet"); break;
-			case VTF_RSRC_CRC:						sName = tr("Cyclic Redundancy Check"); break;
-			case VTF_RSRC_TEXTURE_LOD_SETTINGS:		sName = tr("LOD Settings"); break;
-			case VTF_RSRC_TEXTURE_SETTINGS_EX:		sName = tr("Extended Texture Settings"); break;
-			case VTF_RSRC_KEY_VALUE_DATA:			sName = tr("Key/Value Data"); break;
-			default:								sName = tr("Unknown"); break;
-			}
-
-			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
-
-			vlUInt uiSize = 0;
-			vlVoid *lpData = pVTFFile->GetResourceData(uiResource, uiSize);
-
-			switch(uiResource)
-			{
-			case VTF_RSRC_CRC:
-				if(lpData != nullptr)
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
-				}
-				break;
-
-			case VTF_RSRC_TEXTURE_LOD_SETTINGS:
-				if(lpData && uiSize == sizeof(SVTFTextureLODControlResource))
-				{
-					const SVTFTextureLODControlResource *pLODControl =
-						static_cast<SVTFTextureLODControlResource *>(lpData);
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
-					break;
-				}
-				[[fallthrough]];
-
-			case VTF_RSRC_KEY_VALUE_DATA:
-				if(lpData && uiSize)
-				{
-					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
-
-					if(pVMTFile->Load(lpData, uiSize))
-					{
-						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
-						setResourceInformation(pItem, pVMTFile->GetRoot());
-					}
-
-					delete pVMTFile;
-				}
-				[[fallthrough]];
-
-			default:
-				if(lpData && uiSize == sizeof(vlUInt))
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
-				}
-				else
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
-				}
-				break;
-			}
-
-			pItem->setExpanded(true);
-		}
+		updateResourceList();
 
 		m_bSwitchingDocument = bWasSwitching;
 
@@ -1076,6 +1015,210 @@ namespace VTFEdit
 				break;
 			}
 		}
+	}
+
+	void MainWindow::updateResourceList()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		m_pResourceCount->setText(QString::number(m_pVTFFile->GetResourceCount()));
+
+		m_pResources->clear();
+		for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+		{
+			const vlUInt uiResource = m_pVTFFile->GetResourceType(i);
+
+			QString sName;
+			switch(uiResource)
+			{
+			case VTF_LEGACY_RSRC_LOW_RES_IMAGE:		sName = tr("Thumbnail Image"); break;
+			case VTF_LEGACY_RSRC_IMAGE:				sName = tr("Image"); break;
+			case VTF_RSRC_SHEET:					sName = tr("Sheet"); break;
+			case VTF_RSRC_CRC:						sName = tr("Cyclic Redundancy Check"); break;
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:		sName = tr("LOD Settings"); break;
+			case VTF_RSRC_TEXTURE_SETTINGS_EX:		sName = tr("Extended Texture Settings"); break;
+			case VTF_RSRC_KEY_VALUE_DATA:			sName = tr("Key/Value Data"); break;
+			default:								sName = tr("Unknown"); break;
+			}
+
+			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
+
+			vlUInt uiSize = 0;
+			vlVoid *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize);
+
+			switch(uiResource)
+			{
+			case VTF_RSRC_SHEET:
+			{
+				SheetFile Sheet;
+				if(lpData && uiSize && Sheet.load(lpData, uiSize))
+				{
+					for(const SheetSequence &Sequence : Sheet.sequences())
+					{
+						float fDuration = 0.0f;
+						for(const SheetFrame &Frame : Sequence.Frames)
+						{
+							fDuration += Frame.fDuration;
+						}
+
+						new QTreeWidgetItem(pItem, QStringList(
+							tr("Sequence %1: %2 frames, %3 s, %4")
+								.arg(Sequence.iNumber)
+								.arg(Sequence.Frames.count())
+								.arg(QString::number(fDuration, 'g', 4))
+								.arg(Sequence.bClamp ? tr("clamp") : tr("loop"))));
+					}
+					break;
+				}
+
+				new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
+				break;
+			}
+
+			case VTF_RSRC_CRC:
+				if(lpData != nullptr)
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				break;
+
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:
+				if(lpData && uiSize == sizeof(SVTFTextureLODControlResource))
+				{
+					const SVTFTextureLODControlResource *pLODControl =
+						static_cast<SVTFTextureLODControlResource *>(lpData);
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
+					break;
+				}
+				[[fallthrough]];
+
+			case VTF_RSRC_KEY_VALUE_DATA:
+				if(lpData && uiSize)
+				{
+					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+
+					if(pVMTFile->Load(lpData, uiSize))
+					{
+						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
+						setResourceInformation(pItem, pVMTFile->GetRoot());
+					}
+
+					delete pVMTFile;
+				}
+				[[fallthrough]];
+
+			default:
+				if(lpData && uiSize == sizeof(vlUInt))
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				else
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
+				}
+				break;
+			}
+
+			pItem->setExpanded(true);
+		}
+
+		updateSheetActions();
+	}
+
+	void MainWindow::updateSheetActions()
+	{
+		const bool bSupported = m_pVTFFile != nullptr && m_pVTFFile->GetSupportsResources();
+
+		vlUInt uiSize = 0;
+		const bool bHasSheet = bSupported && m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize) != nullptr;
+
+		m_pEditSheetButton->setEnabled(bSupported);
+		m_pEditSheetButton->setText(bHasSheet ? tr("&Edit...") : tr("&Create..."));
+		m_pRemoveSheetButton->setEnabled(bHasSheet);
+
+		m_pEditSheetButton->setToolTip(bSupported
+			? tr("Edit the sprite sheet (.sht) resource attached to this texture.")
+			: tr("Sprite sheets require a version 7.3 or newer texture."));
+	}
+
+	void MainWindow::onEditSheet()
+	{
+		if(m_pVTFFile == nullptr || !m_pVTFFile->GetSupportsResources())
+		{
+			return;
+		}
+
+		SheetFile Sheet;
+
+		vlUInt uiSize = 0;
+		if(vlVoid *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize))
+		{
+			if(uiSize && !Sheet.load(lpData, uiSize))
+			{
+				if(QMessageBox::question(this, QApplication::applicationName(),
+					tr("The sprite sheet resource could not be read. Replace it?"),
+					QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+				{
+					return;
+				}
+			}
+		}
+
+		SheetDialog Dialog(Sheet, m_pImageView->image(),
+			static_cast<int>(m_pVTFFile->GetWidth()), static_cast<int>(m_pVTFFile->GetHeight()), this);
+
+		if(Dialog.exec() != QDialog::Accepted)
+		{
+			return;
+		}
+
+		const SheetFile &NewSheet = Dialog.sheet();
+
+		if(NewSheet.isEmpty())
+		{
+			m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+		}
+		else
+		{
+			QByteArray Data = NewSheet.save();
+			if(m_pVTFFile->SetResourceData(VTF_RSRC_SHEET,
+				static_cast<vlUInt>(Data.size()), Data.data()) == nullptr)
+			{
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Failed to write the sprite sheet resource:\n%1")
+						.arg(QString::fromLatin1(vlGetLastError())));
+				return;
+			}
+		}
+
+		updateResourceList();
+		onVtfPropertyChanged();
+	}
+
+	void MainWindow::onRemoveSheet()
+	{
+		if(m_pVTFFile == nullptr || !m_pVTFFile->GetSupportsResources())
+		{
+			return;
+		}
+
+		if(QMessageBox::question(this, QApplication::applicationName(),
+			tr("Remove the sprite sheet resource from this texture?"),
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		{
+			return;
+		}
+
+		m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+
+		updateResourceList();
+		onVtfPropertyChanged();
 	}
 
 	bool MainWindow::getVtfFile()
