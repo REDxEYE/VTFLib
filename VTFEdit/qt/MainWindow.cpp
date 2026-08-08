@@ -2616,8 +2616,9 @@ namespace VTFEdit
 
 		const float fOldImageScale = m_fImageScale;
 
-		const float fContentX = static_cast<float>(Anchor.x() + pHorizontal->value());
-		const float fContentY = static_cast<float>(Anchor.y() + pVertical->value());
+		const float fMargin = static_cast<float>(ImageView::margin());
+		const float fContentX = static_cast<float>(Anchor.x() + pHorizontal->value()) - fMargin;
+		const float fContentY = static_cast<float>(Anchor.y() + pVertical->value()) - fMargin;
 
 		m_fImageScale *= fFactor;
 
@@ -2626,8 +2627,8 @@ namespace VTFEdit
 
 		const float fRatio = m_fImageScale / fOldImageScale;
 
-		pHorizontal->setValue(static_cast<int>(fContentX * fRatio) - Anchor.x());
-		pVertical->setValue(static_cast<int>(fContentY * fRatio) - Anchor.y());
+		pHorizontal->setValue(static_cast<int>(fContentX * fRatio + fMargin) - Anchor.x());
+		pVertical->setValue(static_cast<int>(fContentY * fRatio + fMargin) - Anchor.y());
 	}
 
 	void MainWindow::zoom(float fFactor)
@@ -2657,8 +2658,8 @@ namespace VTFEdit
 		m_fImageScale = 1.0f;
 		updateVtfFile();
 
-		m_pImageScrollArea->horizontalScrollBar()->setValue(0);
-		m_pImageScrollArea->verticalScrollBar()->setValue(0);
+		m_pImageScrollArea->horizontalScrollBar()->setValue(ImageView::margin());
+		m_pImageScrollArea->verticalScrollBar()->setValue(ImageView::margin());
 	}
 
 	void MainWindow::onImageContextMenu(const QPoint &Position)
@@ -2754,9 +2755,8 @@ namespace VTFEdit
 			{
 				QMouseEvent *pMouse = static_cast<QMouseEvent *>(pEvent);
 
-				// Alt+drag pans
-				if(m_pVTFFile != nullptr && pMouse->button() == Qt::LeftButton
-					&& (pMouse->modifiers() & Qt::AltModifier))
+				// Left drag pans
+				if(m_pVTFFile != nullptr && pMouse->button() == Qt::LeftButton)
 				{
 					m_bImagePanning = true;
 					m_ImagePanStartMouse = pMouse->globalPosition().toPoint();

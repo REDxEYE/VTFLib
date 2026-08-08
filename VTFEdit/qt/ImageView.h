@@ -37,6 +37,9 @@ namespace VTFEdit
 		void setTiled(bool bTiled);
 		bool isTiled() const { return m_bTiled; }
 
+		// padding around the image so it can be panned slightly past its borders
+		static int margin() { return 64; }
+
 	signals:
 		void mouseMovedOverImage(int iX, int iY);
 
