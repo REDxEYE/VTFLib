@@ -26,6 +26,7 @@
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -121,7 +122,11 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createGeneralTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pGeneral = new QGroupBox(tr("General:"), pTab);
 		QFormLayout *pGeneralForm = new QFormLayout(pGeneral);
@@ -182,11 +187,6 @@ namespace VTFEdit
 		pResizeForm->addRow(tr("Maximum Width:"), m_pMaximumWidth);
 		pResizeForm->addRow(tr("Maximum Height:"), m_pMaximumHeight);
 
-		QGroupBox *pGeneralOptions = new QGroupBox(tr("General Options:"), pTab);
-		QVBoxLayout *pGeneralOptionsLayout = new QVBoxLayout(pGeneralOptions);
-		pGeneralOptionsLayout->addWidget(pGeneral);
-		pGeneralOptionsLayout->addWidget(pResize);
-
 		QGroupBox *pMipmaps = new QGroupBox(tr("Mipmaps:"), pTab);
 		QFormLayout *pMipmapsForm = new QFormLayout(pMipmaps);
 		m_pMipmaps = new QCheckBox(tr("Generate mipmaps"), pMipmaps);
@@ -195,9 +195,11 @@ namespace VTFEdit
 		pMipmapsForm->addRow(m_pMipmaps);
 		pMipmapsForm->addRow(tr("Mipmap Filter:"), m_pMipmapFilter);
 
-		pLayout->addWidget(pGeneralOptions);
-		pLayout->addWidget(pMipmaps);
-		pLayout->addStretch();
+		pLeft->addWidget(pGeneral);
+		pLeft->addStretch();
+		pRight->addWidget(pResize);
+		pRight->addWidget(pMipmaps);
+		pRight->addStretch();
 
 		return pTab;
 	}
@@ -205,7 +207,11 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createAdvancedTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pVersion = new QGroupBox(tr("Version:"), pTab);
 		QFormLayout *pVersionForm = new QFormLayout(pVersion);
@@ -268,13 +274,6 @@ namespace VTFEdit
 		pDistanceAlphaForm->addRow(tr("Scale:"), m_pDistanceAlphaReduce);
 		pDistanceAlphaForm->addRow(tr("Threshold:"), m_pDistanceAlphaThreshold);
 
-		QGroupBox *pAdvancedOptions = new QGroupBox(tr("Advanced Options:"), pTab);
-		QVBoxLayout *pAdvancedLayout = new QVBoxLayout(pAdvancedOptions);
-		pAdvancedLayout->addWidget(pVersion);
-		pAdvancedLayout->addWidget(pGamma);
-		pAdvancedLayout->addWidget(pMisc);
-		pAdvancedLayout->addWidget(pDistanceAlpha);
-
 		QGroupBox *pLuminance = new QGroupBox(tr("Luminance Weights:"), pTab);
 		QFormLayout *pLuminanceForm = new QFormLayout(pLuminance);
 		QDoubleSpinBox **ppWeights[] = { &m_pLuminanceWeightR, &m_pLuminanceWeightG, &m_pLuminanceWeightB };
@@ -289,9 +288,13 @@ namespace VTFEdit
 			pLuminanceForm->addRow(sLabels[i], pWeight);
 		}
 
-		pLayout->addWidget(pAdvancedOptions);
-		pLayout->addWidget(pLuminance);
-		pLayout->addStretch();
+		pLeft->addWidget(pVersion);
+		pLeft->addWidget(pGamma);
+		pLeft->addWidget(pLuminance);
+		pLeft->addStretch();
+		pRight->addWidget(pMisc);
+		pRight->addWidget(pDistanceAlpha);
+		pRight->addStretch();
 
 		return pTab;
 	}
@@ -299,7 +302,11 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createResourcesTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pLOD = new QGroupBox(tr("LOD Control Resource:"), pTab);
 		QFormLayout *pLODForm = new QFormLayout(pLOD);
@@ -329,13 +336,10 @@ namespace VTFEdit
 		pInformationForm->addRow(tr("Description:"), m_pInformationDescription);
 		pInformationForm->addRow(tr("Comments:"), m_pInformationComments);
 
-		QGroupBox *pResourceOptions = new QGroupBox(tr("Resource Options:"), pTab);
-		QVBoxLayout *pResourceLayout = new QVBoxLayout(pResourceOptions);
-		pResourceLayout->addWidget(pLOD);
-		pResourceLayout->addWidget(pInformation);
-
-		pLayout->addWidget(pResourceOptions);
-		pLayout->addStretch();
+		pLeft->addWidget(pLOD);
+		pLeft->addStretch();
+		pRight->addWidget(pInformation);
+		pRight->addStretch();
 
 		return pTab;
 	}
