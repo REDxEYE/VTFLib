@@ -3160,6 +3160,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 	{
 	case IMAGE_FORMAT_DXT1:
 	case IMAGE_FORMAT_DXT1_ONEBITALPHA:
+	case IMAGE_FORMAT_ATI1N:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -3169,6 +3170,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 		return ((uiWidth + 3) / 4) * ((uiHeight + 3) / 4) * 8 * uiDepth;
 	case IMAGE_FORMAT_DXT3:
 	case IMAGE_FORMAT_DXT5:
+	case IMAGE_FORMAT_ATI2N:
 	case IMAGE_FORMAT_BC7:
 	case IMAGE_FORMAT_BC6H:
 		if(uiWidth < 4 && uiWidth > 0)
@@ -3685,8 +3687,8 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	 16,  2, 16,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST24},
 	{	 32,  4,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NV_NULL},
-	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_ATI1N},
-	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_ATI2N}/*,
+	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI1N},
+	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI2N}/*,
 	{	 16,  2, 16,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24},
 	{	 24,  3,  0,  0,  0,  0,	-1, -1, -1, -1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24F},
