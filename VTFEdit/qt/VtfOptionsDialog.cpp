@@ -140,6 +140,11 @@ namespace VTFEdit
 			"Common values are DXT5 and RGBA8888."));
 		m_pTextureType = new QComboBox(pGeneral);
 		m_pTextureType->addItems({ tr("Animated Texture"), tr("Environment Map"), tr("Volume Texture") });
+		m_pVersion = new QComboBox(pGeneral);
+		fill(m_pVersion, VersionNames);
+		m_pVersion->setToolTip(tr("The VTF file version. 7.4 has the best compatibility, "
+			"7.5 is only supported in newer branches, and 7.6 is Strata Source only."));
+		pGeneralForm->addRow(tr("Version:"), m_pVersion);
 		pGeneralForm->addRow(tr("Normal Format:"), m_pFormat);
 		pGeneralForm->addRow(tr("Alpha Format:"), m_pAlphaFormat);
 		pGeneralForm->addRow(tr("Texture Type:"), m_pTextureType);
@@ -213,18 +218,6 @@ namespace VTFEdit
 		pLayout->addLayout(pLeft);
 		pLayout->addLayout(pRight);
 
-		QGroupBox *pVersion = new QGroupBox(tr("Version:"), pTab);
-		QFormLayout *pVersionForm = new QFormLayout(pVersion);
-		m_pVersion = new QComboBox(pVersion);
-		fill(m_pVersion, VersionNames);
-		m_pCompressionLevel = new QComboBox(pVersion);
-		fill(m_pCompressionLevel, CompressionLevelNames);
-		m_pCompressionMethod = new QComboBox(pVersion);
-		fill(m_pCompressionMethod, CompressionMethodNames);
-		pVersionForm->addRow(tr("Version:"), m_pVersion);
-		pVersionForm->addRow(tr("Compression Level:"), m_pCompressionLevel);
-		pVersionForm->addRow(tr("Compression Method:"), m_pCompressionMethod);
-
 		QGroupBox *pGamma = new QGroupBox(tr("Gamma Correction:"), pTab);
 		QFormLayout *pGammaForm = new QFormLayout(pGamma);
 		m_pGammaCorrection = new QCheckBox(tr("Correct gamma"), pGamma);
@@ -288,7 +281,6 @@ namespace VTFEdit
 			pLuminanceForm->addRow(sLabels[i], pWeight);
 		}
 
-		pLeft->addWidget(pVersion);
 		pLeft->addWidget(pGamma);
 		pLeft->addWidget(pLuminance);
 		pLeft->addStretch();
@@ -319,6 +311,16 @@ namespace VTFEdit
 		pLODForm->addRow(tr("Clamp U:"), m_pLODControlClampU);
 		pLODForm->addRow(tr("Clamp V:"), m_pLODControlClampV);
 
+		QGroupBox *pCompression = new QGroupBox(tr("Compression (version 7.6 only):"), pTab);
+		pCompression->setToolTip(tr("CPU compression is only available in version 7.6 files"));
+		QFormLayout *pCompressionForm = new QFormLayout(pCompression);
+		m_pCompressionLevel = new QComboBox(pCompression);
+		fill(m_pCompressionLevel, CompressionLevelNames);
+		m_pCompressionMethod = new QComboBox(pCompression);
+		fill(m_pCompressionMethod, CompressionMethodNames);
+		pCompressionForm->addRow(tr("Compression Level:"), m_pCompressionLevel);
+		pCompressionForm->addRow(tr("Compression Method:"), m_pCompressionMethod);
+
 		QGroupBox *pInformation = new QGroupBox(tr("Information Resource:"), pTab);
 		QFormLayout *pInformationForm = new QFormLayout(pInformation);
 		m_pCreateInformationResource = new QCheckBox(tr("Create information resource"), pInformation);
@@ -337,6 +339,7 @@ namespace VTFEdit
 		pInformationForm->addRow(tr("Comments:"), m_pInformationComments);
 
 		pLeft->addWidget(pLOD);
+		pLeft->addWidget(pCompression);
 		pLeft->addStretch();
 		pRight->addWidget(pInformation);
 		pRight->addStretch();
