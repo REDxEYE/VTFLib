@@ -34,6 +34,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QDragEnterEvent>
@@ -160,6 +161,7 @@ namespace VTFEdit
 		, m_bImagePanning(false)
 		, m_bUpdatingVtfFile(false)
 		, m_bUpdatingFlags(false)
+		, m_bUpdatingFileInfo(false)
 		, m_bHdrResetting(false)
 		, m_iMaximumRecentFiles(8)
 		, m_pOptionsDialog(nullptr)
@@ -612,7 +614,16 @@ namespace VTFEdit
 
 		QGroupBox *pFileInfo = new QGroupBox(tr("File Info:"), pTab);
 		QFormLayout *pFileForm = new QFormLayout(pFileInfo);
-		m_pFileVersion = addInfoRow(pFileForm, tr("Version:"));
+		m_pFileVersion = new QComboBox(pFileInfo);
+		for(vlUInt uiMinor = 0; uiMinor <= VTF_MINOR_VERSION; uiMinor++)
+		{
+			m_pFileVersion->addItem(QStringLiteral("%1.%2").arg(VTF_MAJOR_VERSION).arg(uiMinor), uiMinor);
+		}
+		m_pFileVersion->setToolTip(tr("Change the version of the VTF file format this texture is "
+			"written as.  The encoded image data is carried over unchanged."));
+		connect(m_pFileVersion, &QComboBox::currentIndexChanged, this, &MainWindow::onFileVersionChanged);
+		pFileForm->addRow(tr("Version:"), m_pFileVersion);
+
 		m_pFileSize = addInfoRow(pFileForm, tr("Size:"));
 		m_pFileCompression = addInfoRow(pFileForm, tr("Compression:"));
 
@@ -922,24 +933,7 @@ namespace VTFEdit
 		}
 		m_bUpdatingFlags = false;
 
-		m_pFileVersion->setText(QStringLiteral("%1.%2")
-			.arg(pVTFFile->GetMajorVersion()).arg(pVTFFile->GetMinorVersion()));
-		m_pFileSize->setText(tr("%1 KB").arg(
-			QLocale().toString(static_cast<double>(pVTFFile->GetSize()) / 1024.0, 'f', 3)));
-
-		const vlShort sAuxCompressionLevel = pVTFFile->GetAuxCompressionLevel();
-		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
-		{
-			m_pFileCompression->setText(tr("None"));
-		}
-		else
-		{
-			const QString sMethod = pVTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD
-				? tr("Zstandard") : tr("Deflate");
-			m_pFileCompression->setText(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
-				? sMethod
-				: QStringLiteral("%1 (%2)").arg(sMethod).arg(sAuxCompressionLevel));
-		}
+		updateFileInfo();
 
 		m_pImageWidth->setText(QString::number(pVTFFile->GetWidth()));
 		m_pImageHeight->setText(QString::number(pVTFFile->GetHeight()));
@@ -1031,6 +1025,35 @@ namespace VTFEdit
 			default:
 				break;
 			}
+		}
+	}
+
+	void MainWindow::updateFileInfo()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		m_bUpdatingFileInfo = true;
+		m_pFileVersion->setCurrentIndex(m_pFileVersion->findData(m_pVTFFile->GetMinorVersion()));
+		m_bUpdatingFileInfo = false;
+
+		m_pFileSize->setText(tr("%1 KB").arg(
+			QLocale().toString(static_cast<double>(m_pVTFFile->GetSize()) / 1024.0, 'f', 3)));
+
+		const vlShort sAuxCompressionLevel = m_pVTFFile->GetAuxCompressionLevel();
+		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
+		{
+			m_pFileCompression->setText(tr("None"));
+		}
+		else
+		{
+			const QString sMethod = m_pVTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD
+				? tr("Zstandard") : tr("Deflate");
+			m_pFileCompression->setText(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
+				? sMethod
+				: QStringLiteral("%1 (%2)").arg(sMethod).arg(sAuxCompressionLevel));
 		}
 	}
 
@@ -1252,7 +1275,12 @@ namespace VTFEdit
 				m_pFlags->item(i)->checkState() == Qt::Checked);
 		}
 
-		m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+		// below v7.5 an environment map's start frame doubles as a "no sphere map face" flag
+		// clearing it would change the face count out from under the image data
+		if(m_pVTFFile->GetStartFrame() != 0xffff)
+		{
+			m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+		}
 		m_pVTFFile->SetBumpmapScale(static_cast<vlSingle>(m_pImageBumpmapScale->value()));
 
 		return true;
@@ -2587,6 +2615,74 @@ namespace VTFEdit
 		{
 			return;
 		}
+
+		onVtfPropertyChanged();
+	}
+
+	void MainWindow::onFileVersionChanged(int iIndex)
+	{
+		if(m_bUpdatingFileInfo || m_bSwitchingDocument || m_pVTFFile == nullptr || iIndex < 0)
+		{
+			return;
+		}
+
+		const vlUInt uiMinor = m_pFileVersion->itemData(iIndex).value<vlUInt>();
+
+		if(uiMinor == m_pVTFFile->GetMinorVersion())
+		{
+			return;
+		}
+
+		// dropping below v7.3 takes the whole resource directory with it
+		if(uiMinor < VTF_MINOR_VERSION_MIN_RESOURCE)
+		{
+			vlUInt uiExtraResources = 0;
+			for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+			{
+				const vlUInt uiType = m_pVTFFile->GetResourceType(i);
+				if(uiType != VTF_LEGACY_RSRC_LOW_RES_IMAGE && uiType != VTF_LEGACY_RSRC_IMAGE)
+				{
+					uiExtraResources++;
+				}
+			}
+
+			if(uiExtraResources != 0
+				&& QMessageBox::question(this, QApplication::applicationName(),
+					tr("Version %1.%2 has no resource directory, so the %3 resource(s) attached to "
+						"this texture will be discarded.\n\nContinue?")
+						.arg(VTF_MAJOR_VERSION).arg(uiMinor).arg(uiExtraResources),
+					QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+			{
+				updateFileInfo();
+				return;
+			}
+		}
+
+		// push the pending header edits in first so they are not lost by the refresh below
+		getVtfFile();
+
+		if(!m_pVTFFile->SetVersion(VTF_MAJOR_VERSION, uiMinor))
+		{
+			QMessageBox::critical(this, QApplication::applicationName(),
+				tr("Failed to convert the texture to version %1.%2:\n%3")
+					.arg(VTF_MAJOR_VERSION).arg(uiMinor)
+					.arg(QString::fromLatin1(vlGetLastError())));
+
+			updateFileInfo();
+			return;
+		}
+
+		updateFileInfo();
+
+		m_bSwitchingDocument = true;
+		m_pImageStartFrame->setValue(m_pVTFFile->GetStartFrame() == 0xffff
+			? 0 : static_cast<int>(m_pVTFFile->GetStartFrame()));
+		m_bSwitchingDocument = false;
+
+		m_pImageFaces->setText(QString::number(m_pVTFFile->GetFaceCount()));
+
+		updateResourceList();
+		updateSheetActions();
 
 		onVtfPropertyChanged();
 	}

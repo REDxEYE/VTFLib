@@ -333,6 +333,21 @@ namespace VTFLib
 
 		vlUInt GetMajorVersion() const;	 //!< Returns the VTF file major version number.
 		vlUInt GetMinorVersion() const;	 //!< Returns the VTF file minor version number.
+
+		//! Changes the version of the loaded VTF file.
+		/*!
+			
+			Fails if the image cannot be represented in the requested version
+			e.g. volume texture below v7.2
+
+			\param uiMajor is the major version to convert to
+			\param uiMinor is the minor version to convert to
+			\return true on success, false on failure.
+			\see GetMajorVersion()
+			\see GetMinorVersion()
+		*/
+		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor);
+
 		vlUInt GetSize() const;			 //!< Returns the VTF file size in bytes.
 
 		vlUInt GetWidth() const;	//!< Returns the width of the image in pixels from the VTF header.

@@ -33,6 +33,7 @@
 class QAction;
 class QActionGroup;
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QListWidget;
@@ -150,6 +151,7 @@ namespace VTFEdit
 		void onAnimateFpsChanged(int iFps);
 		void onAnimateTick();
 		void onFlagItemChanged(QListWidgetItem *pItem);
+		void onFileVersionChanged(int iIndex);
 		void onHdrReset();
 
 		void onZoomIn();
@@ -217,6 +219,7 @@ namespace VTFEdit
 		bool validateVmtFile();
 		bool confirmVmtFile(int iIndex);
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
+		void updateFileInfo();
 		void updateResourceList();
 		void updateSheetActions();
 		void updateVmtErrorHighlight();
@@ -260,6 +263,7 @@ namespace VTFEdit
 
 		bool m_bUpdatingVtfFile;
 		bool m_bUpdatingFlags;
+		bool m_bUpdatingFileInfo;
 		bool m_bHdrResetting;
 
 		int m_iMaximumRecentFiles;
@@ -344,7 +348,7 @@ namespace VTFEdit
 		QListWidget *m_pFlags;
 
 		// Info tab controls.
-		QLabel *m_pFileVersion;
+		QComboBox *m_pFileVersion;
 		QLabel *m_pFileSize;
 		QLabel *m_pFileCompression;
 		QLabel *m_pImageWidth;

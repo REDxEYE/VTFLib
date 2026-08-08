@@ -1630,6 +1630,97 @@ vlUInt CVTFFile::GetMinorVersion() const
 }
 
 //
+// SetVersion()
+// Retargets the loaded image at another version of the VTF format.
+//
+vlBool CVTFFile::SetVersion(vlUInt uiMajor, vlUInt uiMinor)
+{
+	if(!this->IsLoaded())
+	{
+		LastError.Set("No image loaded.");
+		return vlFalse;
+	}
+
+	if(uiMajor != VTF_MAJOR_VERSION || uiMinor > VTF_MINOR_VERSION)
+	{
+		LastError.SetFormatted("File version %u.%u does not match %d.%d to %d.%d.", uiMajor, uiMinor, VTF_MAJOR_VERSION, 0, VTF_MAJOR_VERSION, VTF_MINOR_VERSION);
+		return vlFalse;
+	}
+
+	if(this->Header->Version[0] == uiMajor && this->Header->Version[1] == uiMinor)
+	{
+		return vlTrue;
+	}
+
+	if(uiMinor < VTF_MINOR_VERSION_MIN_VOLUME && this->GetDepth() > 1)
+	{
+		LastError.SetFormatted("Volume textures are only supported in version %d.%d and up.", VTF_MAJOR_VERSION, VTF_MINOR_VERSION_MIN_VOLUME);
+		return vlFalse;
+	}
+
+	// ToDo: throw away the sphere map
+	vlBool bHasSphereMap = (this->Header->Flags & TEXTUREFLAGS_ENVMAP) != 0
+		&& this->Header->Version[1] < VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP
+		&& this->Header->StartFrame != 0xffff;
+
+	if(bHasSphereMap && uiMinor >= VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP)
+	{
+		LastError.SetFormatted("Cubemaps with 7th spheremap face are not supported in version %d.%d and up", VTF_MAJOR_VERSION, VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP);
+		return vlFalse;
+	}
+
+	this->Header->Version[0] = uiMajor;
+	this->Header->Version[1] = uiMinor;
+
+	if(this->Header->Flags & TEXTUREFLAGS_ENVMAP)
+	{
+		if(uiMinor < VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP)
+		{
+			if(!bHasSphereMap)
+			{
+				this->Header->StartFrame = 0xffff;
+			}
+		}
+		else if(this->Header->StartFrame == 0xffff)
+		{
+			this->Header->StartFrame = 0;
+		}
+	}
+
+	if(!this->GetSupportsAuxCompression())
+	{
+		this->sAuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_NONE;
+		this->DestroyAuxCompression();
+	}
+
+	if(!this->GetSupportsResources())
+	{
+		for(vlUInt i = 0; i < VTF_RSRC_MAX_DICTIONARY_ENTRIES; i++)
+		{
+			delete []this->Header->Data[i].Data;
+			this->Header->Data[i].Data = 0;
+			this->Header->Data[i].Size = 0;
+		}
+
+		memset(this->Header->Resources, 0, sizeof(this->Header->Resources));
+		this->Header->ResourceCount = 0;
+	}
+	else if(this->Header->ResourceCount == 0)
+	{
+		if(this->Header->LowResImageFormat != IMAGE_FORMAT_NONE)
+		{
+			this->Header->Resources[this->Header->ResourceCount++].Type = VTF_LEGACY_RSRC_LOW_RES_IMAGE;
+		}
+
+		this->Header->Resources[this->Header->ResourceCount++].Type = VTF_LEGACY_RSRC_IMAGE;
+	}
+
+	this->ComputeResources();
+
+	return vlTrue;
+}
+
+//
 // ComputeResources()
 // Computes header VTF directory resources.
 //

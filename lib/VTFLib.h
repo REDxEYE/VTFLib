@@ -42,8 +42,12 @@ typedef vlSingle		vlFloat;
 #define VTF_MAJOR_VERSION	7
 #define VTF_MINOR_VERSION	6
 
+#define VTF_MINOR_VERSION_DEFAULT	3
+
 #define VTF_MINOR_VERSION_MIN_SPHERE_MAP	1
 #define VTF_MINOR_VERSION_MIN_VOLUME		2
+#define VTF_MINOR_VERSION_MIN_RESOURCE		3
+#define VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP	5
 #define VTF_MINOR_VERSION_MIN_AUX_COMPRESSION	6
 
 //
@@ -838,6 +842,7 @@ namespace VTFLib
 
 		vlUInt GetMajorVersion() const;
 		vlUInt GetMinorVersion() const;
+		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor);
 		vlUInt GetSize() const;
 
 		vlUInt GetWidth() const;
