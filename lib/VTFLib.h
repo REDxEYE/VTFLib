@@ -864,6 +864,7 @@ namespace VTFLib
 		vlVoid SetReflectivity(vlSingle sX, vlSingle sY, vlSingle sZ);
 
 		VTFImageFormat GetFormat() const;
+		VTFImageFormat GetDecodeFormat() const;
 		
 		vlByte *GetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel) const;
 		vlVoid SetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel, vlByte *lpData);

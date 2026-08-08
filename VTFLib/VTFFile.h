@@ -393,7 +393,14 @@ namespace VTFLib
 		vlVoid SetReflectivity(vlSingle sX, vlSingle sY, vlSingle sZ);
 
 		VTFImageFormat GetFormat() const;	//!< Returns the storage format of the main image data set in the VTF header.
-		
+
+		//! Returns the format the main image data should be decoded as.
+		/*!
+			Currently identical to GetFormat except for DXT1 images with the one bit alpha flag	set
+			which are stored as plain DXT1 but must be decoded as IMAGE_FORMAT_DXT1_ONEBITALPHA to keep alpha
+		*/
+		VTFImageFormat GetDecodeFormat() const;
+
 		//! Get a pointer to the image data for a specific image.
 		/*!
 			Returns a pointer to the image data for a given frame, face and MIP level.

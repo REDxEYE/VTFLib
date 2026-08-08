@@ -812,7 +812,7 @@ namespace VTFEdit
 
 		vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
 		m_pVTFFile->ConvertToRGBA8888(m_pVTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap),
-			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 		m_fEffectiveImageScale = fScale;
 
@@ -2078,7 +2078,7 @@ namespace VTFEdit
 		m_pVTFFile->ConvertToRGBA8888(
 			m_pVTFFile->GetData(static_cast<vlUInt>(m_pFrame->value()), static_cast<vlUInt>(m_pFace->value()),
 				static_cast<vlUInt>(m_pSlice->value()), static_cast<vlUInt>(m_pMipmap->value())),
-			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 		// DevIL likes image data upside down...
 		m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
@@ -2119,7 +2119,7 @@ namespace VTFEdit
 				{
 					m_pVTFFile->ConvertToRGBA8888(
 						m_pVTFFile->GetData(i, j, k, static_cast<vlUInt>(m_pMipmap->value())),
-						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 					m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
 

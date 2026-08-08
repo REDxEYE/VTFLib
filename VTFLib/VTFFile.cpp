@@ -2018,6 +2018,20 @@ VTFImageFormat CVTFFile::GetFormat() const
 }
 
 //
+// GetDecodeFormat()
+// Gets the format the image data should be decoded as.
+//
+VTFImageFormat CVTFFile::GetDecodeFormat() const
+{
+	VTFImageFormat Format = this->GetFormat();
+
+	if(Format == IMAGE_FORMAT_DXT1 && (this->Header->Flags & TEXTUREFLAGS_ONEBITALPHA))
+		return IMAGE_FORMAT_DXT1_ONEBITALPHA;
+
+	return Format;
+}
+
+//
 // GetData()
 // Gets the image data of the specified frame, face and mipmap in the format
 // of the image.
@@ -2572,7 +2586,7 @@ vlBool CVTFFile::GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, VTFMipmapFilter 
 
 	vlByte *lpImageData = new vlByte[this->ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 	
-	if(!this->ConvertToRGBA8888(this->GetData(uiFace, uiFrame, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!this->ConvertToRGBA8888(this->GetData(uiFace, uiFrame, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpImageData;
 
@@ -2646,7 +2660,7 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB)
 	vlByte *lpImageData = new vlByte[CVTFFile::ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 	vlByte *lpThumbnailImageData = new vlByte[CVTFFile::ComputeImageSize(this->Header->LowResImageWidth, this->Header->LowResImageHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
-	if(!CVTFFile::ConvertToRGBA8888(this->GetData(0, 0, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!CVTFFile::ConvertToRGBA8888(this->GetData(0, 0, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpImageData;
 		delete []lpThumbnailImageData;
@@ -2726,7 +2740,7 @@ vlBool CVTFFile::GenerateNormalMap(vlUInt uiFrame, VTFKernelFilter KernelFilter,
 	vlByte *lpSource = new vlByte[this->ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 
 	// Get the frame's image data.
-	if(!this->ConvertToRGBA8888(lpData, lpSource, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!this->ConvertToRGBA8888(lpData, lpSource, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpSource;
 
@@ -2828,7 +2842,7 @@ vlBool CVTFFile::GenerateSphereMap()
 
 		lpImageData[j] = new vlByte[this->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888)]; 
 		
-		if(!this->ConvertToRGBA8888(this->GetData(0, i, 0, 0), lpImageData[j], uiWidth, uiHeight, this->Header->ImageFormat)) 
+		if(!this->ConvertToRGBA8888(this->GetData(0, i, 0, 0), lpImageData[j], uiWidth, uiHeight, this->GetDecodeFormat())) 
 		{ 
 			for(vlUInt l = 0; l < 6; l++)  
 				delete[] lpImageData[l];  
@@ -3017,7 +3031,7 @@ vlBool CVTFFile::ComputeReflectivity()
         {
 			for(vlUInt uiSlice = 0; uiSlice < uiSliceCount; uiSlice++)
 			{
-				if(!this->ConvertToRGBA8888(this->GetData(uiFrame, uiFace, uiSlice, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+				if(!this->ConvertToRGBA8888(this->GetData(uiFrame, uiFace, uiSlice, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 				{
 					delete []lpImageData;
 
@@ -3417,7 +3431,7 @@ vlBool CVTFFile::DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt
 	options.dwSize        = sizeof(options);
 	options.fquality      = 1.0f;
 	options.dwnumThreads  = 0;
-	options.bDXT1UseAlpha = false;
+	options.bDXT1UseAlpha = SourceFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA;
 
 	vlBool bHDR = GetUncompressedFormat( SourceFormat ) == IMAGE_FORMAT_RGBA16161616F;
 
@@ -3498,6 +3512,7 @@ vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, 
 	options.fquality      = DestFormat == IMAGE_FORMAT_BC7 ? 0.1f : 1.0f;
 	options.dwnumThreads  = 0;
 	options.bDXT1UseAlpha = DestFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA;
+	options.nAlphaThreshold = 128;
 
 	CMP_Texture destTexture = {0};
 	destTexture.dwSize     = sizeof( destTexture );
