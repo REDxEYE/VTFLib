@@ -234,7 +234,7 @@ namespace VTFEdit
 		connect(m_pSaveAllAction, &QAction::triggered, this, &MainWindow::onSaveAll);
 
 		m_pCloseAction = new QAction(tr("&Close"), this);
-		m_pCloseAction->setShortcut(QKeySequence::Close);
+		m_pCloseAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
 		connect(m_pCloseAction, &QAction::triggered, this, &MainWindow::onClose);
 
 		m_pCloseAllAction = new QAction(tr("Close A&ll"), this);
