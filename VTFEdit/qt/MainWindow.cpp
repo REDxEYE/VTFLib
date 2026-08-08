@@ -241,6 +241,10 @@ namespace VTFEdit
 		m_pCloseAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
 		connect(m_pCloseAllAction, &QAction::triggered, this, &MainWindow::onCloseAll);
 
+		m_pReopenRecentAction = new QAction(tr("&Reopen Recent File"), this);
+		m_pReopenRecentAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
+		connect(m_pReopenRecentAction, &QAction::triggered, this, &MainWindow::onReopenRecent);
+
 		m_pNextTabAction = new QAction(tr("&Next Tab"), this);
 		m_pNextTabAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab));
 		connect(m_pNextTabAction, &QAction::triggered, this, &MainWindow::onNextTab);
@@ -362,6 +366,7 @@ namespace VTFEdit
 		pFileMenu->addAction(m_pExportAllAction);
 		pFileMenu->addSeparator();
 		m_pRecentFilesMenu = pFileMenu->addMenu(tr("&Recent Files"));
+		pFileMenu->addAction(m_pReopenRecentAction);
 		pFileMenu->addSeparator();
 		pFileMenu->addAction(m_pExitAction);
 
@@ -2431,6 +2436,18 @@ namespace VTFEdit
 		if(pAction != nullptr)
 		{
 			open(pAction->data().toString(), false);
+		}
+	}
+
+	void MainWindow::onReopenRecent()
+	{
+		for(const QString &sFileName : m_RecentFiles)
+		{
+			if(indexOfFile(sFileName) < 0 && QFileInfo::exists(sFileName))
+			{
+				open(sFileName, false);
+				return;
+			}
 		}
 	}
 

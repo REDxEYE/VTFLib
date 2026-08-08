@@ -137,6 +137,7 @@ namespace VTFEdit
 		void onCreateVmtFile();
 		void onConvertFolder();
 		void onRecentFile();
+		void onReopenRecent();
 		void onCopy();
 		void onPaste();
 		void onChannelChanged();
@@ -281,6 +282,7 @@ namespace VTFEdit
 		QAction *m_pSaveAllAction;
 		QAction *m_pCloseAction;
 		QAction *m_pCloseAllAction;
+		QAction *m_pReopenRecentAction;
 		QAction *m_pNextTabAction;
 		QAction *m_pPreviousTabAction;
 		QAction *m_pTabIndexActions[9];
