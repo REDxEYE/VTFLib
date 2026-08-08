@@ -1467,7 +1467,7 @@ namespace VTFEdit
 
 	int MainWindow::addDocument(Document *pDocument)
 	{
-		if(pDocument->sFileName.isEmpty())
+		if(pDocument->sFileName.isEmpty() && pDocument->sUntitledName.isEmpty())
 		{
 			pDocument->sUntitledName = tr("Untitled %1").arg(++m_iUntitledCounter);
 		}
@@ -1888,15 +1888,18 @@ namespace VTFEdit
 
 		QString sFileName;
 
+		const QString &sDefault = pDocument->sFileName.isEmpty()
+			? pDocument->sSuggestedFileName : pDocument->sFileName;
+
 		if(pDocument->pVTFFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VTF File"),
-				pDocument->sFileName, tr("VTF Files (*.vtf)"));
+				sDefault, tr("VTF Files (*.vtf)"));
 		}
 		else if(pDocument->pVMTFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VMT File"),
-				pDocument->sFileName, tr("VMT Files (*.vmt)"));
+				sDefault, tr("VMT Files (*.vmt)"));
 		}
 
 		if(sFileName.isEmpty())
@@ -1995,7 +1998,8 @@ namespace VTFEdit
 
 		if(!bError)
 		{
-			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
+			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha,
+				sFileNames.isEmpty() ? QString() : sFileNames.first());
 		}
 
 		for(vlByte *lpFrameData : vImageData)
@@ -2005,7 +2009,7 @@ namespace VTFEdit
 	}
 
 	void MainWindow::createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
-		bool bHasAlpha)
+		bool bHasAlpha, const QString &sSourceFileName)
 	{
 		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
 
@@ -2030,6 +2034,15 @@ namespace VTFEdit
 		{
 			Document *pDocument = new Document();
 			pDocument->pVTFFile = pVTFFile;
+
+			// name the document after the imported image
+			if(!sSourceFileName.isEmpty())
+			{
+				const QFileInfo Info(sSourceFileName);
+
+				pDocument->sUntitledName = Info.completeBaseName() + QLatin1String(".vtf");
+				pDocument->sSuggestedFileName = Info.absoluteDir().filePath(pDocument->sUntitledName);
+			}
 
 			pDocument->bModified = true;
 
@@ -2471,7 +2484,7 @@ namespace VTFEdit
 			bHasAlpha = true;
 		}
 
-		createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
+		createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha, QString());
 
 		delete[] vImageData[0];
 	}

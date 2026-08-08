@@ -71,6 +71,7 @@ namespace VTFEdit
 
 		QString sFileName;
 		QString sUntitledName;
+		QString sSuggestedFileName;
 		bool bModified;
 
 		float fImageScale;
@@ -203,7 +204,7 @@ namespace VTFEdit
 		bool saveDocumentAs(int iIndex);
 		void import(const QStringList &sFileNames);
 		void createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
-			bool bHasAlpha);
+			bool bHasAlpha, const QString &sSourceFileName);
 		void exportImage(const QString &sFileName);
 		void exportAllImages(const QString &sFileName);
 
