@@ -21,8 +21,12 @@
 #define STDAFX_H
 
 #if _MSC_VER >= 1400
-#	define _CRT_SECURE_NO_WARNINGS
-#	define _CRT_NONSTDC_NO_DEPRECATE
+#	ifndef _CRT_SECURE_NO_WARNINGS
+#		define _CRT_SECURE_NO_WARNINGS
+#	endif
+#	ifndef _CRT_NONSTDC_NO_DEPRECATE
+#		define _CRT_NONSTDC_NO_DEPRECATE
+#	endif
 #endif
 
 #define WIN32_LEAN_AND_MEAN
