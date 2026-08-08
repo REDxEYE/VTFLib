@@ -31,6 +31,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStandardItemModel>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
@@ -83,6 +84,37 @@ namespace VTFEdit
 				pCombo->addItem(QString::fromLatin1(names[i]));
 			}
 		}
+
+		template <int N>
+		void fillImageFormats(QComboBox *pCombo, const ImageFormatEntry (&Entries)[N])
+		{
+			for(int i = 0; i < N; i++)
+			{
+				pCombo->addItem(QString::fromLatin1(Entries[i].pName));
+			}
+		}
+
+		template <int N>
+		void updateImageFormatsEnabledState(QComboBox *pCombo, const ImageFormatEntry (&Entries)[N], bool bIsVersion76)
+		{
+			QStandardItemModel *pModel = qobject_cast<QStandardItemModel *>(pCombo->model());
+			if(pModel == nullptr)
+			{
+				return;
+			}
+
+			for(int i = 0; i < N; i++)
+			{
+				const bool bEnabled = bIsVersion76 || !Entries[i].bRequiresVersion76;
+				QStandardItem *pItem = pModel->item(i);
+				if(pItem != nullptr)
+				{
+					pItem->setFlags(bEnabled
+						? pItem->flags() | Qt::ItemIsEnabled | Qt::ItemIsSelectable
+						: pItem->flags() & ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable));
+				}
+			}
+		}
 	}
 
 	VtfOptionsDialog::VtfOptionsDialog(VtfOptions *pOptions, QWidget *pParent)
@@ -131,11 +163,11 @@ namespace VTFEdit
 		QGroupBox *pGeneral = new QGroupBox(tr("General:"), pTab);
 		QFormLayout *pGeneralForm = new QFormLayout(pGeneral);
 		m_pFormat = new QComboBox(pGeneral);
-		fill(m_pFormat, NormalImageFormatNames);
+		fillImageFormats(m_pFormat, NormalImageFormats);
 		m_pFormat->setToolTip(tr("The output image format for textures with no alpha channel. "
 			"Common values are DXT1 and RGB888."));
 		m_pAlphaFormat = new QComboBox(pGeneral);
-		fill(m_pAlphaFormat, AlphaImageFormatNames);
+		fillImageFormats(m_pAlphaFormat, AlphaImageFormats);
 		m_pAlphaFormat->setToolTip(tr("The output image format for textures with an alpha channel. "
 			"Common values are DXT5 and RGBA8888."));
 		m_pTextureType = new QComboBox(pGeneral);
@@ -145,7 +177,7 @@ namespace VTFEdit
 		m_pVersion->setToolTip(tr("The VTF file version. 7.4 has the best compatibility, "
 			"7.5 is only supported in newer branches, and 7.6 is Strata Source only."));
 		pGeneralForm->addRow(tr("Version:"), m_pVersion);
-		pGeneralForm->addRow(tr("Normal Format:"), m_pFormat);
+		pGeneralForm->addRow(tr("Color Format:"), m_pFormat);
 		pGeneralForm->addRow(tr("Alpha Format:"), m_pAlphaFormat);
 		pGeneralForm->addRow(tr("Texture Type:"), m_pTextureType);
 
@@ -400,7 +432,11 @@ namespace VTFEdit
 		m_pInformationDescription->setEnabled(bInformation);
 		m_pInformationComments->setEnabled(bInformation);
 
-		const bool bCompressionSupported = m_pVersion->currentText() == QLatin1String("7.6");
+		const bool bIsVersion76 = m_pVersion->currentText() == QLatin1String("7.6");
+		updateImageFormatsEnabledState(m_pFormat, NormalImageFormats, bIsVersion76);
+		updateImageFormatsEnabledState(m_pAlphaFormat, AlphaImageFormats, bIsVersion76);
+
+		const bool bCompressionSupported = bIsVersion76;
 		m_pCompressionLevel->setEnabled(bCompressionSupported);
 		m_pCompressionMethod->setEnabled(bCompressionSupported && m_pCompressionLevel->currentIndex() != 0);
 	}
@@ -409,7 +445,7 @@ namespace VTFEdit
 	{
 		for(int i = 0; i < NormalImageFormatCount; i++)
 		{
-			if(NormalImageFormats[i] == m_pOptions->NormalFormat)
+			if(NormalImageFormats[i].Format == m_pOptions->NormalFormat)
 			{
 				m_pFormat->setCurrentIndex(i);
 			}
@@ -417,7 +453,7 @@ namespace VTFEdit
 
 		for(int i = 0; i < AlphaImageFormatCount; i++)
 		{
-			if(AlphaImageFormats[i] == m_pOptions->AlphaFormat)
+			if(AlphaImageFormats[i].Format == m_pOptions->AlphaFormat)
 			{
 				m_pAlphaFormat->setCurrentIndex(i);
 			}
@@ -498,9 +534,9 @@ namespace VTFEdit
 	void VtfOptionsDialog::controlsToOptions()
 	{
 		m_pOptions->NormalFormat = m_pFormat->currentIndex() >= 0
-			? NormalImageFormats[m_pFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+			? NormalImageFormats[m_pFormat->currentIndex()].Format : IMAGE_FORMAT_NONE;
 		m_pOptions->AlphaFormat = m_pAlphaFormat->currentIndex() >= 0
-			? AlphaImageFormats[m_pAlphaFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+			? AlphaImageFormats[m_pAlphaFormat->currentIndex()].Format : IMAGE_FORMAT_NONE;
 		m_pOptions->TextureType = static_cast<VtfTextureType>(m_pTextureType->currentIndex());
 
 		m_pOptions->FlagClampS = m_pFlagClampS->isChecked() ? vlTrue : vlFalse;
