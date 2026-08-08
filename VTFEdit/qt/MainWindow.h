@@ -183,6 +183,7 @@ namespace VTFEdit
 		int addDocument(Document *pDocument);
 		void commitCurrentDocument();
 		void activateDocument(int iIndex);
+		void switchToTab(int iIndex);
 		void clearWidgets();
 		void hideVtfSidebars();
 		void setupTextDocument(Document *pDocument, const QString &sText);
@@ -281,6 +282,7 @@ namespace VTFEdit
 		QAction *m_pCloseAllAction;
 		QAction *m_pNextTabAction;
 		QAction *m_pPreviousTabAction;
+		QAction *m_pTabIndexActions[9];
 		QAction *m_pImportAction;
 		QAction *m_pExportAction;
 		QAction *m_pExportAllAction;

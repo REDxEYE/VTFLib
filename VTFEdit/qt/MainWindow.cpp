@@ -251,6 +251,18 @@ namespace VTFEdit
 		connect(m_pPreviousTabAction, &QAction::triggered, this, &MainWindow::onPreviousTab);
 		addAction(m_pPreviousTabAction);
 
+		// Ctrl+1 through Ctrl+8 select a tab by position
+		// Ctrl+9 selects the last tab
+		for(int i = 0; i < 9; i++)
+		{
+			m_pTabIndexActions[i] = new QAction(this);
+			m_pTabIndexActions[i]->setShortcut(QKeySequence(Qt::CTRL | (Qt::Key_1 + i)));
+			const int iIndex = i == 8 ? -1 : i;
+			connect(m_pTabIndexActions[i], &QAction::triggered, this,
+				[this, iIndex]() { switchToTab(iIndex); });
+			addAction(m_pTabIndexActions[i]);
+		}
+
 		m_pImportAction = new QAction(tr("&Import"), this);
 		m_pImportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
 		connect(m_pImportAction, &QAction::triggered, this, &MainWindow::onImport);
@@ -2259,6 +2271,21 @@ namespace VTFEdit
 		{
 			m_pTabBar->setCurrentIndex((m_pTabBar->currentIndex() + m_pTabBar->count() - 1)
 				% m_pTabBar->count());
+		}
+	}
+
+	void MainWindow::switchToTab(int iIndex)
+	{
+		const int iCount = m_pTabBar->count();
+
+		if(iIndex < 0)
+		{
+			iIndex = iCount - 1;
+		}
+
+		if(iIndex >= 0 && iIndex < iCount)
+		{
+			m_pTabBar->setCurrentIndex(iIndex);
 		}
 	}
 
