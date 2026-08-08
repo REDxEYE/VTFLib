@@ -25,7 +25,7 @@
 
 namespace VTFEdit
 {
-	static const int NormalImageFormatCount = 17;
+	static const int NormalImageFormatCount = 19;
 	static const int AlphaImageFormatCount = 15;
 
 	extern const VTFImageFormat NormalImageFormats[NormalImageFormatCount];

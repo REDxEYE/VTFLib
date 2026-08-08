@@ -424,8 +424,9 @@ static CMP_FORMAT GetCMPFormat( VTFImageFormat imageFormat, bool bDXT5GA )
 	case IMAGE_FORMAT_DXT3:				return CMP_FORMAT_DXT3;
 	case IMAGE_FORMAT_DXT5:				return CMP_FORMAT_DXT5;
 	case IMAGE_FORMAT_ATI1N:			return CMP_FORMAT_ATI1N;
-	// Swizzle is technically wrong for below but we reverse it in the shader!
 	case IMAGE_FORMAT_ATI2N:			return CMP_FORMAT_ATI2N;
+	case IMAGE_FORMAT_BC4:				return CMP_FORMAT_BC4;
+	case IMAGE_FORMAT_BC5:				return CMP_FORMAT_BC5;
 	case IMAGE_FORMAT_BC7:				return CMP_FORMAT_BC7;
 	case IMAGE_FORMAT_BC6H:				return CMP_FORMAT_BC6H_SF;
 
@@ -3086,8 +3087,8 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "ATI DST16",			 16,  2,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST16
 	{ "ATI DST24",			 24,  3,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST24
 	{ "nVidia NULL",		 32,  4,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_NV_NULL
-	{ "BC5 (ATI2N)",		  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI2N
-	{ "BC4 (ATI1N)",		  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
+	{ "ATI2N",				  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI2N
+	{ "ATI1N",				  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
 	/*
 	{ "Xbox360 DST16",		 16,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST16
 	{ "Xbox360 DST24",		 24,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST24
@@ -3137,7 +3138,9 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "Reserved68",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 68
 	{ "R8",					  8,  1,  8,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_R8
 	{ "BC7",				  8,  0,  0,  0,  0,  8,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC7
-	{ "BC6H",				  8,  0, 16, 16, 16,  0,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC6H
+	{ "BC6H",				  8,  0, 16, 16, 16,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC6H
+	{ "BC4",				  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC4
+	{ "BC5",				  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC5
 };
 
 SVTFImageFormatInfo const &CVTFFile::GetImageFormatInfo(VTFImageFormat ImageFormat)
@@ -3161,6 +3164,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 	case IMAGE_FORMAT_DXT1:
 	case IMAGE_FORMAT_DXT1_ONEBITALPHA:
 	case IMAGE_FORMAT_ATI1N:
+	case IMAGE_FORMAT_BC4:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -3173,6 +3177,7 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 	case IMAGE_FORMAT_ATI2N:
 	case IMAGE_FORMAT_BC7:
 	case IMAGE_FORMAT_BC6H:
+	case IMAGE_FORMAT_BC5:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -3687,8 +3692,8 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	 16,  2, 16,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST24},
 	{	 32,  4,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NV_NULL},
-	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI1N},
-	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI2N}/*,
+	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI2N},
+	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI1N}/*,
 	{	 16,  2, 16,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24},
 	{	 24,  3,  0,  0,  0,  0,	-1, -1, -1, -1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24F},
@@ -3734,7 +3739,9 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 68
 	{	  8,  1,  8,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_R8},
 	{	  8,  0,  0,  0,  0,  8,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC7},
-	{	  8,  0, 16, 16, 16,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC6H}
+	{	  8,  0, 16, 16, 16,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC6H},
+	{	  4,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC4},
+	{	  8,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC5}
 };
 
 // Get each channels shift and mask (for encoding and decoding).

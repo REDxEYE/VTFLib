@@ -39,7 +39,9 @@ namespace VTFEdit
 		IMAGE_FORMAT_R8,
 		IMAGE_FORMAT_BC6H,
 		IMAGE_FORMAT_ATI1N,
-		IMAGE_FORMAT_ATI2N
+		IMAGE_FORMAT_ATI2N,
+		IMAGE_FORMAT_BC4,
+		IMAGE_FORMAT_BC5
 	};
 
 	const char *const NormalImageFormatNames[NormalImageFormatCount] =
@@ -59,8 +61,10 @@ namespace VTFEdit
 		"UVLX8888", 
 		"R8",
 		"BC6H",
-		"BC4 (ATI1N)",
-		"BC5 (ATI2N)"
+		"ATI1N",
+		"ATI2N",
+		"BC4",
+		"BC5"
 	};
 
 	const VTFImageFormat AlphaImageFormats[AlphaImageFormatCount] =
