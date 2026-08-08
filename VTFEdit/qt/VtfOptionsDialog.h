@@ -83,6 +83,11 @@ namespace VTFEdit
 		QCheckBox *m_pStripAlpha;
 		QCheckBox *m_pSrgb;
 
+		QCheckBox *m_pDistanceAlpha;
+		QDoubleSpinBox *m_pDistanceAlphaSpread;
+		QComboBox *m_pDistanceAlphaReduce;
+		QSpinBox *m_pDistanceAlphaThreshold;
+
 		QCheckBox *m_pGammaCorrection;
 		QDoubleSpinBox *m_pGammaCorrectionValue;
 

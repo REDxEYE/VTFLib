@@ -1987,6 +1987,12 @@ namespace VTFEdit
 			ilBindImage(uiImage);
 		}
 
+		if(!bError && m_Options.DistanceAlpha && !vImageData.empty())
+		{
+			VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, m_Options);
+			bHasAlpha = true;
+		}
+
 		if(!bError)
 		{
 			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
@@ -2444,8 +2450,8 @@ namespace VTFEdit
 
 		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
 
-		const vlUInt uiWidth = static_cast<vlUInt>(Source.width());
-		const vlUInt uiHeight = static_cast<vlUInt>(Source.height());
+		vlUInt uiWidth = static_cast<vlUInt>(Source.width());
+		vlUInt uiHeight = static_cast<vlUInt>(Source.height());
 
 		vlByte *lpImageData = new vlByte[static_cast<size_t>(uiWidth) * uiHeight * 4];
 		for(vlUInt j = 0; j < uiHeight; j++)
@@ -2454,12 +2460,20 @@ namespace VTFEdit
 				Source.constScanLine(static_cast<int>(j)), static_cast<size_t>(uiWidth) * 4);
 		}
 
-		const bool bHasAlpha = !m_Options.StripAlpha
+		bool bHasAlpha = !m_Options.StripAlpha
 			&& VtfFileUtility::HasAlphaData(lpImageData, uiWidth, uiHeight);
 
-		createFromImages(std::vector<vlByte *>{ lpImageData }, uiWidth, uiHeight, bHasAlpha);
+		std::vector<vlByte *> vImageData{ lpImageData };
 
-		delete[] lpImageData;
+		if(m_Options.DistanceAlpha)
+		{
+			VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, m_Options);
+			bHasAlpha = true;
+		}
+
+		createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
+
+		delete[] vImageData[0];
 	}
 
 	void MainWindow::onChannelChanged()
@@ -3016,6 +3030,14 @@ namespace VTFEdit
 				m_Options.StripAlpha = toBool(sVal);
 			else if(sArg.compare(QLatin1String("VTFOptions.sRGB"), Qt::CaseInsensitive) == 0)
 				m_Options.sRGB = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlpha"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlpha = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaSpread"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaSpread = sVal.toFloat();
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaReduce"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaReduce = sVal.toUInt();
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaThreshold"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaThreshold = sVal.toUInt();
 
 			else if(sArg.compare(QLatin1String("VTFOptions.Resize"), Qt::CaseInsensitive) == 0)
 				m_Options.ResizeImage = toBool(sVal);
@@ -3169,6 +3191,10 @@ namespace VTFEdit
 		Stream << "VTFOptions.FlagPointSample = " << boolText(m_Options.FlagPointSample != vlFalse) << "\n";
 		Stream << "VTFOptions.StripAlpha = " << boolText(m_Options.StripAlpha != vlFalse) << "\n";
 		Stream << "VTFOptions.sRGB = " << boolText(m_Options.sRGB != vlFalse) << "\n";
+		Stream << "VTFOptions.DistanceAlpha = " << boolText(m_Options.DistanceAlpha != vlFalse) << "\n";
+		Stream << "VTFOptions.DistanceAlphaSpread = " << m_Options.DistanceAlphaSpread << "\n";
+		Stream << "VTFOptions.DistanceAlphaReduce = " << m_Options.DistanceAlphaReduce << "\n";
+		Stream << "VTFOptions.DistanceAlphaThreshold = " << m_Options.DistanceAlphaThreshold << "\n";
 
 		Stream << "VTFOptions.Resize = " << boolText(m_Options.ResizeImage != vlFalse) << "\n";
 		Stream << "VTFOptions.ResizeMethod = " << static_cast<int>(m_Options.ResizeMethod) << "\n";

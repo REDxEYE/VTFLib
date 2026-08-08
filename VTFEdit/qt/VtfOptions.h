@@ -76,6 +76,11 @@ namespace VTFEdit
 		vlBool StripAlpha;
 		vlBool sRGB;
 
+		vlBool DistanceAlpha;
+		vlSingle DistanceAlphaSpread;
+		vlUInt DistanceAlphaReduce;
+		vlUInt DistanceAlphaThreshold;
+
 		vlBool CorrectGamma;
 		vlSingle GammaCorrection;
 

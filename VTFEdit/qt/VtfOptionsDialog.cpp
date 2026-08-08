@@ -110,6 +110,7 @@ namespace VTFEdit
 		connect(m_pResizeClamp, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pMipmaps, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pGammaCorrection, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pDistanceAlpha, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pCreateLODControlResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pCreateInformationResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pTextureType, &QComboBox::currentIndexChanged, this, &VtfOptionsDialog::updateEnabledState);
@@ -241,11 +242,38 @@ namespace VTFEdit
 		pMiscLayout->addWidget(m_pStripAlpha);
 		pMiscLayout->addWidget(m_pSrgb);
 
+		QGroupBox *pDistanceAlpha = new QGroupBox(tr("Distance Alpha:"), pTab);
+		QFormLayout *pDistanceAlphaForm = new QFormLayout(pDistanceAlpha);
+		m_pDistanceAlpha = new QCheckBox(tr("Encode alpha as a distance field"), pDistanceAlpha);
+		m_pDistanceAlpha->setToolTip(tr("Replaces the alpha channel with a signed distance field, for use with $distancealpha. "
+			"Mipmaps and compression should usually be disabled."));
+		m_pDistanceAlphaSpread = new QDoubleSpinBox(pDistanceAlpha);
+		m_pDistanceAlphaSpread->setDecimals(1);
+		m_pDistanceAlphaSpread->setSingleStep(0.5);
+		m_pDistanceAlphaSpread->setRange(0.1, 64.0);
+		m_pDistanceAlphaSpread->setToolTip(tr("Width in pixels of the gradient either side of the edge."));
+		m_pDistanceAlphaReduce = new QComboBox(pDistanceAlpha);
+		for(int i = 0; i < 6; i++)
+		{
+			m_pDistanceAlphaReduce->addItem(QStringLiteral("1/%1").arg(1 << i), 1 << i);
+		}
+		m_pDistanceAlphaReduce->setToolTip(tr("Shrinks the image after the distance field has been computed "
+			"at the source resolution."));
+		pDistanceAlphaForm->addRow(m_pDistanceAlpha);
+		pDistanceAlphaForm->addRow(tr("Spread:"), m_pDistanceAlphaSpread);
+		m_pDistanceAlphaThreshold = new QSpinBox(pDistanceAlpha);
+		m_pDistanceAlphaThreshold->setRange(0, 255);
+		m_pDistanceAlphaThreshold->setToolTip(tr("Source alpha above which a pixel counts as being inside "
+			"the shape. Raise this for soft or anti-aliased edges."));
+		pDistanceAlphaForm->addRow(tr("Scale:"), m_pDistanceAlphaReduce);
+		pDistanceAlphaForm->addRow(tr("Threshold:"), m_pDistanceAlphaThreshold);
+
 		QGroupBox *pAdvancedOptions = new QGroupBox(tr("Advanced Options:"), pTab);
 		QVBoxLayout *pAdvancedLayout = new QVBoxLayout(pAdvancedOptions);
 		pAdvancedLayout->addWidget(pVersion);
 		pAdvancedLayout->addWidget(pGamma);
 		pAdvancedLayout->addWidget(pMisc);
+		pAdvancedLayout->addWidget(pDistanceAlpha);
 
 		QGroupBox *pLuminance = new QGroupBox(tr("Luminance Weights:"), pTab);
 		QFormLayout *pLuminanceForm = new QFormLayout(pLuminance);
@@ -350,6 +378,10 @@ namespace VTFEdit
 
 		m_pGammaCorrectionValue->setEnabled(m_pGammaCorrection->isChecked());
 
+		m_pDistanceAlphaSpread->setEnabled(m_pDistanceAlpha->isChecked());
+		m_pDistanceAlphaReduce->setEnabled(m_pDistanceAlpha->isChecked());
+		m_pDistanceAlphaThreshold->setEnabled(m_pDistanceAlpha->isChecked());
+
 		m_pLODControlClampU->setEnabled(m_pCreateLODControlResource->isChecked());
 		m_pLODControlClampV->setEnabled(m_pCreateLODControlResource->isChecked());
 
@@ -430,6 +462,12 @@ namespace VTFEdit
 		m_pStripAlpha->setChecked(m_pOptions->StripAlpha != vlFalse);
 		m_pSrgb->setChecked(m_pOptions->sRGB != vlFalse);
 
+		m_pDistanceAlpha->setChecked(m_pOptions->DistanceAlpha != vlFalse);
+		m_pDistanceAlphaSpread->setValue(m_pOptions->DistanceAlphaSpread);
+		const int iReduceIndex = m_pDistanceAlphaReduce->findData(static_cast<int>(m_pOptions->DistanceAlphaReduce));
+		m_pDistanceAlphaReduce->setCurrentIndex(iReduceIndex >= 0 ? iReduceIndex : 0);
+		m_pDistanceAlphaThreshold->setValue(static_cast<int>(m_pOptions->DistanceAlphaThreshold));
+
 		m_pGammaCorrection->setChecked(m_pOptions->CorrectGamma != vlFalse);
 		m_pGammaCorrectionValue->setValue(m_pOptions->GammaCorrection);
 
@@ -496,6 +534,11 @@ namespace VTFEdit
 		m_pOptions->GenerateSphereMap = m_pSphereMap->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->StripAlpha = m_pStripAlpha->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->sRGB = m_pSrgb->isChecked() ? vlTrue : vlFalse;
+
+		m_pOptions->DistanceAlpha = m_pDistanceAlpha->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->DistanceAlphaSpread = static_cast<vlSingle>(m_pDistanceAlphaSpread->value());
+		m_pOptions->DistanceAlphaReduce = static_cast<vlUInt>(m_pDistanceAlphaReduce->currentData().toInt());
+		m_pOptions->DistanceAlphaThreshold = static_cast<vlUInt>(m_pDistanceAlphaThreshold->value());
 
 		m_pOptions->CorrectGamma = m_pGammaCorrection->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->GammaCorrection = static_cast<vlSingle>(m_pGammaCorrectionValue->value());

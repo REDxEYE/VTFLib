@@ -128,6 +128,7 @@
     <ClCompile Include="..\..\..\VTFLib\VMTStringNode.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VMTValueNode.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VMTWrapper.cpp" />
+    <ClCompile Include="..\..\..\VTFLib\VTFDistanceAlpha.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFFile.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFLib.cpp" />
     <ClCompile Include="..\..\..\VTFLib\VTFMathlib.cpp" />

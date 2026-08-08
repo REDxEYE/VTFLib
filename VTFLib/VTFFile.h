@@ -733,6 +733,22 @@ namespace VTFLib
 		*/
 		static vlBool Resize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB);
 
+		//! Converts an image's alpha channel into a signed distance field.
+		/*!
+
+			\param lpSourceRGBA8888 is a pointer to the source image data in RGBA8888 format.
+			\param lpDestRGBA8888 is a pointer to the buffer for the converted data.
+			\param uiSourceWidth is the width of the source image in pixels.
+			\param uiSourceHeight is the height of the source image in pixels.
+			\param uiDestWidth is the width of the destination image in pixels.
+			\param uiDestHeight is the height of the destination image in pixels.
+			\param sSpread is the width in destination pixels of the gradient either side of the boundary.
+			\param bThreshold is the source alpha above which a pixel is inside the shape.
+			\param pbClipped optionally receives true if the field ran off the edge of the image and had to be clipped, which loses information.
+			\return true on sucessful conversion, otherwise false.
+		*/
+		static vlBool ConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped);
+
 	private:
 		
 		// DXTn format decompression function

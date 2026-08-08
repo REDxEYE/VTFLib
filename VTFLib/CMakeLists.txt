@@ -16,6 +16,7 @@ add_library(vtflib SHARED
 	VMTStringNode.cpp
 	VMTValueNode.cpp
 	VMTWrapper.cpp
+	VTFDistanceAlpha.cpp
 	VTFFile.cpp
 	VTFLib.cpp
 	VTFMathlib.cpp

@@ -338,6 +338,12 @@ namespace VTFEdit
 					// Leave the base image bound for the next file.
 					ilBindImage(uiImage);
 
+					if(!bError && !vImageData.empty() && m_pOptions->DistanceAlpha)
+					{
+						VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, *m_pOptions);
+						bHasAlpha = true;
+					}
+
 					if(!bError && !vImageData.empty())
 					{
 						VTFCreateOptions.ImageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;

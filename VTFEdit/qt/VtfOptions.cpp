@@ -132,6 +132,11 @@ namespace VTFEdit
 		StripAlpha = vlFalse;
 		sRGB = vlTrue;
 
+		DistanceAlpha = vlFalse;
+		DistanceAlphaSpread = 1.0f;
+		DistanceAlphaReduce = 1;
+		DistanceAlphaThreshold = 10;
+
 		CorrectGamma = vlFalse;
 		GammaCorrection = 2.2f;
 
