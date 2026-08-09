@@ -17,11 +17,7 @@
 #include "VTFDXTn.h"
 #include "VTFMathlib.h"
 
-#ifdef WIN32
-#include "Compressonator.h"
-#else
 #include "compressonator.h"
-#endif
 
 #include "miniz.h"
 #include "zstd.h"
