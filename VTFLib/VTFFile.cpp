@@ -30,7 +30,10 @@
 #include "stb_image_resize.h"
 
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
+
+#undef min
+#undef max
 
 using namespace VTFLib;
 
