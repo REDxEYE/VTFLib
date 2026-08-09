@@ -83,3 +83,21 @@ set_target_properties(
         PROPERTIES
             POSITION_INDEPENDENT_CODE ON
 )
+
+if(MSVC)
+    foreach(target
+            CMP_Compressonator
+            CMP_Core
+            CMP_Core_SSE
+            CMP_Core_AVX
+            CMP_Core_AVX512
+    )
+        if(TARGET ${target})
+            set_property(
+                    TARGET ${target}
+                    PROPERTY MSVC_RUNTIME_LIBRARY
+                    "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+            )
+        endif()
+    endforeach()
+endif()
