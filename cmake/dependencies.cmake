@@ -37,7 +37,16 @@ FetchContent_Declare(
 
 )
 
-FetchContent_MakeAvailable(DevIL)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(devil)
+
+target_include_directories(IL PUBLIC
+        "${devil_SOURCE_DIR}/DevIL/include"
+)
+
+if(WIN32)
+    target_compile_definitions(IL PUBLIC IL_STATIC_LIB)
+endif()
 
 FetchContent_Declare(
         miniz
