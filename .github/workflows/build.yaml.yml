@@ -58,9 +58,11 @@ jobs:
             -opensource `
             -confirm-license `
             -nomake examples `
-            -nomake tests
-
-          cmake --build . --parallel
+            -nomake tests `
+            -- `
+            -G Ninja
+          
+          cmake --build . --parallel $env:NUMBER_OF_PROCESSORS
           cmake --install .
 
       - name: Configure
