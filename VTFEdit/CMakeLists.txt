@@ -64,7 +64,7 @@ target_compile_definitions(vtfedit PRIVATE
 )
 
 target_link_libraries(vtfedit PRIVATE
-	vtflib
+	vtflib_static
 	IL
 	Qt6::Core
 	Qt6::Widgets

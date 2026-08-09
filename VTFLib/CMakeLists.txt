@@ -75,7 +75,9 @@ target_compile_definitions(vtflib_obj
 		_CRT_NONSTDC_NO_DEPRECATE
 		$<$<NOT:$<CONFIG:Debug>>:_USE_RTM_VERSION>
 )
-
+target_compile_definitions(vtflib_static
+		INTERFACE VTFLIB_STATIC
+)
 
 
 target_include_directories(vtflib_obj PRIVATE ${VTFLIB_THIRDPARTY}/include ${VTFLIB_THIRDPARTY}/miniz)

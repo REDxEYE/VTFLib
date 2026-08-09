@@ -23,15 +23,15 @@
 #include <cstdint>
 
 #if defined(_WIN32)
-#	ifdef VTFLIB_EXPORTS
+#	if defined(VTFLIB_STATIC)
+#		define VTFLIB_API
+#	elif defined(VTFLIB_EXPORTS)
 #		define VTFLIB_API __declspec(dllexport)
 #	else
 #		define VTFLIB_API __declspec(dllimport)
 #	endif
-#elif defined(__GNUC__) || defined(__clang__)
-#	define VTFLIB_API __attribute__((visibility("default")))
 #else
-#	define VTFLIB_API
+#	define VTFLIB_API __attribute__((visibility("default")))
 #endif
 
 // Custom data types
