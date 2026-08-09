@@ -51,6 +51,11 @@ vlUInt uiParameterCount = 0;
 vlChar *lpParameters[MAX_ITEMS][2];					// VMT parameters.
 vlChar *lpExportFormat = "tga";						// Format extension for exporting VTF images.
 
+vlBool bDistanceAlpha = vlFalse;					// Encode the alpha channel as a distance field.
+vlSingle sDistanceAlphaSpread = 1.0f;				// Width of the distance field gradient in output pixels.
+vlUInt uiDistanceAlphaReduce = 1;					// Amount to shrink the image by after computing the field.
+vlByte bDistanceAlphaThreshold = 10;				// Source alpha above which a pixel is inside the shape.
+
 void Pause();
 void Print(const vlChar *lpFormat, ...);
 void PrintUsage(const vlChar *lpError, ...);
@@ -481,6 +486,46 @@ int main(int argc, char* argv[])
 					return 2;
 				}
 			}
+			else if(stricmp(argv[i], "-distancealpha") == 0)
+			{
+				bDistanceAlpha = vlTrue;
+			}
+			else if(stricmp(argv[i], "-dspread") == 0)
+			{
+				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1 && sTemp > 0.0f)
+				{
+					sDistanceAlphaSpread = sTemp;
+				}
+				else
+				{
+					PrintUsage("-dspread expects a positive single argument.");
+					return 2;
+				}
+			}
+			else if(stricmp(argv[i], "-dreduce") == 0)
+			{
+				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 >= 1)
+				{
+					uiDistanceAlphaReduce = uiTemp0;
+				}
+				else
+				{
+					PrintUsage("-dreduce expects an unsigned integer argument of 1 or more.");
+					return 2;
+				}
+			}
+			else if(stricmp(argv[i], "-dthreshold") == 0)
+			{
+				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 <= 255)
+				{
+					bDistanceAlphaThreshold = (vlByte)uiTemp0;
+				}
+				else
+				{
+					PrintUsage("-dthreshold expects an unsigned integer argument between 0 and 255.");
+					return 2;
+				}
+			}
 			else if(stricmp(argv[i], "-nomipmaps") == 0)
 			{
 				CreateOptions.bMipmaps = vlFalse;
@@ -719,6 +764,10 @@ void PrintUsage(const vlChar *lpError, ...)
 	Print(" -rclampheight <integer>  (Maximum height to resize to.)\n");
 	Print(" -gamma                   (Gamma correct image.)\n");
 	Print(" -gcorrection <single>    (Gamma correction to use.)\n");
+	Print(" -distancealpha           (Encode the alpha channel as a distance field.)\n");
+	Print(" -dspread <single>        (Width of the distance field gradient in output pixels.)\n");
+	Print(" -dreduce <integer>       (Shrink the image by this factor after computing the field.)\n");
+	Print(" -dthreshold <integer>    (Source alpha above which a pixel is inside the shape.)\n");
 	Print(" -nomipmaps               (Don't generate mipmaps.)\n");
 	Print(" -mfilter <string>        (Mipmap filter to use.)\n");
 	Print(" -bumpscale <single>      (Engine bump mapping scale to use.)\n");
@@ -765,7 +814,7 @@ void PrintUsage(const vlChar *lpError, ...)
 		Print("         CLAMPU, VERTEXTEXTURE, SSBUMP, BORDER");
 
 		Print("\n");
-		Print("Resize Method:  NEAREST, BIGGEST, SMALLEST\n");
+		Print("Resize Method:  NEAREST, BIGGEST, SMALLEST, NEAREST4, BIGGEST4, SMALLEST4\n");
 
 		Print("\n");
 		Print("Resize Filter:  POINT, BOX, TRIANGLE, QUADRATIC, CUBIC, CATROM, MITCHELL\n");
@@ -883,6 +932,12 @@ void ProcessFile(vlChar *lpInputFile)
 	vlSingle sTest;					// Holds .vmt float test result.
 	vlChar cTest[4096];				// Holds .vmt string test result.
 
+	vlUInt uiImageWidth, uiImageHeight;	// Dimensions of the image being created.
+	vlByte *lpSourceData;				// Image data to create the texture from.
+	vlByte *lpDistanceData;				// Distance field data.
+	vlUInt uiDestWidth, uiDestHeight;	// Distance field dimensions.
+	vlBool bClipped;					// Was the distance field clipped?
+
 	vlSingle sR, sG, sB;			// Reflectivity.
 	vlByte *lpImageData;			// Export data.
 	VTFImageFormat DestFormat;		// Export format.
@@ -920,12 +975,61 @@ void ProcessFile(vlChar *lpInputFile)
 			return;
 		}
 
+		uiImageWidth = (vlUInt)ilGetInteger(IL_IMAGE_WIDTH);
+		uiImageHeight = (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT);
+		lpSourceData = ilGetData();
+		lpDistanceData = 0;
+
+		// Replace the alpha channel with a distance field.
+		if(bDistanceAlpha)
+		{
+			uiDestWidth = uiImageWidth / uiDistanceAlphaReduce;
+			uiDestHeight = uiImageHeight / uiDistanceAlphaReduce;
+
+			if(uiDestWidth == 0)
+				uiDestWidth = 1;
+			if(uiDestHeight == 0)
+				uiDestHeight = 1;
+
+			lpDistanceData = (vlByte *)malloc(uiDestWidth * uiDestHeight * 4);
+
+			if(lpDistanceData == 0)
+			{
+				Print("  Error allocating distance field.\n\n");
+				return;
+			}
+
+			bClipped = vlFalse;
+
+			if(!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth, uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped))
+			{
+				Print("  Error creating distance field:\n%s\n\n", vlGetLastError());
+				free(lpDistanceData);
+				return;
+			}
+
+			if(bClipped)
+			{
+				Print("  Warning: the distance field reaches the edge of the image and has been clipped.\n");
+			}
+
+			lpSourceData = lpDistanceData;
+			uiImageWidth = uiDestWidth;
+			uiImageHeight = uiDestHeight;
+
+			// The distance field always needs an alpha channel.
+			CreateOptions.ImageFormat = AlphaFormat;
+		}
+
 		// Create vtf file.
-		if(!vlImageCreateSingle((vlUInt)ilGetInteger(IL_IMAGE_WIDTH), (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT), ilGetData(), &CreateOptions))
+		if(!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions))
 		{
 			Print("  Error creating vtf file:\n%s\n\n", vlGetLastError());
+			free(lpDistanceData);
 			return;
 		}
+
+		free(lpDistanceData);
 
 		CreateOutputPath(lpVTFFile, lpInputFile, "vtf");
 

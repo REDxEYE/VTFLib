@@ -21,6 +21,7 @@
 
 #include <QByteArray>
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -44,6 +45,41 @@ namespace VTFEdit
 			}
 
 			return false;
+		}
+
+		bool ApplyDistanceAlpha(std::vector<vlByte *> &vImageData, vlUInt &uiWidth, vlUInt &uiHeight, const VtfOptions &Options)
+		{
+			if(vImageData.empty() || uiWidth == 0 || uiHeight == 0)
+			{
+				return true;
+			}
+
+			const vlUInt uiReduce = std::max(1u, Options.DistanceAlphaReduce);
+			const vlUInt uiDestWidth = std::max(1u, uiWidth / uiReduce);
+			const vlUInt uiDestHeight = std::max(1u, uiHeight / uiReduce);
+			const vlByte bThreshold = static_cast<vlByte>(std::min(255u, Options.DistanceAlphaThreshold));
+
+			bool bWithinEdges = true;
+
+			for(vlByte *&lpFrameData : vImageData)
+			{
+				const size_t uiDestSize = static_cast<size_t>( uiDestWidth ) * uiDestHeight * 4;
+				vlByte *lpDestData = new vlByte[uiDestSize];
+
+				vlBool bClipped = vlFalse;
+				VTFLib::CVTFFile::ConvertToDistanceField(lpFrameData, lpDestData, uiWidth, uiHeight,
+					uiDestWidth, uiDestHeight, Options.DistanceAlphaSpread, bThreshold, &bClipped);
+
+				bWithinEdges = bWithinEdges && bClipped == vlFalse;
+
+				delete[] lpFrameData;
+				lpFrameData = lpDestData;
+			}
+
+			uiWidth = uiDestWidth;
+			uiHeight = uiDestHeight;
+
+			return bWithinEdges;
 		}
 
 		SVTFCreateOptions GetCreateOptions(const VtfOptions &Options)

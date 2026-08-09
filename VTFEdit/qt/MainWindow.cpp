@@ -22,6 +22,7 @@
 #include "AboutDialog.h"
 #include "BatchConvertDialog.h"
 #include "ImageView.h"
+#include "SheetDialog.h"
 #include "VmtCreateDialog.h"
 #include "VmtEditorOptionsDialog.h"
 #include "VmtFileUtility.h"
@@ -33,6 +34,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QDragEnterEvent>
@@ -41,6 +43,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QKeyEvent>
 #include <QLabel>
@@ -158,6 +161,7 @@ namespace VTFEdit
 		, m_bImagePanning(false)
 		, m_bUpdatingVtfFile(false)
 		, m_bUpdatingFlags(false)
+		, m_bUpdatingFileInfo(false)
 		, m_bHdrResetting(false)
 		, m_iMaximumRecentFiles(8)
 		, m_pOptionsDialog(nullptr)
@@ -232,12 +236,16 @@ namespace VTFEdit
 		connect(m_pSaveAllAction, &QAction::triggered, this, &MainWindow::onSaveAll);
 
 		m_pCloseAction = new QAction(tr("&Close"), this);
-		m_pCloseAction->setShortcut(QKeySequence::Close);
+		m_pCloseAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
 		connect(m_pCloseAction, &QAction::triggered, this, &MainWindow::onClose);
 
 		m_pCloseAllAction = new QAction(tr("Close A&ll"), this);
 		m_pCloseAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
 		connect(m_pCloseAllAction, &QAction::triggered, this, &MainWindow::onCloseAll);
+
+		m_pReopenRecentAction = new QAction(tr("&Reopen Recent File"), this);
+		m_pReopenRecentAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
+		connect(m_pReopenRecentAction, &QAction::triggered, this, &MainWindow::onReopenRecent);
 
 		m_pNextTabAction = new QAction(tr("&Next Tab"), this);
 		m_pNextTabAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab));
@@ -248,6 +256,18 @@ namespace VTFEdit
 		m_pPreviousTabAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab));
 		connect(m_pPreviousTabAction, &QAction::triggered, this, &MainWindow::onPreviousTab);
 		addAction(m_pPreviousTabAction);
+
+		// Ctrl+1 through Ctrl+8 select a tab by position
+		// Ctrl+9 selects the last tab
+		for(int i = 0; i < 9; i++)
+		{
+			m_pTabIndexActions[i] = new QAction(this);
+			m_pTabIndexActions[i]->setShortcut(QKeySequence(Qt::CTRL | (Qt::Key_1 + i)));
+			const int iIndex = i == 8 ? -1 : i;
+			connect(m_pTabIndexActions[i], &QAction::triggered, this,
+				[this, iIndex]() { switchToTab(iIndex); });
+			addAction(m_pTabIndexActions[i]);
+		}
 
 		m_pImportAction = new QAction(tr("&Import"), this);
 		m_pImportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
@@ -348,6 +368,7 @@ namespace VTFEdit
 		pFileMenu->addAction(m_pExportAllAction);
 		pFileMenu->addSeparator();
 		m_pRecentFilesMenu = pFileMenu->addMenu(tr("&Recent Files"));
+		pFileMenu->addAction(m_pReopenRecentAction);
 		pFileMenu->addSeparator();
 		pFileMenu->addAction(m_pExitAction);
 
@@ -593,7 +614,16 @@ namespace VTFEdit
 
 		QGroupBox *pFileInfo = new QGroupBox(tr("File Info:"), pTab);
 		QFormLayout *pFileForm = new QFormLayout(pFileInfo);
-		m_pFileVersion = addInfoRow(pFileForm, tr("Version:"));
+		m_pFileVersion = new QComboBox(pFileInfo);
+		for(vlUInt uiMinor = 0; uiMinor <= VTF_MINOR_VERSION; uiMinor++)
+		{
+			m_pFileVersion->addItem(QStringLiteral("%1.%2").arg(VTF_MAJOR_VERSION).arg(uiMinor), uiMinor);
+		}
+		m_pFileVersion->setToolTip(tr("Change the version of the VTF file format this texture is "
+			"written as.  The encoded image data is carried over unchanged."));
+		connect(m_pFileVersion, &QComboBox::currentIndexChanged, this, &MainWindow::onFileVersionChanged);
+		pFileForm->addRow(tr("Version:"), m_pFileVersion);
+
 		m_pFileSize = addInfoRow(pFileForm, tr("Size:"));
 		m_pFileCompression = addInfoRow(pFileForm, tr("Compression:"));
 
@@ -652,8 +682,20 @@ namespace VTFEdit
 		m_pResources->setColumnCount(1);
 		pResourcesLayout->addWidget(m_pResources);
 
+		QGroupBox *pSheet = new QGroupBox(tr("Sprite Sheet:"), pTab);
+		QHBoxLayout *pSheetLayout = new QHBoxLayout(pSheet);
+
+		m_pEditSheetButton = new QPushButton(tr("&Create..."), pSheet);
+		connect(m_pEditSheetButton, &QPushButton::clicked, this, &MainWindow::onEditSheet);
+		pSheetLayout->addWidget(m_pEditSheetButton);
+
+		m_pRemoveSheetButton = new QPushButton(tr("&Remove"), pSheet);
+		connect(m_pRemoveSheetButton, &QPushButton::clicked, this, &MainWindow::onRemoveSheet);
+		pSheetLayout->addWidget(m_pRemoveSheetButton);
+
 		pLayout->addWidget(pResourceInfo);
 		pLayout->addWidget(pResources, 1);
+		pLayout->addWidget(pSheet);
 
 		return pTab;
 	}
@@ -781,7 +823,7 @@ namespace VTFEdit
 
 		vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
 		m_pVTFFile->ConvertToRGBA8888(m_pVTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap),
-			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 		m_fEffectiveImageScale = fScale;
 
@@ -891,24 +933,7 @@ namespace VTFEdit
 		}
 		m_bUpdatingFlags = false;
 
-		m_pFileVersion->setText(QStringLiteral("%1.%2")
-			.arg(pVTFFile->GetMajorVersion()).arg(pVTFFile->GetMinorVersion()));
-		m_pFileSize->setText(tr("%1 KB").arg(
-			QLocale().toString(static_cast<double>(pVTFFile->GetSize()) / 1024.0, 'f', 3)));
-
-		const vlShort sAuxCompressionLevel = pVTFFile->GetAuxCompressionLevel();
-		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
-		{
-			m_pFileCompression->setText(tr("None"));
-		}
-		else
-		{
-			const QString sMethod = pVTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD
-				? tr("Zstandard") : tr("Deflate");
-			m_pFileCompression->setText(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
-				? sMethod
-				: QStringLiteral("%1 (%2)").arg(sMethod).arg(sAuxCompressionLevel));
-		}
+		updateFileInfo();
 
 		m_pImageWidth->setText(QString::number(pVTFFile->GetWidth()));
 		m_pImageHeight->setText(QString::number(pVTFFile->GetHeight()));
@@ -933,82 +958,7 @@ namespace VTFEdit
 		m_pThumbnailHeight->setText(QString::number(pVTFFile->GetThumbnailHeight()));
 		m_pThumbnailFormat->setText(imageFormatString(pVTFFile->GetThumbnailFormat()));
 
-		m_pResourceCount->setText(QString::number(pVTFFile->GetResourceCount()));
-
-		m_pResources->clear();
-		for(vlUInt i = 0; i < pVTFFile->GetResourceCount(); i++)
-		{
-			const vlUInt uiResource = pVTFFile->GetResourceType(i);
-
-			QString sName;
-			switch(uiResource)
-			{
-			case VTF_LEGACY_RSRC_LOW_RES_IMAGE:		sName = tr("Thumbnail Image"); break;
-			case VTF_LEGACY_RSRC_IMAGE:				sName = tr("Image"); break;
-			case VTF_RSRC_SHEET:					sName = tr("Sheet"); break;
-			case VTF_RSRC_CRC:						sName = tr("Cyclic Redundancy Check"); break;
-			case VTF_RSRC_TEXTURE_LOD_SETTINGS:		sName = tr("LOD Settings"); break;
-			case VTF_RSRC_TEXTURE_SETTINGS_EX:		sName = tr("Extended Texture Settings"); break;
-			case VTF_RSRC_KEY_VALUE_DATA:			sName = tr("Key/Value Data"); break;
-			default:								sName = tr("Unknown"); break;
-			}
-
-			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
-
-			vlUInt uiSize = 0;
-			vlVoid *lpData = pVTFFile->GetResourceData(uiResource, uiSize);
-
-			switch(uiResource)
-			{
-			case VTF_RSRC_CRC:
-				if(lpData != nullptr)
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
-				}
-				break;
-
-			case VTF_RSRC_TEXTURE_LOD_SETTINGS:
-				if(lpData && uiSize == sizeof(SVTFTextureLODControlResource))
-				{
-					const SVTFTextureLODControlResource *pLODControl =
-						static_cast<SVTFTextureLODControlResource *>(lpData);
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
-					break;
-				}
-				[[fallthrough]];
-
-			case VTF_RSRC_KEY_VALUE_DATA:
-				if(lpData && uiSize)
-				{
-					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
-
-					if(pVMTFile->Load(lpData, uiSize))
-					{
-						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
-						setResourceInformation(pItem, pVMTFile->GetRoot());
-					}
-
-					delete pVMTFile;
-				}
-				[[fallthrough]];
-
-			default:
-				if(lpData && uiSize == sizeof(vlUInt))
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
-				}
-				else
-				{
-					new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
-				}
-				break;
-			}
-
-			pItem->setExpanded(true);
-		}
+		updateResourceList();
 
 		m_bSwitchingDocument = bWasSwitching;
 
@@ -1078,6 +1028,239 @@ namespace VTFEdit
 		}
 	}
 
+	void MainWindow::updateFileInfo()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		m_bUpdatingFileInfo = true;
+		m_pFileVersion->setCurrentIndex(m_pFileVersion->findData(m_pVTFFile->GetMinorVersion()));
+		m_bUpdatingFileInfo = false;
+
+		m_pFileSize->setText(tr("%1 KB").arg(
+			QLocale().toString(static_cast<double>(m_pVTFFile->GetSize()) / 1024.0, 'f', 3)));
+
+		const vlShort sAuxCompressionLevel = m_pVTFFile->GetAuxCompressionLevel();
+		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
+		{
+			m_pFileCompression->setText(tr("None"));
+		}
+		else
+		{
+			const QString sMethod = m_pVTFFile->GetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD
+				? tr("Zstandard") : tr("Deflate");
+			m_pFileCompression->setText(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_DEFAULT
+				? sMethod
+				: QStringLiteral("%1 (%2)").arg(sMethod).arg(sAuxCompressionLevel));
+		}
+	}
+
+	void MainWindow::updateResourceList()
+	{
+		if(m_pVTFFile == nullptr)
+		{
+			return;
+		}
+
+		m_pResourceCount->setText(QString::number(m_pVTFFile->GetResourceCount()));
+
+		m_pResources->clear();
+		for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+		{
+			const vlUInt uiResource = m_pVTFFile->GetResourceType(i);
+
+			QString sName;
+			switch(uiResource)
+			{
+			case VTF_LEGACY_RSRC_LOW_RES_IMAGE:		sName = tr("Thumbnail Image"); break;
+			case VTF_LEGACY_RSRC_IMAGE:				sName = tr("Image"); break;
+			case VTF_RSRC_SHEET:					sName = tr("Sheet"); break;
+			case VTF_RSRC_CRC:						sName = tr("Cyclic Redundancy Check"); break;
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:		sName = tr("LOD Settings"); break;
+			case VTF_RSRC_TEXTURE_SETTINGS_EX:		sName = tr("Extended Texture Settings"); break;
+			case VTF_RSRC_KEY_VALUE_DATA:			sName = tr("Key/Value Data"); break;
+			default:								sName = tr("Unknown"); break;
+			}
+
+			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
+
+			vlUInt uiSize = 0;
+			vlVoid *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize);
+
+			switch(uiResource)
+			{
+			case VTF_RSRC_SHEET:
+			{
+				SheetFile Sheet;
+				if(lpData && uiSize && Sheet.load(lpData, uiSize))
+				{
+					for(const SheetSequence &Sequence : Sheet.sequences())
+					{
+						float fDuration = 0.0f;
+						for(const SheetFrame &Frame : Sequence.Frames)
+						{
+							fDuration += Frame.fDuration;
+						}
+
+						new QTreeWidgetItem(pItem, QStringList(
+							tr("Sequence %1: %2 frames, %3 s, %4")
+								.arg(Sequence.iNumber)
+								.arg(Sequence.Frames.count())
+								.arg(QString::number(fDuration, 'g', 4))
+								.arg(Sequence.bClamp ? tr("clamp") : tr("loop"))));
+					}
+					break;
+				}
+
+				new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
+				break;
+			}
+
+			case VTF_RSRC_CRC:
+				if(lpData != nullptr)
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				break;
+
+			case VTF_RSRC_TEXTURE_LOD_SETTINGS:
+				if(lpData && uiSize == sizeof(SVTFTextureLODControlResource))
+				{
+					const SVTFTextureLODControlResource *pLODControl =
+						static_cast<SVTFTextureLODControlResource *>(lpData);
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
+					break;
+				}
+				[[fallthrough]];
+
+			case VTF_RSRC_KEY_VALUE_DATA:
+				if(lpData && uiSize)
+				{
+					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
+
+					if(pVMTFile->Load(lpData, uiSize))
+					{
+						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
+						setResourceInformation(pItem, pVMTFile->GetRoot());
+					}
+
+					delete pVMTFile;
+				}
+				[[fallthrough]];
+
+			default:
+				if(lpData && uiSize == sizeof(vlUInt))
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
+						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+				}
+				else
+				{
+					new QTreeWidgetItem(pItem, QStringList(tr("Size: %1 B").arg(QLocale().toString(uiSize))));
+				}
+				break;
+			}
+
+			pItem->setExpanded(true);
+		}
+
+		updateSheetActions();
+	}
+
+	void MainWindow::updateSheetActions()
+	{
+		const bool bSupported = m_pVTFFile != nullptr && m_pVTFFile->GetSupportsResources();
+
+		vlUInt uiSize = 0;
+		const bool bHasSheet = bSupported && m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize) != nullptr;
+
+		m_pEditSheetButton->setEnabled(bSupported);
+		m_pEditSheetButton->setText(bHasSheet ? tr("&Edit...") : tr("&Create..."));
+		m_pRemoveSheetButton->setEnabled(bHasSheet);
+
+		m_pEditSheetButton->setToolTip(bSupported
+			? tr("Edit the sprite sheet (.sht) resource attached to this texture.")
+			: tr("Sprite sheets require a version 7.3 or newer texture."));
+	}
+
+	void MainWindow::onEditSheet()
+	{
+		if(m_pVTFFile == nullptr || !m_pVTFFile->GetSupportsResources())
+		{
+			return;
+		}
+
+		SheetFile Sheet;
+
+		vlUInt uiSize = 0;
+		if(vlVoid *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize))
+		{
+			if(uiSize && !Sheet.load(lpData, uiSize))
+			{
+				if(QMessageBox::question(this, QApplication::applicationName(),
+					tr("The sprite sheet resource could not be read. Replace it?"),
+					QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+				{
+					return;
+				}
+			}
+		}
+
+		SheetDialog Dialog(Sheet, m_pImageView->image(),
+			static_cast<int>(m_pVTFFile->GetWidth()), static_cast<int>(m_pVTFFile->GetHeight()), this);
+
+		if(Dialog.exec() != QDialog::Accepted)
+		{
+			return;
+		}
+
+		const SheetFile &NewSheet = Dialog.sheet();
+
+		if(NewSheet.isEmpty())
+		{
+			m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+		}
+		else
+		{
+			QByteArray Data = NewSheet.save();
+			if(m_pVTFFile->SetResourceData(VTF_RSRC_SHEET,
+				static_cast<vlUInt>(Data.size()), Data.data()) == nullptr)
+			{
+				QMessageBox::critical(this, QApplication::applicationName(),
+					tr("Failed to write the sprite sheet resource:\n%1")
+						.arg(QString::fromLatin1(vlGetLastError())));
+				return;
+			}
+		}
+
+		updateResourceList();
+		onVtfPropertyChanged();
+	}
+
+	void MainWindow::onRemoveSheet()
+	{
+		if(m_pVTFFile == nullptr || !m_pVTFFile->GetSupportsResources())
+		{
+			return;
+		}
+
+		if(QMessageBox::question(this, QApplication::applicationName(),
+			tr("Remove the sprite sheet resource from this texture?"),
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		{
+			return;
+		}
+
+		m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+
+		updateResourceList();
+		onVtfPropertyChanged();
+	}
+
 	bool MainWindow::getVtfFile()
 	{
 		if(m_pVTFFile == nullptr)
@@ -1092,7 +1275,12 @@ namespace VTFEdit
 				m_pFlags->item(i)->checkState() == Qt::Checked);
 		}
 
-		m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+		// below v7.5 an environment map's start frame doubles as a "no sphere map face" flag
+		// clearing it would change the face count out from under the image data
+		if(m_pVTFFile->GetStartFrame() != 0xffff)
+		{
+			m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+		}
 		m_pVTFFile->SetBumpmapScale(static_cast<vlSingle>(m_pImageBumpmapScale->value()));
 
 		return true;
@@ -1312,7 +1500,7 @@ namespace VTFEdit
 
 	int MainWindow::addDocument(Document *pDocument)
 	{
-		if(pDocument->sFileName.isEmpty())
+		if(pDocument->sFileName.isEmpty() && pDocument->sUntitledName.isEmpty())
 		{
 			pDocument->sUntitledName = tr("Untitled %1").arg(++m_iUntitledCounter);
 		}
@@ -1733,15 +1921,18 @@ namespace VTFEdit
 
 		QString sFileName;
 
+		const QString &sDefault = pDocument->sFileName.isEmpty()
+			? pDocument->sSuggestedFileName : pDocument->sFileName;
+
 		if(pDocument->pVTFFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VTF File"),
-				pDocument->sFileName, tr("VTF Files (*.vtf)"));
+				sDefault, tr("VTF Files (*.vtf)"));
 		}
 		else if(pDocument->pVMTFile != nullptr)
 		{
 			sFileName = QFileDialog::getSaveFileName(this, tr("Save VMT File"),
-				pDocument->sFileName, tr("VMT Files (*.vmt)"));
+				sDefault, tr("VMT Files (*.vmt)"));
 		}
 
 		if(sFileName.isEmpty())
@@ -1832,9 +2023,16 @@ namespace VTFEdit
 			ilBindImage(uiImage);
 		}
 
+		if(!bError && m_Options.DistanceAlpha && !vImageData.empty())
+		{
+			VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, m_Options);
+			bHasAlpha = true;
+		}
+
 		if(!bError)
 		{
-			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha);
+			createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha,
+				sFileNames.isEmpty() ? QString() : sFileNames.first());
 		}
 
 		for(vlByte *lpFrameData : vImageData)
@@ -1844,7 +2042,7 @@ namespace VTFEdit
 	}
 
 	void MainWindow::createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
-		bool bHasAlpha)
+		bool bHasAlpha, const QString &sSourceFileName)
 	{
 		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
 
@@ -1869,6 +2067,15 @@ namespace VTFEdit
 		{
 			Document *pDocument = new Document();
 			pDocument->pVTFFile = pVTFFile;
+
+			// name the document after the imported image
+			if(!sSourceFileName.isEmpty())
+			{
+				const QFileInfo Info(sSourceFileName);
+
+				pDocument->sUntitledName = Info.completeBaseName() + QLatin1String(".vtf");
+				pDocument->sSuggestedFileName = Info.absoluteDir().filePath(pDocument->sUntitledName);
+			}
 
 			pDocument->bModified = true;
 
@@ -1899,7 +2106,7 @@ namespace VTFEdit
 		m_pVTFFile->ConvertToRGBA8888(
 			m_pVTFFile->GetData(static_cast<vlUInt>(m_pFrame->value()), static_cast<vlUInt>(m_pFace->value()),
 				static_cast<vlUInt>(m_pSlice->value()), static_cast<vlUInt>(m_pMipmap->value())),
-			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 		// DevIL likes image data upside down...
 		m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
@@ -1940,7 +2147,7 @@ namespace VTFEdit
 				{
 					m_pVTFFile->ConvertToRGBA8888(
 						m_pVTFFile->GetData(i, j, k, static_cast<vlUInt>(m_pMipmap->value())),
-						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetFormat());
+						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
 
 					m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
 
@@ -2119,6 +2326,21 @@ namespace VTFEdit
 		}
 	}
 
+	void MainWindow::switchToTab(int iIndex)
+	{
+		const int iCount = m_pTabBar->count();
+
+		if(iIndex < 0)
+		{
+			iIndex = iCount - 1;
+		}
+
+		if(iIndex >= 0 && iIndex < iCount)
+		{
+			m_pTabBar->setCurrentIndex(iIndex);
+		}
+	}
+
 	void MainWindow::onTabChanged(int iIndex)
 	{
 		if(iIndex == m_iCurrentDocument)
@@ -2245,6 +2467,18 @@ namespace VTFEdit
 		}
 	}
 
+	void MainWindow::onReopenRecent()
+	{
+		for(const QString &sFileName : m_RecentFiles)
+		{
+			if(indexOfFile(sFileName) < 0 && QFileInfo::exists(sFileName))
+			{
+				open(sFileName, false);
+				return;
+			}
+		}
+	}
+
 	void MainWindow::onCopy()
 	{
 		if(!m_pImageView->image().isNull())
@@ -2274,8 +2508,8 @@ namespace VTFEdit
 
 		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
 
-		const vlUInt uiWidth = static_cast<vlUInt>(Source.width());
-		const vlUInt uiHeight = static_cast<vlUInt>(Source.height());
+		vlUInt uiWidth = static_cast<vlUInt>(Source.width());
+		vlUInt uiHeight = static_cast<vlUInt>(Source.height());
 
 		vlByte *lpImageData = new vlByte[static_cast<size_t>(uiWidth) * uiHeight * 4];
 		for(vlUInt j = 0; j < uiHeight; j++)
@@ -2284,12 +2518,20 @@ namespace VTFEdit
 				Source.constScanLine(static_cast<int>(j)), static_cast<size_t>(uiWidth) * 4);
 		}
 
-		const bool bHasAlpha = !m_Options.StripAlpha
+		bool bHasAlpha = !m_Options.StripAlpha
 			&& VtfFileUtility::HasAlphaData(lpImageData, uiWidth, uiHeight);
 
-		createFromImages(std::vector<vlByte *>{ lpImageData }, uiWidth, uiHeight, bHasAlpha);
+		std::vector<vlByte *> vImageData{ lpImageData };
 
-		delete[] lpImageData;
+		if(m_Options.DistanceAlpha)
+		{
+			VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, m_Options);
+			bHasAlpha = true;
+		}
+
+		createFromImages(vImageData, uiWidth, uiHeight, bHasAlpha, QString());
+
+		delete[] vImageData[0];
 	}
 
 	void MainWindow::onChannelChanged()
@@ -2377,6 +2619,74 @@ namespace VTFEdit
 		onVtfPropertyChanged();
 	}
 
+	void MainWindow::onFileVersionChanged(int iIndex)
+	{
+		if(m_bUpdatingFileInfo || m_bSwitchingDocument || m_pVTFFile == nullptr || iIndex < 0)
+		{
+			return;
+		}
+
+		const vlUInt uiMinor = m_pFileVersion->itemData(iIndex).value<vlUInt>();
+
+		if(uiMinor == m_pVTFFile->GetMinorVersion())
+		{
+			return;
+		}
+
+		// dropping below v7.3 takes the whole resource directory with it
+		if(uiMinor < VTF_MINOR_VERSION_MIN_RESOURCE)
+		{
+			vlUInt uiExtraResources = 0;
+			for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+			{
+				const vlUInt uiType = m_pVTFFile->GetResourceType(i);
+				if(uiType != VTF_LEGACY_RSRC_LOW_RES_IMAGE && uiType != VTF_LEGACY_RSRC_IMAGE)
+				{
+					uiExtraResources++;
+				}
+			}
+
+			if(uiExtraResources != 0
+				&& QMessageBox::question(this, QApplication::applicationName(),
+					tr("Version %1.%2 has no resource directory, so the %3 resource(s) attached to "
+						"this texture will be discarded.\n\nContinue?")
+						.arg(VTF_MAJOR_VERSION).arg(uiMinor).arg(uiExtraResources),
+					QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+			{
+				updateFileInfo();
+				return;
+			}
+		}
+
+		// push the pending header edits in first so they are not lost by the refresh below
+		getVtfFile();
+
+		if(!m_pVTFFile->SetVersion(VTF_MAJOR_VERSION, uiMinor))
+		{
+			QMessageBox::critical(this, QApplication::applicationName(),
+				tr("Failed to convert the texture to version %1.%2:\n%3")
+					.arg(VTF_MAJOR_VERSION).arg(uiMinor)
+					.arg(QString::fromLatin1(vlGetLastError())));
+
+			updateFileInfo();
+			return;
+		}
+
+		updateFileInfo();
+
+		m_bSwitchingDocument = true;
+		m_pImageStartFrame->setValue(m_pVTFFile->GetStartFrame() == 0xffff
+			? 0 : static_cast<int>(m_pVTFFile->GetStartFrame()));
+		m_bSwitchingDocument = false;
+
+		m_pImageFaces->setText(QString::number(m_pVTFFile->GetFaceCount()));
+
+		updateResourceList();
+		updateSheetActions();
+
+		onVtfPropertyChanged();
+	}
+
 	void MainWindow::onHdrReset()
 	{
 		m_bHdrResetting = true;
@@ -2419,8 +2729,9 @@ namespace VTFEdit
 
 		const float fOldImageScale = m_fImageScale;
 
-		const float fContentX = static_cast<float>(Anchor.x() + pHorizontal->value());
-		const float fContentY = static_cast<float>(Anchor.y() + pVertical->value());
+		const float fMargin = static_cast<float>(ImageView::margin());
+		const float fContentX = static_cast<float>(Anchor.x() + pHorizontal->value()) - fMargin;
+		const float fContentY = static_cast<float>(Anchor.y() + pVertical->value()) - fMargin;
 
 		m_fImageScale *= fFactor;
 
@@ -2429,8 +2740,8 @@ namespace VTFEdit
 
 		const float fRatio = m_fImageScale / fOldImageScale;
 
-		pHorizontal->setValue(static_cast<int>(fContentX * fRatio) - Anchor.x());
-		pVertical->setValue(static_cast<int>(fContentY * fRatio) - Anchor.y());
+		pHorizontal->setValue(static_cast<int>(fContentX * fRatio + fMargin) - Anchor.x());
+		pVertical->setValue(static_cast<int>(fContentY * fRatio + fMargin) - Anchor.y());
 	}
 
 	void MainWindow::zoom(float fFactor)
@@ -2460,8 +2771,8 @@ namespace VTFEdit
 		m_fImageScale = 1.0f;
 		updateVtfFile();
 
-		m_pImageScrollArea->horizontalScrollBar()->setValue(0);
-		m_pImageScrollArea->verticalScrollBar()->setValue(0);
+		m_pImageScrollArea->horizontalScrollBar()->setValue(ImageView::margin());
+		m_pImageScrollArea->verticalScrollBar()->setValue(ImageView::margin());
 	}
 
 	void MainWindow::onImageContextMenu(const QPoint &Position)
@@ -2557,9 +2868,8 @@ namespace VTFEdit
 			{
 				QMouseEvent *pMouse = static_cast<QMouseEvent *>(pEvent);
 
-				// Alt+drag pans
-				if(m_pVTFFile != nullptr && pMouse->button() == Qt::LeftButton
-					&& (pMouse->modifiers() & Qt::AltModifier))
+				// Left drag pans
+				if(m_pVTFFile != nullptr && pMouse->button() == Qt::LeftButton)
 				{
 					m_bImagePanning = true;
 					m_ImagePanStartMouse = pMouse->globalPosition().toPoint();
@@ -2846,6 +3156,14 @@ namespace VTFEdit
 				m_Options.StripAlpha = toBool(sVal);
 			else if(sArg.compare(QLatin1String("VTFOptions.sRGB"), Qt::CaseInsensitive) == 0)
 				m_Options.sRGB = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlpha"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlpha = toBool(sVal);
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaSpread"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaSpread = sVal.toFloat();
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaReduce"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaReduce = sVal.toUInt();
+			else if(sArg.compare(QLatin1String("VTFOptions.DistanceAlphaThreshold"), Qt::CaseInsensitive) == 0)
+				m_Options.DistanceAlphaThreshold = sVal.toUInt();
 
 			else if(sArg.compare(QLatin1String("VTFOptions.Resize"), Qt::CaseInsensitive) == 0)
 				m_Options.ResizeImage = toBool(sVal);
@@ -2999,6 +3317,10 @@ namespace VTFEdit
 		Stream << "VTFOptions.FlagPointSample = " << boolText(m_Options.FlagPointSample != vlFalse) << "\n";
 		Stream << "VTFOptions.StripAlpha = " << boolText(m_Options.StripAlpha != vlFalse) << "\n";
 		Stream << "VTFOptions.sRGB = " << boolText(m_Options.sRGB != vlFalse) << "\n";
+		Stream << "VTFOptions.DistanceAlpha = " << boolText(m_Options.DistanceAlpha != vlFalse) << "\n";
+		Stream << "VTFOptions.DistanceAlphaSpread = " << m_Options.DistanceAlphaSpread << "\n";
+		Stream << "VTFOptions.DistanceAlphaReduce = " << m_Options.DistanceAlphaReduce << "\n";
+		Stream << "VTFOptions.DistanceAlphaThreshold = " << m_Options.DistanceAlphaThreshold << "\n";
 
 		Stream << "VTFOptions.Resize = " << boolText(m_Options.ResizeImage != vlFalse) << "\n";
 		Stream << "VTFOptions.ResizeMethod = " << static_cast<int>(m_Options.ResizeMethod) << "\n";

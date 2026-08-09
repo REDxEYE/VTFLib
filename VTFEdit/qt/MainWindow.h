@@ -33,6 +33,7 @@
 class QAction;
 class QActionGroup;
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QListWidget;
@@ -71,6 +72,7 @@ namespace VTFEdit
 
 		QString sFileName;
 		QString sUntitledName;
+		QString sSuggestedFileName;
 		bool bModified;
 
 		float fImageScale;
@@ -136,6 +138,7 @@ namespace VTFEdit
 		void onCreateVmtFile();
 		void onConvertFolder();
 		void onRecentFile();
+		void onReopenRecent();
 		void onCopy();
 		void onPaste();
 		void onChannelChanged();
@@ -148,6 +151,7 @@ namespace VTFEdit
 		void onAnimateFpsChanged(int iFps);
 		void onAnimateTick();
 		void onFlagItemChanged(QListWidgetItem *pItem);
+		void onFileVersionChanged(int iIndex);
 		void onHdrReset();
 
 		void onZoomIn();
@@ -159,6 +163,9 @@ namespace VTFEdit
 		void onValidateLoose();
 		void onValidateStrict();
 		void onVmtEditorOptions();
+
+		void onEditSheet();
+		void onRemoveSheet();
 
 		void onImageContextMenu(const QPoint &Position);
 		void onVmtContextMenu(const QPoint &Position);
@@ -180,6 +187,7 @@ namespace VTFEdit
 		int addDocument(Document *pDocument);
 		void commitCurrentDocument();
 		void activateDocument(int iIndex);
+		void switchToTab(int iIndex);
 		void clearWidgets();
 		void hideVtfSidebars();
 		void setupTextDocument(Document *pDocument, const QString &sText);
@@ -199,7 +207,7 @@ namespace VTFEdit
 		bool saveDocumentAs(int iIndex);
 		void import(const QStringList &sFileNames);
 		void createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
-			bool bHasAlpha);
+			bool bHasAlpha, const QString &sSourceFileName);
 		void exportImage(const QString &sFileName);
 		void exportAllImages(const QString &sFileName);
 
@@ -211,6 +219,9 @@ namespace VTFEdit
 		bool validateVmtFile();
 		bool confirmVmtFile(int iIndex);
 		void setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode);
+		void updateFileInfo();
+		void updateResourceList();
+		void updateSheetActions();
 		void updateVmtErrorHighlight();
 		void applyVmtTabStopDistance();
 		void applyVmtEditorSettings();
@@ -252,6 +263,7 @@ namespace VTFEdit
 
 		bool m_bUpdatingVtfFile;
 		bool m_bUpdatingFlags;
+		bool m_bUpdatingFileInfo;
 		bool m_bHdrResetting;
 
 		int m_iMaximumRecentFiles;
@@ -274,8 +286,10 @@ namespace VTFEdit
 		QAction *m_pSaveAllAction;
 		QAction *m_pCloseAction;
 		QAction *m_pCloseAllAction;
+		QAction *m_pReopenRecentAction;
 		QAction *m_pNextTabAction;
 		QAction *m_pPreviousTabAction;
+		QAction *m_pTabIndexActions[9];
 		QAction *m_pImportAction;
 		QAction *m_pExportAction;
 		QAction *m_pExportAllAction;
@@ -334,7 +348,7 @@ namespace VTFEdit
 		QListWidget *m_pFlags;
 
 		// Info tab controls.
-		QLabel *m_pFileVersion;
+		QComboBox *m_pFileVersion;
 		QLabel *m_pFileSize;
 		QLabel *m_pFileCompression;
 		QLabel *m_pImageWidth;
@@ -354,6 +368,8 @@ namespace VTFEdit
 		// Resources tab controls.
 		QLabel *m_pResourceCount;
 		QTreeWidget *m_pResources;
+		QPushButton *m_pEditSheetButton;
+		QPushButton *m_pRemoveSheetButton;
 
 		// Status bar.
 		QLabel *m_pStatusFileName;

@@ -430,8 +430,9 @@ static CMP_FORMAT GetCMPFormat( VTFImageFormat imageFormat, bool bDXT5GA )
 	case IMAGE_FORMAT_DXT3:				return CMP_FORMAT_DXT3;
 	case IMAGE_FORMAT_DXT5:				return CMP_FORMAT_DXT5;
 	case IMAGE_FORMAT_ATI1N:			return CMP_FORMAT_ATI1N;
-	// Swizzle is technically wrong for below but we reverse it in the shader!
 	case IMAGE_FORMAT_ATI2N:			return CMP_FORMAT_ATI2N;
+	case IMAGE_FORMAT_BC4:				return CMP_FORMAT_BC4;
+	case IMAGE_FORMAT_BC5:				return CMP_FORMAT_BC5;
 	case IMAGE_FORMAT_BC7:				return CMP_FORMAT_BC7;
 	case IMAGE_FORMAT_BC6H:				return CMP_FORMAT_BC6H_SF;
 
@@ -541,67 +542,16 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 			case RESIZE_NEAREST_POWER2:
 			case RESIZE_BIGGEST_POWER2:
 			case RESIZE_SMALLEST_POWER2:
-				// Find the best width.
-				if(this->IsPowerOfTwo(uiWidth))
-				{
-					// Width already a power of 2.
-					uiNewWidth = uiWidth;
-				}
-				else
-				{
-					// Find largest power of 2.
-					uiNewWidth = this->NextPowerOfTwo(uiWidth);
-
-					if(VTFCreateOptions.ResizeMethod == RESIZE_NEAREST_POWER2)
-					{
-						if(uiWidth - (uiNewWidth >> 1) < uiNewWidth - uiWidth)
-						{
-							uiNewWidth >>= 1;
-						}
-					}
-					else if(VTFCreateOptions.ResizeMethod == RESIZE_SMALLEST_POWER2)
-					{
-						uiNewWidth >>= 1;
-					}
-
-					if(uiNewWidth == 0)
-					{
-						uiNewWidth = 1;
-					}
-				}
+			case RESIZE_NEAREST_MULTIPLE4:
+			case RESIZE_BIGGEST_MULTIPLE4:
+			case RESIZE_SMALLEST_MULTIPLE4:
+				uiNewWidth = this->ComputeResizedDimension(uiWidth, VTFCreateOptions.ResizeMethod);
 				if(VTFCreateOptions.bResizeClamp && uiNewWidth > VTFCreateOptions.uiResizeClampWidth)
 				{
 					uiNewWidth = VTFCreateOptions.uiResizeClampWidth;
 				}
 
-				// Find the best height.
-				if(this->IsPowerOfTwo(uiHeight))
-				{
-					// Height already a power of 2.
-					uiNewHeight = uiHeight;
-				}
-				else
-				{
-					// Find largest power of 2.
-					uiNewHeight = this->NextPowerOfTwo(uiHeight);
-
-					if(VTFCreateOptions.ResizeMethod == RESIZE_NEAREST_POWER2)
-					{
-						if(uiHeight - (uiNewHeight >> 1) < uiNewHeight - uiHeight)
-						{
-							uiNewHeight >>= 1;
-						}
-					}
-					else if(VTFCreateOptions.ResizeMethod == RESIZE_SMALLEST_POWER2)
-					{
-						uiNewHeight >>= 1;
-					}
-
-					if(uiNewHeight == 0)
-					{
-						uiNewHeight = 1;
-					}
-				}
+				uiNewHeight = this->ComputeResizedDimension(uiHeight, VTFCreateOptions.ResizeMethod);
 				if(VTFCreateOptions.bResizeClamp && uiNewHeight > VTFCreateOptions.uiResizeClampHeight)
 				{
 					uiNewHeight = VTFCreateOptions.uiResizeClampHeight;
@@ -789,6 +739,14 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 		}
 		this->SetStartFrame(VTFCreateOptions.uiStartFrame);
 		this->SetBumpmapScale(VTFCreateOptions.sBumpScale);
+
+		// The engine does not load DXT1_ONEBITALPHA textures correctly
+		// but it does handle plain DXT1 with the one bit alpha flag set
+		if(this->Header->ImageFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA)
+		{
+			this->Header->ImageFormat = IMAGE_FORMAT_DXT1;
+			this->Header->Flags |= TEXTUREFLAGS_ONEBITALPHA;
+		}
 
 		return vlTrue;
 	}
@@ -1076,6 +1034,56 @@ vlUInt CVTFFile::NextPowerOfTwo(vlUInt uiSize)
 	uiSize++;
 
 	return uiSize;
+}
+
+vlUInt CVTFFile::ComputeResizedDimension(vlUInt uiSize, VTFResizeMethod ResizeMethod)
+{
+	vlUInt uiBiggest, uiSmallest;
+
+	switch(ResizeMethod)
+	{
+	case RESIZE_NEAREST_POWER2:
+	case RESIZE_BIGGEST_POWER2:
+	case RESIZE_SMALLEST_POWER2:
+		if(this->IsPowerOfTwo(uiSize))
+		{
+			return uiSize;
+		}
+
+		uiBiggest = this->NextPowerOfTwo(uiSize);
+		uiSmallest = uiBiggest >> 1;
+		break;
+	case RESIZE_NEAREST_MULTIPLE4:
+	case RESIZE_BIGGEST_MULTIPLE4:
+	case RESIZE_SMALLEST_MULTIPLE4:
+		if(uiSize % 4 == 0)
+		{
+			return uiSize;
+		}
+
+		uiBiggest = (uiSize + 3) & ~3u;
+		uiSmallest = uiBiggest - 4;
+		break;
+	default:
+		return uiSize;
+	}
+
+	if(uiSmallest == 0)
+	{
+		return uiBiggest;
+	}
+
+	switch(ResizeMethod)
+	{
+	case RESIZE_SMALLEST_POWER2:
+	case RESIZE_SMALLEST_MULTIPLE4:
+		return uiSmallest;
+	case RESIZE_NEAREST_POWER2:
+	case RESIZE_NEAREST_MULTIPLE4:
+		return uiSize - uiSmallest < uiBiggest - uiSize ? uiSmallest : uiBiggest;
+	default:
+		return uiBiggest;
+	}
 }
 
 //
@@ -1633,6 +1641,97 @@ vlUInt CVTFFile::GetMinorVersion() const
 }
 
 //
+// SetVersion()
+// Retargets the loaded image at another version of the VTF format.
+//
+vlBool CVTFFile::SetVersion(vlUInt uiMajor, vlUInt uiMinor)
+{
+	if(!this->IsLoaded())
+	{
+		LastError.Set("No image loaded.");
+		return vlFalse;
+	}
+
+	if(uiMajor != VTF_MAJOR_VERSION || uiMinor > VTF_MINOR_VERSION)
+	{
+		LastError.SetFormatted("File version %u.%u does not match %d.%d to %d.%d.", uiMajor, uiMinor, VTF_MAJOR_VERSION, 0, VTF_MAJOR_VERSION, VTF_MINOR_VERSION);
+		return vlFalse;
+	}
+
+	if(this->Header->Version[0] == uiMajor && this->Header->Version[1] == uiMinor)
+	{
+		return vlTrue;
+	}
+
+	if(uiMinor < VTF_MINOR_VERSION_MIN_VOLUME && this->GetDepth() > 1)
+	{
+		LastError.SetFormatted("Volume textures are only supported in version %d.%d and up.", VTF_MAJOR_VERSION, VTF_MINOR_VERSION_MIN_VOLUME);
+		return vlFalse;
+	}
+
+	// ToDo: throw away the sphere map
+	vlBool bHasSphereMap = (this->Header->Flags & TEXTUREFLAGS_ENVMAP) != 0
+		&& this->Header->Version[1] < VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP
+		&& this->Header->StartFrame != 0xffff;
+
+	if(bHasSphereMap && uiMinor >= VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP)
+	{
+		LastError.SetFormatted("Cubemaps with 7th spheremap face are not supported in version %d.%d and up", VTF_MAJOR_VERSION, VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP);
+		return vlFalse;
+	}
+
+	this->Header->Version[0] = uiMajor;
+	this->Header->Version[1] = uiMinor;
+
+	if(this->Header->Flags & TEXTUREFLAGS_ENVMAP)
+	{
+		if(uiMinor < VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP)
+		{
+			if(!bHasSphereMap)
+			{
+				this->Header->StartFrame = 0xffff;
+			}
+		}
+		else if(this->Header->StartFrame == 0xffff)
+		{
+			this->Header->StartFrame = 0;
+		}
+	}
+
+	if(!this->GetSupportsAuxCompression())
+	{
+		this->sAuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_NONE;
+		this->DestroyAuxCompression();
+	}
+
+	if(!this->GetSupportsResources())
+	{
+		for(vlUInt i = 0; i < VTF_RSRC_MAX_DICTIONARY_ENTRIES; i++)
+		{
+			delete []this->Header->Data[i].Data;
+			this->Header->Data[i].Data = 0;
+			this->Header->Data[i].Size = 0;
+		}
+
+		memset(this->Header->Resources, 0, sizeof(this->Header->Resources));
+		this->Header->ResourceCount = 0;
+	}
+	else if(this->Header->ResourceCount == 0)
+	{
+		if(this->Header->LowResImageFormat != IMAGE_FORMAT_NONE)
+		{
+			this->Header->Resources[this->Header->ResourceCount++].Type = VTF_LEGACY_RSRC_LOW_RES_IMAGE;
+		}
+
+		this->Header->Resources[this->Header->ResourceCount++].Type = VTF_LEGACY_RSRC_IMAGE;
+	}
+
+	this->ComputeResources();
+
+	return vlTrue;
+}
+
+//
 // ComputeResources()
 // Computes header VTF directory resources.
 //
@@ -2018,6 +2117,20 @@ VTFImageFormat CVTFFile::GetFormat() const
 		return IMAGE_FORMAT_NONE;
 
 	return this->Header->ImageFormat;
+}
+
+//
+// GetDecodeFormat()
+// Gets the format the image data should be decoded as.
+//
+VTFImageFormat CVTFFile::GetDecodeFormat() const
+{
+	VTFImageFormat Format = this->GetFormat();
+
+	if(Format == IMAGE_FORMAT_DXT1 && (this->Header->Flags & TEXTUREFLAGS_ONEBITALPHA))
+		return IMAGE_FORMAT_DXT1_ONEBITALPHA;
+
+	return Format;
 }
 
 //
@@ -2575,7 +2688,7 @@ vlBool CVTFFile::GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, VTFMipmapFilter 
 
 	vlByte *lpImageData = new vlByte[this->ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 
-	if(!this->ConvertToRGBA8888(this->GetData(uiFace, uiFrame, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!this->ConvertToRGBA8888(this->GetData(uiFace, uiFrame, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpImageData;
 
@@ -2649,7 +2762,7 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB)
 	vlByte *lpImageData = new vlByte[CVTFFile::ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 	vlByte *lpThumbnailImageData = new vlByte[CVTFFile::ComputeImageSize(this->Header->LowResImageWidth, this->Header->LowResImageHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
-	if(!CVTFFile::ConvertToRGBA8888(this->GetData(0, 0, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!CVTFFile::ConvertToRGBA8888(this->GetData(0, 0, 0, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpImageData;
 		delete []lpThumbnailImageData;
@@ -2729,7 +2842,7 @@ vlBool CVTFFile::GenerateNormalMap(vlUInt uiFrame, VTFKernelFilter KernelFilter,
 	vlByte *lpSource = new vlByte[this->ComputeImageSize(this->Header->Width, this->Header->Height, 1, IMAGE_FORMAT_RGBA8888)];
 
 	// Get the frame's image data.
-	if(!this->ConvertToRGBA8888(lpData, lpSource, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+	if(!this->ConvertToRGBA8888(lpData, lpSource, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 	{
 		delete []lpSource;
 
@@ -2831,11 +2944,10 @@ vlBool CVTFFile::GenerateSphereMap()
 
 		lpImageData[j] = new vlByte[this->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
-		if(!this->ConvertToRGBA8888(this->GetData(0, i, 0, 0), lpImageData[j], uiWidth, uiHeight, this->Header->ImageFormat))
+		if(!this->ConvertToRGBA8888(this->GetData(0, i, 0, 0), lpImageData[j], uiWidth, uiHeight, this->GetDecodeFormat()))
 		{
 			for(vlUInt l = 0; l < 6; l++)
 				delete[] lpImageData[l];
-
 			LastError.Set("Could not convert source to RGBA8888 format");
 			return vlFalse;
 		}
@@ -3020,7 +3132,7 @@ vlBool CVTFFile::ComputeReflectivity()
         {
 			for(vlUInt uiSlice = 0; uiSlice < uiSliceCount; uiSlice++)
 			{
-				if(!this->ConvertToRGBA8888(this->GetData(uiFrame, uiFace, uiSlice, 0), lpImageData, this->Header->Width, this->Header->Height, this->Header->ImageFormat))
+				if(!this->ConvertToRGBA8888(this->GetData(uiFrame, uiFace, uiSlice, 0), lpImageData, this->Header->Width, this->Header->Height, this->GetDecodeFormat()))
 				{
 					delete []lpImageData;
 
@@ -3090,8 +3202,8 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "ATI DST16",			 16,  2,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST16
 	{ "ATI DST24",			 24,  3,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_ATI_DST24
 	{ "nVidia NULL",		 32,  4,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_NV_NULL
-	{ "BC5 (ATI2N)",		  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI2N
-	{ "BC4 (ATI1N)",		  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
+	{ "ATI2N",				  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI2N
+	{ "ATI1N",				  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_ATI1N
 	/*
 	{ "Xbox360 DST16",		 16,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST16
 	{ "Xbox360 DST24",		 24,  0,  0,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_X360_DST24
@@ -3141,7 +3253,9 @@ static SVTFImageFormatInfo VTFImageFormatInfo[] =
 	{ "Reserved68",			  0,  0,  0,  0,  0,  0, vlFalse, vlFalse },		// 68
 	{ "R8",					  8,  1,  8,  0,  0,  0, vlFalse,  vlTrue },		// IMAGE_FORMAT_R8
 	{ "BC7",				  8,  0,  0,  0,  0,  8,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC7
-	{ "BC6H",				  8,  0, 16, 16, 16,  0,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC6H
+	{ "BC6H",				  8,  0, 16, 16, 16,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC6H
+	{ "BC4",				  4,  0,  0,  0,  0,  0,  vlTrue,  vlTrue },		// IMAGE_FORMAT_BC4
+	{ "BC5",				  8,  0,  0,  0,  0,  0,  vlTrue,  vlTrue }			// IMAGE_FORMAT_BC5
 };
 
 SVTFImageFormatInfo const &CVTFFile::GetImageFormatInfo(VTFImageFormat ImageFormat)
@@ -3164,6 +3278,8 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 	{
 	case IMAGE_FORMAT_DXT1:
 	case IMAGE_FORMAT_DXT1_ONEBITALPHA:
+	case IMAGE_FORMAT_ATI1N:
+	case IMAGE_FORMAT_BC4:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -3173,8 +3289,10 @@ vlUInt CVTFFile::ComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDept
 		return ((uiWidth + 3) / 4) * ((uiHeight + 3) / 4) * 8 * uiDepth;
 	case IMAGE_FORMAT_DXT3:
 	case IMAGE_FORMAT_DXT5:
+	case IMAGE_FORMAT_ATI2N:
 	case IMAGE_FORMAT_BC7:
 	case IMAGE_FORMAT_BC6H:
+	case IMAGE_FORMAT_BC5:
 		if(uiWidth < 4 && uiWidth > 0)
 			uiWidth = 4;
 
@@ -3414,7 +3532,7 @@ vlBool CVTFFile::DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt
 	options.dwSize        = sizeof(options);
 	options.fquality      = 1.0f;
 	options.dwnumThreads  = 0;
-	options.bDXT1UseAlpha = false;
+	options.bDXT1UseAlpha = SourceFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA;
 
 	vlBool bHDR = GetUncompressedFormat( SourceFormat ) == IMAGE_FORMAT_RGBA16161616F;
 
@@ -3495,6 +3613,7 @@ vlBool CVTFFile::CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, 
 	options.fquality      = DestFormat == IMAGE_FORMAT_BC7 ? 0.1f : 1.0f;
 	options.dwnumThreads  = 0;
 	options.bDXT1UseAlpha = DestFormat == IMAGE_FORMAT_DXT1_ONEBITALPHA;
+	options.nAlphaThreshold = 128;
 
 	CMP_Texture destTexture = {0};
 	destTexture.dwSize     = sizeof( destTexture );
@@ -3689,8 +3808,8 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	 16,  2, 16,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI_DST24},
 	{	 32,  4,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NV_NULL},
-	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_ATI1N},
-	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_ATI2N}/*,
+	{     8,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI2N},
+	{	  4,  0,  0,  0,  0,  0,	-1, -1, -1, -1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_ATI1N}/*,
 	{	 16,  2, 16,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST16},
 	{	 24,  3, 24,  0,  0,  0,	 0, -1, -1, -1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24},
 	{	 24,  3,  0,  0,  0,  0,	-1, -1, -1, -1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_X360_DST24F},
@@ -3736,7 +3855,9 @@ static SVTFImageConvertInfo VTFImageConvertInfo[] =
 	{	  0,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1, vlFalse, vlFalse,	NULL,	NULL,		IMAGE_FORMAT_NONE},	// 68
 	{	  8,  1,  8,  0,  0,  0,	 0,	-1,	-1,	-1, vlFalse,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_R8},
 	{	  8,  0,  0,  0,  0,  8,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC7},
-	{	  8,  0, 16, 16, 16,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC6H}
+	{	  8,  0, 16, 16, 16,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC6H},
+	{	  4,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC4},
+	{	  8,  0,  0,  0,  0,  0,	-1,	-1,	-1,	-1,  vlTrue,  vlTrue,	NULL,	NULL,		IMAGE_FORMAT_BC5}
 };
 
 // Get each channels shift and mask (for encoding and decoding).

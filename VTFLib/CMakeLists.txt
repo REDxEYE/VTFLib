@@ -5,6 +5,9 @@ set(VTFLIB_SOURCES
 		Float16.cpp
 		MemoryReader.cpp
 		MemoryWriter.cpp
+		Proc.cpp
+		ProcReader.cpp
+		ProcWriter.cpp
 		VMTFile.cpp
 		VMTGroupNode.cpp
 		VMTIntegerNode.cpp
@@ -13,13 +16,11 @@ set(VTFLIB_SOURCES
 		VMTStringNode.cpp
 		VMTValueNode.cpp
 		VMTWrapper.cpp
+        VTFDistanceAlpha.cpp
 		VTFFile.cpp
 		VTFLib.cpp
 		VTFMathlib.cpp
 		VTFWrapper.cpp
-		Proc.cpp
-		ProcReader.cpp
-		ProcWriter.cpp
 
 		"${VTFLIB_THIRDPARTY}/miniz/miniz.c"
 		"${VTFLIB_THIRDPARTY}/zstd/zstd.c"

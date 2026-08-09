@@ -312,6 +312,7 @@ namespace VTFLib
 	private:
 		vlBool IsPowerOfTwo(vlUInt uiSize);
 		vlUInt NextPowerOfTwo(vlUInt uiSize);
+		vlUInt ComputeResizedDimension(vlUInt uiSize, VTFResizeMethod ResizeMethod);	//!< Rounds a dimension as dictated by the given re-size method.
 
 		vlVoid ComputeResources();	 //!< Computes header VTF directory resources.
 
@@ -332,6 +333,21 @@ namespace VTFLib
 
 		vlUInt GetMajorVersion() const;	 //!< Returns the VTF file major version number.
 		vlUInt GetMinorVersion() const;	 //!< Returns the VTF file minor version number.
+
+		//! Changes the version of the loaded VTF file.
+		/*!
+			
+			Fails if the image cannot be represented in the requested version
+			e.g. volume texture below v7.2
+
+			\param uiMajor is the major version to convert to
+			\param uiMinor is the minor version to convert to
+			\return true on success, false on failure.
+			\see GetMajorVersion()
+			\see GetMinorVersion()
+		*/
+		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor);
+
 		vlUInt GetSize() const;			 //!< Returns the VTF file size in bytes.
 
 		vlUInt GetWidth() const;	//!< Returns the width of the image in pixels from the VTF header.
@@ -392,7 +408,14 @@ namespace VTFLib
 		vlVoid SetReflectivity(vlSingle sX, vlSingle sY, vlSingle sZ);
 
 		VTFImageFormat GetFormat() const;	//!< Returns the storage format of the main image data set in the VTF header.
-		
+
+		//! Returns the format the main image data should be decoded as.
+		/*!
+			Currently identical to GetFormat except for DXT1 images with the one bit alpha flag	set
+			which are stored as plain DXT1 but must be decoded as IMAGE_FORMAT_DXT1_ONEBITALPHA to keep alpha
+		*/
+		VTFImageFormat GetDecodeFormat() const;
+
 		//! Get a pointer to the image data for a specific image.
 		/*!
 			Returns a pointer to the image data for a given frame, face and MIP level.
@@ -731,6 +754,22 @@ namespace VTFLib
 			\return true on sucessful re-size, otherwise false.
 		*/
 		static vlBool Resize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB);
+
+		//! Converts an image's alpha channel into a signed distance field.
+		/*!
+
+			\param lpSourceRGBA8888 is a pointer to the source image data in RGBA8888 format.
+			\param lpDestRGBA8888 is a pointer to the buffer for the converted data.
+			\param uiSourceWidth is the width of the source image in pixels.
+			\param uiSourceHeight is the height of the source image in pixels.
+			\param uiDestWidth is the width of the destination image in pixels.
+			\param uiDestHeight is the height of the destination image in pixels.
+			\param sSpread is the width in destination pixels of the gradient either side of the boundary.
+			\param bThreshold is the source alpha above which a pixel is inside the shape.
+			\param pbClipped optionally receives true if the field ran off the edge of the image and had to be clipped, which loses information.
+			\return true on sucessful conversion, otherwise false.
+		*/
+		static vlBool ConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped);
 
 	private:
 		

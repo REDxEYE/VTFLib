@@ -60,6 +60,9 @@
     <ClCompile Include="..\..\..\VTFLib\VMTWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\VTFLib\VTFDistanceAlpha.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\VTFLib\VTFFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

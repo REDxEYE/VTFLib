@@ -1,12 +1,12 @@
-# VTFLib - A Valve VTF and VMT image format programming library.
+# VTFLib++ - A Valve VTF and VMT image format programming library.
 
-VTFLib is a LGPL open source programming library that provides a C and C++ API that, with a few simple functions, can open and save .vtf and .vmt files, providing access to all known features. The library functions independent of Steam, allowing third party applications to use the library without Steam present or running on the target system.
+VTFLib++ is a LGPL open source programming library that provides a C and C++ API that, with a few simple functions, can open and save .vtf and .vmt files, providing access to all known features. The library functions independent of Steam, allowing third party applications to use the library without Steam present or running on the target system.
 
-VTFLib includes two GPL example applications, VTFCmd and VTFEdit++. VTFCmd is a C command line frontend for VTFLib that can create .vtf and .vmt files from various source formats. It is similar in functionality to Valve's vtex Source SDK utility, but offers a lot more control. VTFEdit++ is a Qt-based graphical frontend for VTFLib with viewing and creation capabilities, plus a VMT text editor. Both VTFCmd and VTFEdit++ support several source image formats, including, but not limited to .bmp, .dds, .gif, .jpg, .png and .tga.
+VTFLib++ includes two GPL example applications, VTFCmd and VTFEdit++. VTFCmd is a C command line frontend for VTFLib++ that can create .vtf and .vmt files from various source formats. It is similar in functionality to Valve's vtex Source SDK utility, but offers a lot more control. VTFEdit++ is a Qt-based graphical frontend for VTFLib++ with viewing and creation capabilities, plus a VMT text editor. Both VTFCmd and VTFEdit++ support several source image formats, including, but not limited to .bmp, .dds, .gif, .jpg, .png and .tga.
 
 ## Library/Author Information
 
-* **Title**: VTFLib
+* **Title**: VTFLib++
 * **Version**: 2.0.0 (VTFEdit++ 4.0.0)
 * **Written In**: C/C++
 * **Original authors**: [Neil 'Jed' Jedrzejewski](https://github.com/NeilJed) & [Ryan Gregg](http://nemesis.thewavelength.net/), ['misyltoad'](https://github.com/misyltoad)
@@ -66,6 +66,10 @@ Correct vtfcmd usage:
  -rclampheight <integer>  (Maximum height to resize to.)
  -gamma                   (Gamma correct image.)
  -gcorrection <single>    (Gamma correction to use.)
+ -distancealpha           (Encode the alpha channel as a distance field.)
+ -dspread <single>        (Width of the distance field gradient in output pixels.)
+ -dreduce <integer>       (Shrink the image by this factor after computing the field.)
+ -dthreshold <integer>    (Source alpha above which a pixel is inside the shape.)
  -nomipmaps               (Don't generate mipmaps.)
  -mfilter <string>        (Mipmap filter to use.)
  -bumpscale <single>      (Engine bump mapping scale to use.)
@@ -87,4 +91,4 @@ vtfcmd.exe -folder "C:\output\*.vtf" -output "C:\input" -exportformat "jpg"
 
 ## Program Copyright-Permissions
 
-See the LGPL.txt (VTFLib) and GPL.txt (VTFCmd & VTFEdit++) files contained in the distribution.
+See the LGPL.txt (VTFLib++) and GPL.txt (VTFCmd & VTFEdit++) files contained in the distribution.

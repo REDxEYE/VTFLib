@@ -338,6 +338,12 @@ namespace VTFEdit
 					// Leave the base image bound for the next file.
 					ilBindImage(uiImage);
 
+					if(!bError && !vImageData.empty() && m_pOptions->DistanceAlpha)
+					{
+						VtfFileUtility::ApplyDistanceAlpha(vImageData, uiWidth, uiHeight, *m_pOptions);
+						bHasAlpha = true;
+					}
+
 					if(!bError && !vImageData.empty())
 					{
 						VTFCreateOptions.ImageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;
@@ -422,7 +428,7 @@ namespace VTFEdit
 										+ QLatin1Char('.') + m_pFromVTFFormat->currentText()));
 
 								if(!VTFFile.ConvertToRGBA8888(VTFFile.GetData(uiFrame, uiFace, uiSlice, 0),
-									ImageData.data(), uiWidth, uiHeight, VTFFile.GetFormat()))
+									ImageData.data(), uiWidth, uiHeight, VTFFile.GetDecodeFormat()))
 								{
 									log(tr("Error converting %1.%2").arg(sName,
 										QString::fromLatin1(vlGetLastError()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);

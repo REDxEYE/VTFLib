@@ -21,80 +21,47 @@
 
 namespace VTFEdit
 {
-	const VTFImageFormat NormalImageFormats[15] =
+	// ordered by how commonly the format is used
+
+	const ImageFormatEntry NormalImageFormats[NormalImageFormatCount] =
 	{
-		IMAGE_FORMAT_RGB888,
-		IMAGE_FORMAT_BGR888,
-		IMAGE_FORMAT_RGB565,
-		IMAGE_FORMAT_I8, 
-		IMAGE_FORMAT_P8,
-		IMAGE_FORMAT_RGB888_BLUESCREEN,
-		IMAGE_FORMAT_BGR888_BLUESCREEN,
-		IMAGE_FORMAT_DXT1, 
-		IMAGE_FORMAT_BGRX8888,
-		IMAGE_FORMAT_BGR565, 
-		IMAGE_FORMAT_BGRX5551,
-		IMAGE_FORMAT_UV88,
-		IMAGE_FORMAT_UVLX8888,
-		IMAGE_FORMAT_R8,
-		IMAGE_FORMAT_BC6H
+		{ IMAGE_FORMAT_DXT1,				"DXT1",					false },
+		{ IMAGE_FORMAT_RGB888,				"RGB888",				false },
+		{ IMAGE_FORMAT_BGR888,				"BGR888",				false },
+		{ IMAGE_FORMAT_I8,					"I8",					false },
+		{ IMAGE_FORMAT_ATI1N,				"ATI1N",				false },
+		{ IMAGE_FORMAT_ATI2N,				"ATI2N",				false },
+		{ IMAGE_FORMAT_BC4,					"BC4",					true },
+		{ IMAGE_FORMAT_BC5,					"BC5",					true },
+		{ IMAGE_FORMAT_BC6H,				"BC6H",					true },
+		{ IMAGE_FORMAT_R8,					"R8",					true },
+		{ IMAGE_FORMAT_BGRX8888,			"BGRX8888",				false },
+		{ IMAGE_FORMAT_RGB565,				"RGB565",				false },
+		{ IMAGE_FORMAT_BGR565,				"BGR565",				false },
+		{ IMAGE_FORMAT_BGRX5551,			"BGRX5551",				false },
+		{ IMAGE_FORMAT_UV88,				"UV88",					false },
+		{ IMAGE_FORMAT_UVLX8888,			"UVLX8888",				false },
+		{ IMAGE_FORMAT_RGB888_BLUESCREEN,	"RGB888 Bluescreen",	false },
+		{ IMAGE_FORMAT_BGR888_BLUESCREEN,	"BGR888 Bluescreen",	false },
 	};
 
-	const char *const NormalImageFormatNames[15] =
+	const ImageFormatEntry AlphaImageFormats[AlphaImageFormatCount] =
 	{
-		"RGB888",
-		"BGR888", 
-		"RGB565", 
-		"I8", 
-		"P8 (Not supported)", 
-		"RGB888 Bluescreen",
-		"BGR888 Bluescreen",
-		"DXT1", 
-		"BGRX8888",
-		"BGR565", 
-		"BGRX5551",
-		"UV88", 
-		"UVLX8888", 
-		"R8", 
-		"BC6H"
-	};
-
-	const VTFImageFormat AlphaImageFormats[15] =
-	{
-		IMAGE_FORMAT_RGBA8888,
-		IMAGE_FORMAT_ABGR8888, 
-		IMAGE_FORMAT_IA88, 
-		IMAGE_FORMAT_A8,
-		IMAGE_FORMAT_ARGB8888,
-		IMAGE_FORMAT_BGRA8888, 
-		IMAGE_FORMAT_DXT3,
-		IMAGE_FORMAT_DXT5,
-		IMAGE_FORMAT_BGRA4444,
-		IMAGE_FORMAT_DXT1_ONEBITALPHA, 
-		IMAGE_FORMAT_BGRA5551,
-		IMAGE_FORMAT_UVWQ8888,
-		IMAGE_FORMAT_RGBA16161616F,
-		IMAGE_FORMAT_RGBA16161616, 
-		IMAGE_FORMAT_BC7
-	};
-
-	const char *const AlphaImageFormatNames[15] =
-	{
-		"RGBA8888", 
-		"ABGR8888", 
-		"IA88",
-		"A8", 
-		"ARGB8888",
-		"BGRA8888",
-		"DXT3", 
-		"DXT5", 
-		"BGRA4444",
-		"DXT1 With One Bit Alpha",
-		"BGRA5551",
-		"UVWQ8888",
-		"RGBA16161616F",
-		"RGBA16161616",
-		"BC7"
+		{ IMAGE_FORMAT_DXT5,				"DXT5",						false },
+		{ IMAGE_FORMAT_RGBA8888,			"RGBA8888",					false },
+		{ IMAGE_FORMAT_DXT3,				"DXT3",						false },
+		{ IMAGE_FORMAT_DXT1_ONEBITALPHA,	"DXT1 With One Bit Alpha",	false },
+		{ IMAGE_FORMAT_RGBA16161616,		"RGBA16161616",				false },
+		{ IMAGE_FORMAT_RGBA16161616F,		"RGBA16161616F",			false },
+		{ IMAGE_FORMAT_A8,					"A8",						false },
+		{ IMAGE_FORMAT_IA88,				"IA88",						false },
+		{ IMAGE_FORMAT_BC7,					"BC7",						true },
+		{ IMAGE_FORMAT_BGRA8888,			"BGRA8888",					false },
+		{ IMAGE_FORMAT_ABGR8888,			"ABGR8888",					false },
+		{ IMAGE_FORMAT_ARGB8888,			"ARGB8888",					false },
+		{ IMAGE_FORMAT_BGRA4444,			"BGRA4444",					false },
+		{ IMAGE_FORMAT_BGRA5551,			"BGRA5551",					false },
+		{ IMAGE_FORMAT_UVWQ8888,			"UVWQ8888",					false },
 	};
 
 	void VtfOptions::reset()
@@ -127,6 +94,11 @@ namespace VTFEdit
 		GenerateSphereMap = vlTrue;
 		StripAlpha = vlFalse;
 		sRGB = vlTrue;
+
+		DistanceAlpha = vlFalse;
+		DistanceAlphaSpread = 1.0f;
+		DistanceAlphaReduce = 1;
+		DistanceAlphaThreshold = 10;
 
 		CorrectGamma = vlFalse;
 		GammaCorrection = 2.2f;

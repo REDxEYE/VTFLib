@@ -36,14 +36,18 @@ typedef vlSingle		vlFloat;
 #define vlFalse			0
 #define vlTrue			1
 
-#define VL_VERSION			200
-#define VL_VERSION_STRING	"2.0.0"
+#define VL_VERSION			210
+#define VL_VERSION_STRING	"2.1.0"
 
 #define VTF_MAJOR_VERSION	7
 #define VTF_MINOR_VERSION	6
 
+#define VTF_MINOR_VERSION_DEFAULT	3
+
 #define VTF_MINOR_VERSION_MIN_SPHERE_MAP	1
 #define VTF_MINOR_VERSION_MIN_VOLUME		2
+#define VTF_MINOR_VERSION_MIN_RESOURCE		3
+#define VTF_MINOR_VERSION_MIN_NO_SPHERE_MAP	5
 #define VTF_MINOR_VERSION_MIN_AUX_COMPRESSION	6
 
 //
@@ -114,9 +118,13 @@ typedef enum tagVTFImageFormat
 	IMAGE_FORMAT_NV_NULL,
 	IMAGE_FORMAT_ATI2N,						
 	IMAGE_FORMAT_ATI1N,
+
 	IMAGE_FORMAT_R8 = 69,
 	IMAGE_FORMAT_BC7,
 	IMAGE_FORMAT_BC6H,
+	IMAGE_FORMAT_BC4,
+	IMAGE_FORMAT_BC5,
+
 	IMAGE_FORMAT_COUNT,
 	IMAGE_FORMAT_NONE = -1
 } VTFImageFormat;
@@ -206,6 +214,9 @@ typedef enum tagVTFResizeMethod
     RESIZE_BIGGEST_POWER2,
     RESIZE_SMALLEST_POWER2,
     RESIZE_SET,
+    RESIZE_NEAREST_MULTIPLE4,
+    RESIZE_BIGGEST_MULTIPLE4,
+    RESIZE_SMALLEST_MULTIPLE4,
 	RESIZE_COUNT
 } VTFResizeMethod;
 
@@ -536,6 +547,8 @@ VTFLIB_API vlBool vlImageConvert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidt
 
 VTFLIB_API vlBool vlImageResize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter);
 
+VTFLIB_API vlBool vlImageConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped);
+
 VTFLIB_API vlVoid vlImageCorrectImageGamma(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle sGammaCorrection);
 VTFLIB_API vlVoid vlImageComputeImageReflectivity(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle *sX, vlSingle *sY, vlSingle *sZ);
 
@@ -829,6 +842,7 @@ namespace VTFLib
 
 		vlUInt GetMajorVersion() const;
 		vlUInt GetMinorVersion() const;
+		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor);
 		vlUInt GetSize() const;
 
 		vlUInt GetWidth() const;
@@ -855,6 +869,7 @@ namespace VTFLib
 		vlVoid SetReflectivity(vlSingle sX, vlSingle sY, vlSingle sZ);
 
 		VTFImageFormat GetFormat() const;
+		VTFImageFormat GetDecodeFormat() const;
 		
 		vlByte *GetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel) const;
 		vlVoid SetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel, vlByte *lpData);
@@ -931,6 +946,10 @@ namespace VTFLib
 
 		static vlVoid FlipImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);
 		static vlVoid MirrorImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);
+
+		static vlBool ConvertToDistanceField(vlByte* lpSourceRGBA8888, vlByte* lpDestRGBA8888,
+			vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight,
+			vlSingle sSpread, vlByte bThreshold, vlBool* pbClipped);
 	};
 
 	//

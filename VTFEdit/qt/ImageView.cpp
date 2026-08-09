@@ -56,7 +56,8 @@ namespace VTFEdit
 		const int iTiles = m_bTiled ? 2 : 1;
 		const QSize Size = m_Image.isNull()
 			? QSize(0, 0)
-			: QSize(m_Image.width() * iTiles, m_Image.height() * iTiles);
+			: QSize(m_Image.width() * iTiles + margin() * 2,
+				m_Image.height() * iTiles + margin() * 2);
 
 		setFixedSize(Size);
 	}
@@ -75,7 +76,7 @@ namespace VTFEdit
 		{
 			for(int i = 0; i < iTiles; i++)
 			{
-				const QRect Target(i * m_Image.width(), j * m_Image.height(),
+				const QRect Target(margin() + i * m_Image.width(), margin() + j * m_Image.height(),
 					m_Image.width(), m_Image.height());
 
 				if(Target.intersects(pEvent->rect()))
@@ -90,9 +91,15 @@ namespace VTFEdit
 	{
 		if(!m_Image.isNull())
 		{
-			const QPoint Position = pEvent->position().toPoint();
+			const QPoint Position = pEvent->position().toPoint() - QPoint(margin(), margin());
+			const int iTiles = m_bTiled ? 2 : 1;
 
-			emit mouseMovedOverImage(Position.x() % m_Image.width(), Position.y() % m_Image.height());
+			if(Position.x() >= 0 && Position.y() >= 0
+				&& Position.x() < m_Image.width() * iTiles
+				&& Position.y() < m_Image.height() * iTiles)
+			{
+				emit mouseMovedOverImage(Position.x() % m_Image.width(), Position.y() % m_Image.height());
+			}
 		}
 
 		QWidget::mouseMoveEvent(pEvent);

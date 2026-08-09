@@ -26,10 +26,12 @@
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStandardItemModel>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
@@ -37,7 +39,20 @@ namespace VTFEdit
 {
 	namespace
 	{
-		const char *const ResizeMethodNames[] = { "Nearest Power Of 2", "Biggest Power Of 2", "Smallest Power Of 2" };
+		struct ResizeMethodEntry
+		{
+			const char *pName;
+			VTFResizeMethod Method;
+		};
+
+		const ResizeMethodEntry ResizeMethods[] = {
+			{ "Nearest Power Of 2", RESIZE_NEAREST_POWER2 },
+			{ "Biggest Power Of 2", RESIZE_BIGGEST_POWER2 },
+			{ "Smallest Power Of 2", RESIZE_SMALLEST_POWER2 },
+			{ "Nearest Multiple Of 4", RESIZE_NEAREST_MULTIPLE4 },
+			{ "Biggest Multiple Of 4", RESIZE_BIGGEST_MULTIPLE4 },
+			{ "Smallest Multiple Of 4", RESIZE_SMALLEST_MULTIPLE4 },
+		};
 		const char *const FilterNames[] = { "Box", "NICE" };
 		const char *const VersionNames[] = { "7.6", "7.5", "7.4", "7.3", "7.2", "7.1", "7.0" };
 		const char *const CompressionLevelNames[] = { "None", "Default", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -53,12 +68,51 @@ namespace VTFEdit
 			return list;
 		}
 
+		void fillResizeMethods(QComboBox *pCombo)
+		{
+			for(const ResizeMethodEntry &Entry : ResizeMethods)
+			{
+				pCombo->addItem(QString::fromLatin1(Entry.pName), static_cast<int>(Entry.Method));
+			}
+		}
+
 		template <int N>
 		void fill(QComboBox *pCombo, const char *const (&names)[N])
 		{
 			for(int i = 0; i < N; i++)
 			{
 				pCombo->addItem(QString::fromLatin1(names[i]));
+			}
+		}
+
+		template <int N>
+		void fillImageFormats(QComboBox *pCombo, const ImageFormatEntry (&Entries)[N])
+		{
+			for(int i = 0; i < N; i++)
+			{
+				pCombo->addItem(QString::fromLatin1(Entries[i].pName));
+			}
+		}
+
+		template <int N>
+		void updateImageFormatsEnabledState(QComboBox *pCombo, const ImageFormatEntry (&Entries)[N], bool bIsVersion76)
+		{
+			QStandardItemModel *pModel = qobject_cast<QStandardItemModel *>(pCombo->model());
+			if(pModel == nullptr)
+			{
+				return;
+			}
+
+			for(int i = 0; i < N; i++)
+			{
+				const bool bEnabled = bIsVersion76 || !Entries[i].bRequiresVersion76;
+				QStandardItem *pItem = pModel->item(i);
+				if(pItem != nullptr)
+				{
+					pItem->setFlags(bEnabled
+						? pItem->flags() | Qt::ItemIsEnabled | Qt::ItemIsSelectable
+						: pItem->flags() & ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable));
+				}
 			}
 		}
 	}
@@ -89,6 +143,7 @@ namespace VTFEdit
 		connect(m_pResizeClamp, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pMipmaps, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pGammaCorrection, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
+		connect(m_pDistanceAlpha, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pCreateLODControlResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pCreateInformationResource, &QCheckBox::toggled, this, &VtfOptionsDialog::updateEnabledState);
 		connect(m_pTextureType, &QComboBox::currentIndexChanged, this, &VtfOptionsDialog::updateEnabledState);
@@ -99,21 +154,30 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createGeneralTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pGeneral = new QGroupBox(tr("General:"), pTab);
 		QFormLayout *pGeneralForm = new QFormLayout(pGeneral);
 		m_pFormat = new QComboBox(pGeneral);
-		fill(m_pFormat, NormalImageFormatNames);
+		fillImageFormats(m_pFormat, NormalImageFormats);
 		m_pFormat->setToolTip(tr("The output image format for textures with no alpha channel. "
 			"Common values are DXT1 and RGB888."));
 		m_pAlphaFormat = new QComboBox(pGeneral);
-		fill(m_pAlphaFormat, AlphaImageFormatNames);
+		fillImageFormats(m_pAlphaFormat, AlphaImageFormats);
 		m_pAlphaFormat->setToolTip(tr("The output image format for textures with an alpha channel. "
 			"Common values are DXT5 and RGBA8888."));
 		m_pTextureType = new QComboBox(pGeneral);
 		m_pTextureType->addItems({ tr("Animated Texture"), tr("Environment Map"), tr("Volume Texture") });
-		pGeneralForm->addRow(tr("Normal Format:"), m_pFormat);
+		m_pVersion = new QComboBox(pGeneral);
+		fill(m_pVersion, VersionNames);
+		m_pVersion->setToolTip(tr("The VTF file version. 7.4 has the best compatibility, "
+			"7.5 is only supported in newer branches, and 7.6 is Strata Source only."));
+		pGeneralForm->addRow(tr("Version:"), m_pVersion);
+		pGeneralForm->addRow(tr("Color Format:"), m_pFormat);
 		pGeneralForm->addRow(tr("Alpha Format:"), m_pAlphaFormat);
 		pGeneralForm->addRow(tr("Texture Type:"), m_pTextureType);
 
@@ -140,10 +204,10 @@ namespace VTFEdit
 
 		QGroupBox *pResize = new QGroupBox(tr("Resize:"), pTab);
 		QFormLayout *pResizeForm = new QFormLayout(pResize);
-		m_pResize = new QCheckBox(tr("Resize to power of 2"), pResize);
+		m_pResize = new QCheckBox(tr("Resize image"), pResize);
 		m_pResizeMethod = new QComboBox(pResize);
-		fill(m_pResizeMethod, ResizeMethodNames);
-		m_pResizeMethod->setToolTip(tr("The method for choosing which power of 2 to use."));
+		fillResizeMethods(m_pResizeMethod);
+		m_pResizeMethod->setToolTip(tr("The size to round the image dimensions to. DXT compressed formats only require multiples of 4."));
 		m_pResizeFilter = new QComboBox(pResize);
 		fill(m_pResizeFilter, FilterNames);
 		m_pResizeClamp = new QCheckBox(tr("Clamp resize dimensions"), pResize);
@@ -160,11 +224,6 @@ namespace VTFEdit
 		pResizeForm->addRow(tr("Maximum Width:"), m_pMaximumWidth);
 		pResizeForm->addRow(tr("Maximum Height:"), m_pMaximumHeight);
 
-		QGroupBox *pGeneralOptions = new QGroupBox(tr("General Options:"), pTab);
-		QVBoxLayout *pGeneralOptionsLayout = new QVBoxLayout(pGeneralOptions);
-		pGeneralOptionsLayout->addWidget(pGeneral);
-		pGeneralOptionsLayout->addWidget(pResize);
-
 		QGroupBox *pMipmaps = new QGroupBox(tr("Mipmaps:"), pTab);
 		QFormLayout *pMipmapsForm = new QFormLayout(pMipmaps);
 		m_pMipmaps = new QCheckBox(tr("Generate mipmaps"), pMipmaps);
@@ -173,9 +232,11 @@ namespace VTFEdit
 		pMipmapsForm->addRow(m_pMipmaps);
 		pMipmapsForm->addRow(tr("Mipmap Filter:"), m_pMipmapFilter);
 
-		pLayout->addWidget(pGeneralOptions);
-		pLayout->addWidget(pMipmaps);
-		pLayout->addStretch();
+		pLeft->addWidget(pGeneral);
+		pLeft->addStretch();
+		pRight->addWidget(pResize);
+		pRight->addWidget(pMipmaps);
+		pRight->addStretch();
 
 		return pTab;
 	}
@@ -183,19 +244,11 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createAdvancedTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
-
-		QGroupBox *pVersion = new QGroupBox(tr("Version:"), pTab);
-		QFormLayout *pVersionForm = new QFormLayout(pVersion);
-		m_pVersion = new QComboBox(pVersion);
-		fill(m_pVersion, VersionNames);
-		m_pCompressionLevel = new QComboBox(pVersion);
-		fill(m_pCompressionLevel, CompressionLevelNames);
-		m_pCompressionMethod = new QComboBox(pVersion);
-		fill(m_pCompressionMethod, CompressionMethodNames);
-		pVersionForm->addRow(tr("Version:"), m_pVersion);
-		pVersionForm->addRow(tr("Compression Level:"), m_pCompressionLevel);
-		pVersionForm->addRow(tr("Compression Method:"), m_pCompressionMethod);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pGamma = new QGroupBox(tr("Gamma Correction:"), pTab);
 		QFormLayout *pGammaForm = new QFormLayout(pGamma);
@@ -220,11 +273,31 @@ namespace VTFEdit
 		pMiscLayout->addWidget(m_pStripAlpha);
 		pMiscLayout->addWidget(m_pSrgb);
 
-		QGroupBox *pAdvancedOptions = new QGroupBox(tr("Advanced Options:"), pTab);
-		QVBoxLayout *pAdvancedLayout = new QVBoxLayout(pAdvancedOptions);
-		pAdvancedLayout->addWidget(pVersion);
-		pAdvancedLayout->addWidget(pGamma);
-		pAdvancedLayout->addWidget(pMisc);
+		QGroupBox *pDistanceAlpha = new QGroupBox(tr("Distance Alpha:"), pTab);
+		QFormLayout *pDistanceAlphaForm = new QFormLayout(pDistanceAlpha);
+		m_pDistanceAlpha = new QCheckBox(tr("Encode alpha as a distance field"), pDistanceAlpha);
+		m_pDistanceAlpha->setToolTip(tr("Replaces the alpha channel with a signed distance field, for use with $distancealpha. "
+			"Mipmaps and compression should usually be disabled."));
+		m_pDistanceAlphaSpread = new QDoubleSpinBox(pDistanceAlpha);
+		m_pDistanceAlphaSpread->setDecimals(1);
+		m_pDistanceAlphaSpread->setSingleStep(0.5);
+		m_pDistanceAlphaSpread->setRange(0.1, 64.0);
+		m_pDistanceAlphaSpread->setToolTip(tr("Width in pixels of the gradient either side of the edge."));
+		m_pDistanceAlphaReduce = new QComboBox(pDistanceAlpha);
+		for(int i = 0; i < 6; i++)
+		{
+			m_pDistanceAlphaReduce->addItem(QStringLiteral("1/%1").arg(1 << i), 1 << i);
+		}
+		m_pDistanceAlphaReduce->setToolTip(tr("Shrinks the image after the distance field has been computed "
+			"at the source resolution."));
+		pDistanceAlphaForm->addRow(m_pDistanceAlpha);
+		pDistanceAlphaForm->addRow(tr("Spread:"), m_pDistanceAlphaSpread);
+		m_pDistanceAlphaThreshold = new QSpinBox(pDistanceAlpha);
+		m_pDistanceAlphaThreshold->setRange(0, 255);
+		m_pDistanceAlphaThreshold->setToolTip(tr("Source alpha above which a pixel counts as being inside "
+			"the shape. Raise this for soft or anti-aliased edges."));
+		pDistanceAlphaForm->addRow(tr("Scale:"), m_pDistanceAlphaReduce);
+		pDistanceAlphaForm->addRow(tr("Threshold:"), m_pDistanceAlphaThreshold);
 
 		QGroupBox *pLuminance = new QGroupBox(tr("Luminance Weights:"), pTab);
 		QFormLayout *pLuminanceForm = new QFormLayout(pLuminance);
@@ -240,9 +313,12 @@ namespace VTFEdit
 			pLuminanceForm->addRow(sLabels[i], pWeight);
 		}
 
-		pLayout->addWidget(pAdvancedOptions);
-		pLayout->addWidget(pLuminance);
-		pLayout->addStretch();
+		pLeft->addWidget(pGamma);
+		pLeft->addWidget(pLuminance);
+		pLeft->addStretch();
+		pRight->addWidget(pMisc);
+		pRight->addWidget(pDistanceAlpha);
+		pRight->addStretch();
 
 		return pTab;
 	}
@@ -250,7 +326,11 @@ namespace VTFEdit
 	QWidget *VtfOptionsDialog::createResourcesTab()
 	{
 		QWidget *pTab = new QWidget(this);
-		QVBoxLayout *pLayout = new QVBoxLayout(pTab);
+		QHBoxLayout *pLayout = new QHBoxLayout(pTab);
+		QVBoxLayout *pLeft = new QVBoxLayout();
+		QVBoxLayout *pRight = new QVBoxLayout();
+		pLayout->addLayout(pLeft);
+		pLayout->addLayout(pRight);
 
 		QGroupBox *pLOD = new QGroupBox(tr("LOD Control Resource:"), pTab);
 		QFormLayout *pLODForm = new QFormLayout(pLOD);
@@ -262,6 +342,16 @@ namespace VTFEdit
 		pLODForm->addRow(m_pCreateLODControlResource);
 		pLODForm->addRow(tr("Clamp U:"), m_pLODControlClampU);
 		pLODForm->addRow(tr("Clamp V:"), m_pLODControlClampV);
+
+		QGroupBox *pCompression = new QGroupBox(tr("Compression (version 7.6 only):"), pTab);
+		pCompression->setToolTip(tr("CPU compression is only available in version 7.6 files"));
+		QFormLayout *pCompressionForm = new QFormLayout(pCompression);
+		m_pCompressionLevel = new QComboBox(pCompression);
+		fill(m_pCompressionLevel, CompressionLevelNames);
+		m_pCompressionMethod = new QComboBox(pCompression);
+		fill(m_pCompressionMethod, CompressionMethodNames);
+		pCompressionForm->addRow(tr("Compression Level:"), m_pCompressionLevel);
+		pCompressionForm->addRow(tr("Compression Method:"), m_pCompressionMethod);
 
 		QGroupBox *pInformation = new QGroupBox(tr("Information Resource:"), pTab);
 		QFormLayout *pInformationForm = new QFormLayout(pInformation);
@@ -280,13 +370,11 @@ namespace VTFEdit
 		pInformationForm->addRow(tr("Description:"), m_pInformationDescription);
 		pInformationForm->addRow(tr("Comments:"), m_pInformationComments);
 
-		QGroupBox *pResourceOptions = new QGroupBox(tr("Resource Options:"), pTab);
-		QVBoxLayout *pResourceLayout = new QVBoxLayout(pResourceOptions);
-		pResourceLayout->addWidget(pLOD);
-		pResourceLayout->addWidget(pInformation);
-
-		pLayout->addWidget(pResourceOptions);
-		pLayout->addStretch();
+		pLeft->addWidget(pLOD);
+		pLeft->addWidget(pCompression);
+		pLeft->addStretch();
+		pRight->addWidget(pInformation);
+		pRight->addStretch();
 
 		return pTab;
 	}
@@ -329,6 +417,10 @@ namespace VTFEdit
 
 		m_pGammaCorrectionValue->setEnabled(m_pGammaCorrection->isChecked());
 
+		m_pDistanceAlphaSpread->setEnabled(m_pDistanceAlpha->isChecked());
+		m_pDistanceAlphaReduce->setEnabled(m_pDistanceAlpha->isChecked());
+		m_pDistanceAlphaThreshold->setEnabled(m_pDistanceAlpha->isChecked());
+
 		m_pLODControlClampU->setEnabled(m_pCreateLODControlResource->isChecked());
 		m_pLODControlClampV->setEnabled(m_pCreateLODControlResource->isChecked());
 
@@ -340,20 +432,28 @@ namespace VTFEdit
 		m_pInformationDescription->setEnabled(bInformation);
 		m_pInformationComments->setEnabled(bInformation);
 
-		const bool bCompressionSupported = m_pVersion->currentText() == QLatin1String("7.6");
+		const bool bIsVersion76 = m_pVersion->currentText() == QLatin1String("7.6");
+		updateImageFormatsEnabledState(m_pFormat, NormalImageFormats, bIsVersion76);
+		updateImageFormatsEnabledState(m_pAlphaFormat, AlphaImageFormats, bIsVersion76);
+
+		const bool bCompressionSupported = bIsVersion76;
 		m_pCompressionLevel->setEnabled(bCompressionSupported);
 		m_pCompressionMethod->setEnabled(bCompressionSupported && m_pCompressionLevel->currentIndex() != 0);
 	}
 
 	void VtfOptionsDialog::optionsToControls()
 	{
-		for(int i = 0; i < 15; i++)
+		for(int i = 0; i < NormalImageFormatCount; i++)
 		{
-			if(NormalImageFormats[i] == m_pOptions->NormalFormat)
+			if(NormalImageFormats[i].Format == m_pOptions->NormalFormat)
 			{
 				m_pFormat->setCurrentIndex(i);
 			}
-			if(AlphaImageFormats[i] == m_pOptions->AlphaFormat)
+		}
+
+		for(int i = 0; i < AlphaImageFormatCount; i++)
+		{
+			if(AlphaImageFormats[i].Format == m_pOptions->AlphaFormat)
 			{
 				m_pAlphaFormat->setCurrentIndex(i);
 			}
@@ -367,7 +467,8 @@ namespace VTFEdit
 		m_pFlagPointSample->setChecked(m_pOptions->FlagPointSample != vlFalse);
 
 		m_pResize->setChecked(m_pOptions->ResizeImage != vlFalse);
-		m_pResizeMethod->setCurrentIndex(static_cast<int>(m_pOptions->ResizeMethod));
+		const int iResizeMethodIndex = m_pResizeMethod->findData(static_cast<int>(m_pOptions->ResizeMethod));
+		m_pResizeMethod->setCurrentIndex(iResizeMethodIndex >= 0 ? iResizeMethodIndex : 0);
 		m_pResizeFilter->setCurrentIndex(m_pOptions->ResizeFilter == MIPMAP_FILTER_NICE ? 1 : 0);
 		m_pResizeClamp->setChecked(m_pOptions->ResizeClamp != vlFalse);
 
@@ -404,6 +505,12 @@ namespace VTFEdit
 		m_pStripAlpha->setChecked(m_pOptions->StripAlpha != vlFalse);
 		m_pSrgb->setChecked(m_pOptions->sRGB != vlFalse);
 
+		m_pDistanceAlpha->setChecked(m_pOptions->DistanceAlpha != vlFalse);
+		m_pDistanceAlphaSpread->setValue(m_pOptions->DistanceAlphaSpread);
+		const int iReduceIndex = m_pDistanceAlphaReduce->findData(static_cast<int>(m_pOptions->DistanceAlphaReduce));
+		m_pDistanceAlphaReduce->setCurrentIndex(iReduceIndex >= 0 ? iReduceIndex : 0);
+		m_pDistanceAlphaThreshold->setValue(static_cast<int>(m_pOptions->DistanceAlphaThreshold));
+
 		m_pGammaCorrection->setChecked(m_pOptions->CorrectGamma != vlFalse);
 		m_pGammaCorrectionValue->setValue(m_pOptions->GammaCorrection);
 
@@ -427,9 +534,9 @@ namespace VTFEdit
 	void VtfOptionsDialog::controlsToOptions()
 	{
 		m_pOptions->NormalFormat = m_pFormat->currentIndex() >= 0
-			? NormalImageFormats[m_pFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+			? NormalImageFormats[m_pFormat->currentIndex()].Format : IMAGE_FORMAT_NONE;
 		m_pOptions->AlphaFormat = m_pAlphaFormat->currentIndex() >= 0
-			? AlphaImageFormats[m_pAlphaFormat->currentIndex()] : IMAGE_FORMAT_NONE;
+			? AlphaImageFormats[m_pAlphaFormat->currentIndex()].Format : IMAGE_FORMAT_NONE;
 		m_pOptions->TextureType = static_cast<VtfTextureType>(m_pTextureType->currentIndex());
 
 		m_pOptions->FlagClampS = m_pFlagClampS->isChecked() ? vlTrue : vlFalse;
@@ -438,7 +545,7 @@ namespace VTFEdit
 		m_pOptions->FlagPointSample = m_pFlagPointSample->isChecked() ? vlTrue : vlFalse;
 
 		m_pOptions->ResizeImage = m_pResize->isChecked() ? vlTrue : vlFalse;
-		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentIndex());
+		m_pOptions->ResizeMethod = static_cast<VTFResizeMethod>(m_pResizeMethod->currentData().toInt());
 		m_pOptions->ResizeFilter = m_pResizeFilter->currentIndex() == 1 ? MIPMAP_FILTER_NICE : MIPMAP_FILTER_BOX;
 		m_pOptions->ResizeClamp = m_pResizeClamp->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->ResizeClampWidth = m_pMaximumWidth->currentText().toUInt();
@@ -470,6 +577,11 @@ namespace VTFEdit
 		m_pOptions->GenerateSphereMap = m_pSphereMap->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->StripAlpha = m_pStripAlpha->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->sRGB = m_pSrgb->isChecked() ? vlTrue : vlFalse;
+
+		m_pOptions->DistanceAlpha = m_pDistanceAlpha->isChecked() ? vlTrue : vlFalse;
+		m_pOptions->DistanceAlphaSpread = static_cast<vlSingle>(m_pDistanceAlphaSpread->value());
+		m_pOptions->DistanceAlphaReduce = static_cast<vlUInt>(m_pDistanceAlphaReduce->currentData().toInt());
+		m_pOptions->DistanceAlphaThreshold = static_cast<vlUInt>(m_pDistanceAlphaThreshold->value());
 
 		m_pOptions->CorrectGamma = m_pGammaCorrection->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->GammaCorrection = static_cast<vlSingle>(m_pGammaCorrectionValue->value());

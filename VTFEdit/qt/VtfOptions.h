@@ -25,11 +25,18 @@
 
 namespace VTFEdit
 {
-	extern const VTFImageFormat NormalImageFormats[15];
-	extern const char *const NormalImageFormatNames[15];
+	struct ImageFormatEntry
+	{
+		VTFImageFormat Format;
+		const char *pName;
+		bool bRequiresVersion76;	// Format was only added in VTF version 7.6.
+	};
 
-	extern const VTFImageFormat AlphaImageFormats[15];
-	extern const char *const AlphaImageFormatNames[15];
+	static const int NormalImageFormatCount = 18;
+	static const int AlphaImageFormatCount = 15;
+
+	extern const ImageFormatEntry NormalImageFormats[NormalImageFormatCount];
+	extern const ImageFormatEntry AlphaImageFormats[AlphaImageFormatCount];
 
 	enum class VtfTextureType
 	{
@@ -72,6 +79,11 @@ namespace VTFEdit
 		vlBool GenerateSphereMap;
 		vlBool StripAlpha;
 		vlBool sRGB;
+
+		vlBool DistanceAlpha;
+		vlSingle DistanceAlphaSpread;
+		vlUInt DistanceAlphaReduce;
+		vlUInt DistanceAlphaThreshold;
 
 		vlBool CorrectGamma;
 		vlSingle GammaCorrection;
