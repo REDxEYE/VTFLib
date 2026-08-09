@@ -19,9 +19,6 @@ set(VTFLIB_SOURCES
 		VTFLib.cpp
 		VTFMathlib.cpp
 		VTFWrapper.cpp
-
-		"${VTFLIB_THIRDPARTY}/miniz/miniz.c"
-		"${VTFLIB_THIRDPARTY}/zstd/zstd.c"
 )
 
 if(WIN32)
@@ -63,7 +60,6 @@ set_target_properties(vtflib PROPERTIES
 	# third-party VTF shell extensions get loaded into our process by the shell
 	# and would attempt to use our VTFLib, which has a fatal ABI mismatch
 	OUTPUT_NAME VTFLib++
-	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
 target_compile_definitions(vtflib_obj

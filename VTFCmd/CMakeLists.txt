@@ -17,7 +17,6 @@ add_executable(vtfcmd ${VTFCMD_SOURCES})
 
 set_target_properties(vtfcmd PROPERTIES
 	OUTPUT_NAME VTFCmd
-	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
 target_compile_definitions(vtfcmd PRIVATE
