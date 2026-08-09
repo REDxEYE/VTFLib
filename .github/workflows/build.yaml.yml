@@ -12,35 +12,74 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      QT_VERSION: 6.8.4
+      QT_PREFIX: C:\Qt-static\6.8.4
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
         with:
-          version: '6.8.*'
-          host: windows
-          target: desktop
-          arch: win64_msvc2022_64
-          cache: true
+          arch: x64
+
+      - name: Cache static Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\Qt-static\6.8.4
+          key: qt-static-6.8.4-msvc2022-x64-mt-v1
+
+      - name: Build static Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $url = "https://download.qt.io/official_releases/qt/6.8/$env:QT_VERSION/submodules/qtbase-everywhere-opensource-src-$env:QT_VERSION.tar.xz"
+
+          curl.exe -L $url -o qtbase.tar.xz
+
+          New-Item -ItemType Directory -Force qt-src | Out-Null
+          tar -xf qtbase.tar.xz -C qt-src
+
+          $source = (Get-ChildItem qt-src -Directory | Select-Object -First 1).FullName
+
+          New-Item -ItemType Directory -Force qt-build | Out-Null
+          Set-Location qt-build
+
+          & "$source\configure.bat" `
+            -prefix "$env:QT_PREFIX" `
+            -release `
+            -static `
+            -static-runtime `
+            -opensource `
+            -confirm-license `
+            -nomake examples `
+            -nomake tests
+
+          cmake --build . --parallel
+          cmake --install .
 
       - name: Configure
-        run: >
-          cmake
-          -S .
-          -B build
-          -A x64
+        shell: pwsh
+        run: |
+          cmake `
+            -S . `
+            -B build `
+            -A x64 `
+            "-DCMAKE_PREFIX_PATH=$env:QT_PREFIX"
 
       - name: Build
-        run: >
-          cmake
-          --build build
-          --config Release
-          --target vtflib vtflib_static vtfcmd vtfedit
-          --parallel
+        shell: pwsh
+        run: |
+          cmake `
+            --build build `
+            --config Release `
+            --target vtflib vtflib_static vtfcmd vtfedit `
+            --parallel
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -52,7 +91,6 @@ jobs:
             build/bin/**/*.exe
             build/bin/**/*.lib
             build/lib/**/*.lib
-
   build-linux:
     runs-on: ubuntu-latest
 
