@@ -60,6 +60,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(miniz)
 
+
 FetchContent_Declare(
         zstd
         QUIET
@@ -74,3 +75,12 @@ SET(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 SET(ZSTD_BUILD_STATIC ON CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_SHARED OFF)
 FetchContent_MakeAvailable(zstd)
+
+set_target_properties(
+        miniz
+        libzstd_static
+        CMP_Compressonator
+        CMP_Core
+        PROPERTIES
+            POSITION_INDEPENDENT_CODE ON
+)
