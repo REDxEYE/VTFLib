@@ -34,6 +34,7 @@
 
 #undef min
 #undef max
+# define PI		3.14159265358979323846
 
 using namespace VTFLib;
 
@@ -4277,7 +4278,7 @@ static vlVoid GenerateNiceFilter(vlUInt uiWidthRatio, vlUInt uiHeightRatio, vlUI
 			}
 			else
 			{
-				vlSingle sT = (vlSingle)M_PI * sD;
+				vlSingle sT = (vlSingle)PI * sD;
 
 				if(sT != 0.0f)
 				{
