@@ -20,6 +20,8 @@
 #ifndef ENUMERATIONS_H
 #define ENUMERATIONS_H
 
+#include "VTFLib.h"
+
 VTFImageFormat StringToImageFormat(const vlChar *cString);
 VTFImageFlag StringToImageFlag(const vlChar *cString);
 

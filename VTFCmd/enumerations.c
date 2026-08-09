@@ -19,6 +19,8 @@
 
 #include "stdafx.h"
 
+#include "VTFLib.h"
+
 VTFImageFormat StringToImageFormat(const vlChar *cString)
 {
 	if(stricmp(cString, "RGBA8888") == 0)

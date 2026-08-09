@@ -29,35 +29,43 @@
 #	endif
 #endif
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>			// For FindFirstFile()
 
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
-#include "..\lib\VTFLib.h"
+// #include "VTFLib.h"
 
-#ifndef VTFLIB_CMAKE_BUILD
-#	ifdef _DEBUG
-#		ifdef _WIN64
-#			pragma comment(lib, "../VTFLib/x64/Debug/VTFLib.lib")
-#		else
-#			pragma comment(lib, "../VTFLib/Win32/Debug/VTFLib.lib")
-#		endif
-#	else
-#		ifdef _WIN64
-#			pragma comment(lib, "../VTFLib/x64/Release/VTFLib.lib")
-#		else
-#			pragma comment(lib, "../VTFLib/Win32/Release/VTFLib.lib")
-#		endif
-#	endif
-#endif
-
-#include "IL\il.h"
-#ifndef VTFLIB_CMAKE_BUILD
-#	pragma comment(lib, "DevIL.lib")
+#if WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>			// For FindFirstFile()
+// #ifndef VTFLIB_CMAKE_BUILD
+// #	ifdef _DEBUG
+// #		ifdef _WIN64
+// #			pragma comment(lib, "../VTFLib/x64/Debug/VTFLib.lib")
+// #		else
+// #			pragma comment(lib, "../VTFLib/Win32/Debug/VTFLib.lib")
+// #		endif
+// #	else
+// #		ifdef _WIN64
+// #			pragma comment(lib, "../VTFLib/x64/Release/VTFLib.lib")
+// #		else
+// #			pragma comment(lib, "../VTFLib/Win32/Release/VTFLib.lib")
+// #		endif
+// #	endif
+// #endif
+//
+// #include "IL\il.h"
+// #ifndef VTFLIB_CMAKE_BUILD
+// #	pragma comment(lib, "DevIL.lib")
+// #endif
+#else
+#include <strings.h>
+#define stricmp strcasecmp
+#define _stricmp strcasecmp
+#define strnicmp strncasecmp
+#include <ctype.h>
 #endif
 
 #endif

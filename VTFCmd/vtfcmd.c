@@ -19,6 +19,7 @@
 
 #include "stdafx.h"
 #include "enumerations.h"
+#include "IL/il.h"
 
 #define MAX_ITEMS	1024
 
