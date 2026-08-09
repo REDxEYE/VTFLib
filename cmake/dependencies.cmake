@@ -32,7 +32,7 @@ FetchContent_Declare(
         QUIET
         GIT_REPOSITORY https://github.com/REDxEYE/DevIL.git
         GIT_TAG master
-        SOURCE_SUBDIR DevIL
+        SOURCE_SUBDIR DevIL/src-IL
         GIT_SHALLOW TRUE
 
 )
