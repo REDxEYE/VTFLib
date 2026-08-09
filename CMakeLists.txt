@@ -8,6 +8,10 @@ project(VTFLib
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 include(cmake/dependencies.cmake)
 
 option(VTFLIB_BUILD_VTFCMD "Build VTFCmd" ON)
@@ -19,10 +23,6 @@ if (NOT WIN32)
     SET(VTFLIB_BUILD_VTFEDIT OFF)
     SET(VTFLIB_BUILD_VTFCMD OFF)
 endif ()
-
-if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
 
 foreach (config "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY${config} "${CMAKE_BINARY_DIR}/bin")
