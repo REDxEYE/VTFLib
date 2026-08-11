@@ -1,6 +1,6 @@
 set(VTFCMD_SOURCES
-		vtfcmd.c
-		enumerations.c
+		vtfcmd.cpp
+		enumerations.cpp
 )
 
 if(WIN32)
@@ -26,6 +26,12 @@ target_compile_definitions(vtfcmd PRIVATE
 	_CRT_NONSTDC_NO_DEPRECATE
 	$<$<NOT:$<CONFIG:Debug>>:_USE_RTM_VERSION>
 )
-target_include_directories(vtfcmd PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ../lib  "${devil_SOURCE_DIR}/DevIL/include")
+target_include_directories(vtfcmd
+		PRIVATE
+		"${CMAKE_CURRENT_SOURCE_DIR}"
+		"../shared/include"
+		"../lib"
+		"${devil_SOURCE_DIR}/DevIL/include"
+)
 
 target_link_libraries(vtfcmd PRIVATE vtflib_static IL)

@@ -31,8 +31,7 @@
 					- Image data (in relevant format)
 */
 
-#ifndef VTFFORMAT_H
-#define VTFFORMAT_H
+#pragma once
 
 #include "stdafx.h"
 
@@ -517,5 +516,3 @@ struct SVTFHeader : public SVTFHeader_74_A
 #ifdef __cplusplus
 }
 #endif
-
-#endif // VTFFORMAT_H

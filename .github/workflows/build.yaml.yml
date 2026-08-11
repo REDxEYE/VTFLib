@@ -122,7 +122,7 @@ jobs:
         run: |
           cmake \
             --build build \
-            --target vtflib vtflib_static \
+            --target vtflib vtflib_static vtfedit vtfcmd \
             --parallel
 
       - name: Upload artifacts
@@ -131,7 +131,6 @@ jobs:
           name: VTFLib-linux-x64
           if-no-files-found: error
           path: |
-            build/bin/**/*.so
-            build/bin/**/*.a
+            build/bin/**/*.*
             build/lib/**/*.so
             build/lib/**/*.a

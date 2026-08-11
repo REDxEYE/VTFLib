@@ -21,6 +21,8 @@
 #include "enumerations.h"
 #include "IL/il.h"
 
+#include "win32_findfile_polyfill.hpp"
+
 #define MAX_ITEMS	1024
 
 vlUInt uiFileCount = 0;
@@ -131,8 +133,8 @@ int main(int argc, char* argv[])
 
 	VTFMipmapFilter MipmapFilter;		// Temp variable for string to VTFMipmapFilter test.
 
-	WIN32_FIND_DATA FindData;
-	HANDLE Handle;
+	winfind::WIN32_FIND_DATA FindData;
+	winfind::HANDLE Handle;
 
 	// Check we have the right DLL version.
 	if(vlGetVersion() != VL_VERSION)
@@ -155,9 +157,9 @@ int main(int argc, char* argv[])
 		// If only one argument assume drag and drop.
 		Handle = FindFirstFile(argv[1], &FindData);
 
-		if(Handle != INVALID_HANDLE_VALUE)
+		if(Handle != winfind::INVALID_HANDLE_VALUE)
 		{
-			if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if(FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY)
 			{
 				lpFolders[uiFolderCount++] = argv[1];
 				CreateOptions.bResize = vlTrue;
@@ -170,7 +172,7 @@ int main(int argc, char* argv[])
 				bPause = vlTrue;
 			}
 
-			FindClose(Handle);
+			winfind::FindClose(Handle);
 			break;
 		}
 		// Fall through.
@@ -1138,7 +1140,7 @@ void ProcessFile(vlChar *lpInputFile)
 		DestFormat = (vlImageGetFlags() & (TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA)) ? IMAGE_FORMAT_RGBA8888 : IMAGE_FORMAT_RGB888;
 
 		// Alocate the required memory to convert the vtf to.
-		lpImageData = malloc(vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat));
+		lpImageData = static_cast<vlByte *>(malloc(vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat)));
 
 		if(lpImageData == 0)
 		{
@@ -1195,8 +1197,8 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 	vlChar lpSearchString[512];
 	vlChar lpPath[512];
 
-	WIN32_FIND_DATA FindData;
-	HANDLE Handle;
+	winfind::WIN32_FIND_DATA FindData;
+	winfind::HANDLE Handle;
 
 	Print("Processing %s\\...\n\n", lpInputFolder);
 
@@ -1206,7 +1208,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 
 		Handle = FindFirstFile(lpSearchString, &FindData);
 
-		if(Handle != INVALID_HANDLE_VALUE)
+		if(Handle != winfind::INVALID_HANDLE_VALUE)
 		{
 			do
 			{
@@ -1214,14 +1216,14 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 				{
 					sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-					if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+					if(FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY)
 					{
 						ProcessFolder(lpPath, lpWildcard);
 					}
 				}
 			} while(FindNextFile(Handle, &FindData));
 
-			FindClose(Handle);
+			winfind::FindClose(Handle);
 		}
 	}
 
@@ -1229,7 +1231,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 
 	Handle = FindFirstFile(lpSearchString, &FindData);
 
-	if(Handle != INVALID_HANDLE_VALUE)
+	if(Handle != winfind::INVALID_HANDLE_VALUE)
 	{
 		do
 		{
@@ -1237,14 +1239,14 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 			{
 				sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-				if((FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+				if((FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY) == 0)
 				{
 					ProcessFile(lpPath);
 				}
 			}
-		} while(FindNextFile(Handle, &FindData));
+		} while(winfind::FindNextFile(Handle, &FindData));
 
-		FindClose(Handle);
+		winfind::FindClose(Handle);
 	}
 
 	Print("%s\\ processed.\n\n", lpInputFolder);

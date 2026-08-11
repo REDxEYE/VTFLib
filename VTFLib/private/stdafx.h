@@ -13,13 +13,14 @@
 // NOTE: This file is commented for compatibility with Doxygen.
 // ============================================================
 /*!
-	\file StdAfx.h
+	\file stdafx.h
 	\brief Application framework header plus VTFLib custom data types.
 */
 
-#ifndef STDAFX_H
-#define STDAFX_H
+#pragma once
 
+#include "polyfill.hpp"
+#include "macros.hpp"
 #include <cstdint>
 
 #if defined(_WIN32)
@@ -77,11 +78,6 @@ typedef vlSingle		vlFloat;			//!< Floating point number (same as vlSingled).
 #include <math.h>
 #include <stdarg.h>
 
-#if _MSC_VER >= 1600 // Visual Studio 2010
-#	define STATIC_ASSERT(condition, message) static_assert(condition, message)
-#else
-#	define STATIC_ASSERT(condition, message) typedef char __C_ASSERT__[(condition) ? 1 : -1]
-#endif
 #else
 #include <cstring>
 #include <cmath>
@@ -99,16 +95,4 @@ typedef FILE *HANDLE;
 #define FILE_BEGIN   0
 #define FILE_CURRENT 1
 #define FILE_END     2
-#endif
-
-#if defined(_MSC_VER)
-#	define VL_ALIGN(n) __declspec(align(n))
-#elif defined(__GNUC__) || defined(__clang__)
-#	define VL_ALIGN(n) __attribute__((aligned(n)))
-#else
-#	define VL_ALIGN(n)
-#endif
-
-#define STATIC_ASSERT(condition, message) static_assert(condition, message)
-
 #endif

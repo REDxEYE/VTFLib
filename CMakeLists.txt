@@ -22,13 +22,6 @@ include(cmake/dependencies.cmake)
 option(VTFLIB_BUILD_VTFCMD "Build VTFCmd" ON)
 option(VTFLIB_BUILD_VTFEDIT "Build VTFEdit" ON)
 
-
-if (NOT WIN32)
-    message(WARNING "VTFCMD and VTFEDIT only supported on Windows")
-    SET(VTFLIB_BUILD_VTFEDIT OFF)
-    SET(VTFLIB_BUILD_VTFCMD OFF)
-endif ()
-
 foreach (config "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY${config} "${CMAKE_BINARY_DIR}/bin")
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY${config} "${CMAKE_BINARY_DIR}/bin")

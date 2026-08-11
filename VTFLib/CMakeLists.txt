@@ -39,6 +39,7 @@ add_library(vtflib_obj OBJECT ${VTFLIB_SOURCES})
 target_include_directories(vtflib_obj
 		PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/private"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../shared/include"
 		PUBLIC
 		"${CMAKE_CURRENT_SOURCE_DIR}/public"
 		INTERFACE

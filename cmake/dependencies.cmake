@@ -38,7 +38,8 @@ FetchContent_Declare(
 
 )
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(OPTION_BUILD_INTERNAL_CMP_TEST OFF CACHE BOOL "" FORCE)
+set(IL_STATIC_DEPS ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(devil)
 
 target_include_directories(IL PUBLIC

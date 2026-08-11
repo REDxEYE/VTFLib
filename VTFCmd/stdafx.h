@@ -17,8 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef STDAFX_H
-#define STDAFX_H
+#pragma once
+
+#include "polyfill.hpp"
+#include "macros.hpp"
 
 #if _MSC_VER >= 1400
 #	ifndef _CRT_SECURE_NO_WARNINGS
@@ -31,9 +33,9 @@
 
 
 #include <malloc.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdarg>
 
 // #include "VTFLib.h"
 
@@ -68,4 +70,3 @@
 #include <ctype.h>
 #endif
 
-#endif
