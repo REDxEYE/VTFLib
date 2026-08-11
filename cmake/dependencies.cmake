@@ -3,8 +3,8 @@ include(FetchContent)
 FetchContent_Declare(
         compressonator
         QUIET
-        GIT_REPOSITORY https://github.com/GPUOpen-Tools/compressonator.git
-        GIT_TAG f4b53d7
+        GIT_REPOSITORY https://github.com/REDxEYE/compressonator.git
+        GIT_TAG master
         GIT_SHALLOW TRUE
 
 )
