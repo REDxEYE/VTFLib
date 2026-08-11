@@ -157,9 +157,9 @@ int main(int argc, char* argv[])
 		// If only one argument assume drag and drop.
 		Handle = FindFirstFile(argv[1], &FindData);
 
-		if(Handle != winfind::INVALID_HANDLE_VALUE)
+		if(Handle != INVALID_HANDLE_VALUE)
 		{
-			if(FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY)
+			if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				lpFolders[uiFolderCount++] = argv[1];
 				CreateOptions.bResize = vlTrue;
@@ -1208,7 +1208,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 
 		Handle = FindFirstFile(lpSearchString, &FindData);
 
-		if(Handle != winfind::INVALID_HANDLE_VALUE)
+		if(Handle != INVALID_HANDLE_VALUE)
 		{
 			do
 			{
@@ -1216,7 +1216,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 				{
 					sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-					if(FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY)
+					if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 					{
 						ProcessFolder(lpPath, lpWildcard);
 					}
@@ -1231,7 +1231,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 
 	Handle = FindFirstFile(lpSearchString, &FindData);
 
-	if(Handle != winfind::INVALID_HANDLE_VALUE)
+	if(Handle != INVALID_HANDLE_VALUE)
 	{
 		do
 		{
@@ -1239,7 +1239,7 @@ void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
 			{
 				sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-				if((FindData.dwFileAttributes & winfind::FILE_ATTRIBUTE_DIRECTORY) == 0)
+				if((FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 				{
 					ProcessFile(lpPath);
 				}

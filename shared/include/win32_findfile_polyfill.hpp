@@ -35,12 +35,6 @@ namespace winfind {
     using HANDLE = ::HANDLE;
     using WIN32_FIND_DATA = ::WIN32_FIND_DATAA;
 
-    inline const HANDLE INVALID_HANDLE_VALUE =
-            winfind_detail::invalid_handle_value;
-
-    constexpr std::uint32_t FILE_ATTRIBUTE_DIRECTORY =
-            winfind_detail::file_attribute_directory;
-
 
     inline HANDLE FindFirstFile(
         const char *searchPattern,
@@ -64,9 +58,6 @@ namespace winfind {
 
     using DWORD = std::uint32_t;
 
-    constexpr DWORD FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
-
-
     struct WIN32_FIND_DATA {
         DWORD dwFileAttributes{};
         char cFileName[260]{};
@@ -81,9 +72,8 @@ namespace winfind {
 
     using HANDLE = FindHandle *;
 
-    inline const HANDLE INVALID_HANDLE_VALUE =
-            reinterpret_cast<HANDLE>(static_cast<std::intptr_t>(-1));
-
+    inline const HANDLE _INTERNAL_INVALID_HANDLE_VALUE = reinterpret_cast<HANDLE>(static_cast<std::intptr_t>(-1));
+    constexpr DWORD _INTERNAL_FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
 
     inline std::string NormalizePath(std::string path) {
         std::replace(path.begin(), path.end(), '\\', '/');
@@ -140,7 +130,7 @@ namespace winfind {
 
         findData->dwFileAttributes =
                 entry.is_directory(ec)
-                    ? FILE_ATTRIBUTE_DIRECTORY
+                    ? _INTERNAL_FILE_ATTRIBUTE_DIRECTORY
                     : 0;
 
         const std::string name =
@@ -184,7 +174,7 @@ namespace winfind {
 
         if (ec) {
             delete handle;
-            return INVALID_HANDLE_VALUE;
+            return _INTERNAL_INVALID_HANDLE_VALUE;
         }
 
         for (const auto &entry: iterator) {
@@ -200,7 +190,7 @@ namespace winfind {
 
         if (handle->entries.empty()) {
             delete handle;
-            return INVALID_HANDLE_VALUE;
+            return _INTERNAL_INVALID_HANDLE_VALUE;
         }
 
         FillFindData(
@@ -216,7 +206,7 @@ namespace winfind {
         HANDLE handle,
         WIN32_FIND_DATA *findData) {
         if (!handle ||
-            handle == INVALID_HANDLE_VALUE) {
+            handle == _INTERNAL_INVALID_HANDLE_VALUE) {
             return false;
         }
 
@@ -236,7 +226,7 @@ namespace winfind {
 
     inline bool FindClose(HANDLE handle) {
         if (!handle ||
-            handle == INVALID_HANDLE_VALUE) {
+            handle == _INTERNAL_INVALID_HANDLE_VALUE) {
             return false;
         }
 
@@ -246,3 +236,10 @@ namespace winfind {
 
 #endif
 }
+
+
+#ifndef _WIN32
+inline const winfind::HANDLE INVALID_HANDLE_VALUE = reinterpret_cast<winfind::HANDLE>(static_cast<std::intptr_t>(-1));
+constexpr winfind::DWORD FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
+
+#endif
