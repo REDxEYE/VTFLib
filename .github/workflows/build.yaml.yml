@@ -108,7 +108,8 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             cmake \
-            ninja-build
+            ninja-build \
+            qt6-base-dev
 
       - name: Configure
         run: |
