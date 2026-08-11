@@ -94,7 +94,7 @@ jobs:
             build/bin/**/*.lib
             build/lib/**/*.lib
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout
@@ -132,6 +132,6 @@ jobs:
           name: VTFLib-linux-x64
           if-no-files-found: error
           path: |
-            build/bin/**/*.*
+            build/bin/*.*
             build/lib/**/*.so
             build/lib/**/*.a
