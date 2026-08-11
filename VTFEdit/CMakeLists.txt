@@ -63,6 +63,29 @@ target_compile_definitions(vtfedit PRIVATE
 	_CRT_NONSTDC_NO_DEPRECATE
 )
 
+set(_indirect_extern_flag)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(_indirect_extern_flag "-fno-direct-access-external-data")
+
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	set(_indirect_extern_flag "-mno-direct-extern-access")
+endif()
+
+if(_indirect_extern_flag)
+	check_cxx_compiler_flag(
+			"${_indirect_extern_flag}"
+			VTFEDIT_HAS_INDIRECT_EXTERN_ACCESS
+	)
+
+	if(VTFEDIT_HAS_INDIRECT_EXTERN_ACCESS)
+		target_compile_options(
+				vtfedit
+				PRIVATE
+				"${_indirect_extern_flag}"
+		)
+	endif()
+endif()
 target_link_libraries(vtfedit PRIVATE
 	vtflib_static
 	IL
