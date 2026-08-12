@@ -773,7 +773,7 @@ vlVoid CVTFFile::DestroyAuxCompression() {
 // Chunks are visited in the order they appear in the file: smallest mipmap first, then frame, then face.
 // All slices of a 3D texture are compressed as one chunk.
 //
-vlBool CVTFFile::ComputeAuxCompression(vlBool bForce, Diagnostics::CError& error) {
+vlBool CVTFFile::ComputeAuxCompression(vlBool bForce, Diagnostics::CError &error) {
     if (!this->GetSupportsAuxCompression() || this->sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE || !this->
         GetHasImage()) {
         this->DestroyAuxCompression();
@@ -884,7 +884,8 @@ vlBool CVTFFile::ComputeAuxCompression(vlBool bForce, Diagnostics::CError& error
 // The compressed chunk sizes come from the AXC resource payload described by lpInfo.
 //
 static vlBool DecompressAuxData(const CVTFFile *VTFFile, const vlByte *lpSource, vlUInt uiSourceSize, vlByte *lpDest,
-                                vlUInt uiDestSize, const vlByte *lpInfo, vlUInt uiInfoSize, vlShort sMethod, Diagnostics::CError& error) {
+                                vlUInt uiDestSize, const vlByte *lpInfo, vlUInt uiInfoSize, vlShort sMethod,
+                                Diagnostics::CError &error) {
     vlUInt uiFrameCount = VTFFile->GetFrameCount();
     vlUInt uiFaceCount = VTFFile->GetFaceCount();
     vlUInt uiMipmapCount = VTFFile->GetMipmapCount();
@@ -1307,7 +1308,8 @@ vlBool CVTFFile::Load(IO::Readers::IReader *Reader, vlBool bHeaderOnly, Diagnost
 
                 vlBool bResult = DecompressAuxData(this, lpCompressedData, uiAuxImageBufferSize, this->lpImageData,
                                                    this->uiImageBufferSize, this->Header->Data[uiAuxIndex].Data,
-                                                   this->Header->Data[uiAuxIndex].Size, this->sAuxCompressionMethod, error);
+                                                   this->Header->Data[uiAuxIndex].Size, this->sAuxCompressionMethod,
+                                                   error);
 
                 delete []lpCompressedData;
 
@@ -1429,7 +1431,8 @@ vlBool CVTFFile::Save(IO::Writers::IWriter *Writer, Diagnostics::CError &error) 
                                 throw 0;
                             }
 
-                            if (Writer->Write(SaveHeader.Data[i].Data, SaveHeader.Data[i].Size, error) != SaveHeader.Data
+                            if (Writer->Write(SaveHeader.Data[i].Data, SaveHeader.Data[i].Size, error) != SaveHeader.
+                                Data
                                 [i].Size) {
                                 throw 0;
                             }
@@ -1506,7 +1509,7 @@ vlUInt CVTFFile::GetMinorVersion() const {
 // SetVersion()
 // Retargets the loaded image at another version of the VTF format.
 //
-vlBool CVTFFile::SetVersion(vlUInt uiMajor, vlUInt uiMinor, Diagnostics::CError& error) {
+vlBool CVTFFile::SetVersion(vlUInt uiMajor, vlUInt uiMinor, Diagnostics::CError &error) {
     if (!this->IsLoaded()) {
         error.Set("No image loaded.");
         return vlFalse;
@@ -1653,7 +1656,7 @@ vlVoid CVTFFile::ComputeResources() {
 // GetSize()
 // Returns the size of the VTF file in bytes.
 //
-vlUInt CVTFFile::GetSize(Diagnostics::CError& error) const {
+vlUInt CVTFFile::GetSize(Diagnostics::CError &error) const {
     if (!this->IsLoaded())
         return 0;
 
@@ -1978,7 +1981,7 @@ vlVoid CVTFFile::SetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt u
     memcpy(
         this->lpImageData + this->ComputeDataOffset(uiFrame, uiFace, uiSlice, uiMipmapLevel, this->Header->ImageFormat),
         lpData, ComputeMipmapSize(this->Header->Width, this->Header->Height, 1, uiMipmapLevel,
-                                            this->Header->ImageFormat));
+                                  this->Header->ImageFormat));
 
     this->DestroyAuxCompression();
 }
@@ -2248,7 +2251,7 @@ vlShort CVTFFile::GetAuxCompressionLevel() const {
     return this->sAuxCompressionLevel;
 }
 
-vlBool CVTFFile::SetAuxCompressionLevel(vlShort sLevel, Diagnostics::CError& error) {
+vlBool CVTFFile::SetAuxCompressionLevel(vlShort sLevel, Diagnostics::CError &error) {
     if (!this->GetSupportsAuxCompression()) {
         error.SetFormatted("Auxiliary compression requires VTF file version v%d.%d and up.", VTF_MAJOR_VERSION,
                            VTF_MINOR_VERSION_MIN_AUX_COMPRESSION);
@@ -2276,7 +2279,7 @@ vlShort CVTFFile::GetAuxCompressionMethod() const {
     return this->sAuxCompressionMethod;
 }
 
-vlBool CVTFFile::SetAuxCompressionMethod(vlShort sMethod, Diagnostics::CError& error) {
+vlBool CVTFFile::SetAuxCompressionMethod(vlShort sMethod, Diagnostics::CError &error) {
     if (!this->GetSupportsAuxCompression()) {
         error.SetFormatted("Auxiliary compression requires VTF file version v%d.%d and up.", VTF_MAJOR_VERSION,
                            VTF_MINOR_VERSION_MIN_AUX_COMPRESSION);
@@ -2325,13 +2328,12 @@ vlBool CVTFFile::GenerateMipmaps(Diagnostics::CError &error, VTFMipmapFilter Mip
 // GenerateMipmaps()
 // Generate mipmaps from the first mipmap level of the specified frame and face.
 //
-vlBool CVTFFile::GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, Diagnostics::CError &error, VTFMipmapFilter MipmapFilter, vlBool bSRGB) {
+vlBool CVTFFile::GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, Diagnostics::CError &error,
+                                 VTFMipmapFilter MipmapFilter, vlBool bSRGB) {
     if (!this->IsLoaded())
         return vlFalse;
 
-// TODO: use stdimageresize
-#ifdef USE_NVDXT
-    if (this->lpImageData == 0) {
+    if (this->lpImageData == nullptr) {
         error.Set("No image data to generate mipmaps from.");
         return vlFalse;
     }
@@ -2343,118 +2345,134 @@ vlBool CVTFFile::GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, Diagnostics::CEr
 
     assert(MipmapFilter >= 0 && MipmapFilter < MIPMAP_FILTER_COUNT);
 
-    if (this->Header->MipCount == 1) {
+    if (this->Header->MipCount <= 1)
         return vlTrue;
-    }
 
-    // The mipmap callback NVMipmapCallback() will call ConvertFromRGBA8888() which will use the
-    // NVDXT lib to compress the image data if it is in a DXT format.  This is bad!!!  The
-    // nvDXTcompressRGBA() function only seems to be able to handle one call at a time and since
-    // we made a call for the mipmap generation the thing will crash.  Hence all this DXT nonsense.
-    // This took me a LONG time to figure out!  Go NVidia docs...
-    // Sidenote: this could very well cause problems in multithreaded applications!
+    stbir_filter stbFilter = STBIR_FILTER_DEFAULT;
 
-    // Get the format to generate mipmaps to.
-    VTFImageFormat MipmapImageFormat;
-    switch (this->Header->ImageFormat) {
-        case IMAGE_FORMAT_DXT1:
-        case IMAGE_FORMAT_DXT1_ONEBITALPHA:
-        case IMAGE_FORMAT_DXT3:
-        case IMAGE_FORMAT_DXT5:
-            MipmapImageFormat = this->Header->ImageFormat;
+    switch (MipmapFilter) {
+        case MIPMAP_FILTER_BOX:
+            stbFilter = STBIR_FILTER_BOX;
+            break;
+        case MIPMAP_FILTER_TRIANGLE:
+            stbFilter = STBIR_FILTER_TRIANGLE;
+            break;
+        case MIPMAP_FILTER_QUADRATIC:
+        case MIPMAP_FILTER_CUBIC:
+        case MIPMAP_FILTER_GAUSSIAN:
+            stbFilter = STBIR_FILTER_CUBICBSPLINE;
+            break;
+        case MIPMAP_FILTER_CATROM:
+            stbFilter = STBIR_FILTER_CATMULLROM;
+            break;
+        case MIPMAP_FILTER_MITCHELL:
+        case MIPMAP_FILTER_SINC:
+        case MIPMAP_FILTER_BESSEL:
+        case MIPMAP_FILTER_HANNING:
+        case MIPMAP_FILTER_HAMMING:
+        case MIPMAP_FILTER_BLACKMAN:
+        case MIPMAP_FILTER_KAISER:
+            stbFilter = STBIR_FILTER_MITCHELL;
             break;
         default:
-            MipmapImageFormat = IMAGE_FORMAT_RGBA8888;
             break;
     }
 
-    nvCompressionOptions Options = nvCompressionOptions();
+    vlUInt srcWidth = this->Header->Width;
+    vlUInt srcHeight = this->Header->Height;
 
-    SNVCompressionUserData UserData = SNVCompressionUserData(this, uiFace, uiFrame, 0, MipmapImageFormat);
+    std::vector<vlByte> src(
+        this->ComputeImageSize(
+            srcWidth,
+            srcHeight,
+            1,
+            IMAGE_FORMAT_RGBA8888));
 
-    // Don't generate mipmaps.
-    Options.mipMapGeneration = kGenerateMipMaps;
-
-    Options.mipFilterType = (nvMipFilterTypes) MipmapFilter;
-
-    // Set the format.
-    switch (uiDXTQuality) {
-        case DXT_QUALITY_LOW:
-            Options.quality = kQualityFastest;
-            break;
-        case DXT_QUALITY_MEDIUM:
-            Options.quality = kQualityNormal;
-            break;
-        case DXT_QUALITY_HIGH:
-            Options.quality = kQualityProduction;
-            break;
-        case DXT_QUALITY_HIGHEST:
-            Options.quality = kQualityHighest;
-            break;
-    }
-    switch (MipmapImageFormat) {
-        case IMAGE_FORMAT_DXT1:
-            Options.textureFormat = kDXT1;
-            Options.bForceDXT1FourColors = true;
-            break;
-        case IMAGE_FORMAT_DXT1_ONEBITALPHA:
-            Options.bBinaryAlpha = true;
-            Options.bForceDXT1FourColors = true;
-            Options.textureFormat = kDXT1a;
-            break;
-        case IMAGE_FORMAT_DXT3:
-            Options.textureFormat = kDXT3;
-            break;
-        case IMAGE_FORMAT_DXT5:
-            Options.textureFormat = kDXT5;
-            break;
-        case IMAGE_FORMAT_RGBA8888:
-            Options.textureFormat = k8888;
-            Options.bSwapRB = true;
-            break;
-    }
-
-    if (MipmapImageFormat != IMAGE_FORMAT_RGBA8888) {
-        // nvDXTcompressRGBA() fails on widths or heights of 1 or 2 so rescale those images.
-        if (this->Header->Width < 4) {
-            Options.rescaleImageType = kRescalePreScale;
-            Options.rescaleImageFilter = kMipFilterPoint;
-            Options.scaleX = 4.0f;
-        }
-
-        if (this->Header->Height < 4) {
-            Options.rescaleImageType = kRescalePreScale;
-            Options.rescaleImageFilter = kMipFilterPoint;
-            Options.scaleY = 4.0f;
-        }
-    }
-
-    // The UserData struct gets passed to our callback.
-    Options.user_data = &UserData;
-
-    vlByte *lpImageData = new vlByte[this->ComputeImageSize(this->Header->Width, this->Header->Height, 1,
-                                                            IMAGE_FORMAT_RGBA8888)];
-
-    if (!this->ConvertToRGBA8888(this->GetData(uiFace, uiFrame, 0, 0), lpImageData, this->Header->Width,
-                                 this->Header->Height, this->GetDecodeFormat())) {
-        delete []lpImageData;
-
+    if (!this->ConvertToRGBA8888(
+        this->GetData(uiFace, uiFrame, 0, 0),
+        src.data(),
+        srcWidth,
+        srcHeight,
+        this->GetDecodeFormat(),
+        error)) {
         return vlFalse;
     }
 
-    if (!nvDXTCompressWrapper(lpImageData, this->Header->Width, this->Header->Height, &Options, NVWriteCallback)) {
-        delete []lpImageData;
+    for (vlUInt mip = 1; mip < this->Header->MipCount; ++mip) {
+        const vlUInt dstWidth = std::max<vlUInt>(1, srcWidth >> 1);
+        const vlUInt dstHeight = std::max<vlUInt>(1, srcHeight >> 1);
 
-        return vlFalse;
+        std::vector<vlByte> dst(
+            this->ComputeImageSize(
+                dstWidth,
+                dstHeight,
+                1,
+                IMAGE_FORMAT_RGBA8888));
+
+        if (MipmapFilter == MIPMAP_FILTER_POINT) {
+            for (vlUInt y = 0; y < dstHeight; ++y) {
+                const vlUInt srcY =
+                        std::min(
+                            (2 * y + 1) * srcHeight / (2 * dstHeight),
+                            srcHeight - 1);
+
+                for (vlUInt x = 0; x < dstWidth; ++x) {
+                    const vlUInt srcX =
+                            std::min(
+                                (2 * x + 1) * srcWidth / (2 * dstWidth),
+                                srcWidth - 1);
+
+                    const vlByte *s =
+                            src.data() + (srcY * srcWidth + srcX) * 4;
+
+                    vlByte *d =
+                            dst.data() + (y * dstWidth + x) * 4;
+
+                    d[0] = s[0];
+                    d[1] = s[1];
+                    d[2] = s[2];
+                    d[3] = s[3];
+                }
+            }
+        } else {
+            if (!stbir_resize_uint8_generic(
+                src.data(),
+                static_cast<int>(srcWidth),
+                static_cast<int>(srcHeight),
+                0,
+                dst.data(),
+                static_cast<int>(dstWidth),
+                static_cast<int>(dstHeight),
+                0,
+                4,
+                STBIR_ALPHA_CHANNEL_NONE,
+                0,
+                STBIR_EDGE_CLAMP,
+                stbFilter,
+                STBIR_COLORSPACE_LINEAR,
+                nullptr)) {
+                error.Set("Failed to generate mipmap.");
+                return vlFalse;
+            }
+        }
+
+        if (!this->ConvertFromRGBA8888(
+            dst.data(),
+            this->GetData(uiFace, uiFrame, 0, mip),
+            dstWidth,
+            dstHeight,
+            this->Header->ImageFormat,
+            error)) {
+            return vlFalse;
+        }
+
+        src.swap(dst);
+
+        srcWidth = dstWidth;
+        srcHeight = dstHeight;
     }
-
-    delete []lpImageData;
 
     return vlTrue;
-#else
-    error.Set("NVDXT support required for CVTFFile::GenerateMipmaps().");
-    return vlFalse;
-#endif
 }
 
 //
@@ -2480,7 +2498,7 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
     for (vlUInt i = 0; i < this->Header->MipCount; i++) {
         vlUInt uiMipmapWidth, uiMipmapHeight, uiMipmapDepth;
         ComputeMipmapDimensions(this->Header->Width, this->Header->Height, 1, i, uiMipmapWidth,
-                                          uiMipmapHeight, uiMipmapDepth);
+                                uiMipmapHeight, uiMipmapDepth);
 
         if (uiMipmapWidth == (vlUInt) this->Header->LowResImageWidth && uiMipmapHeight == (vlUInt) this->Header->
             LowResImageHeight) {
@@ -2490,7 +2508,7 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
                 this->SetThumbnailData(this->GetData(0, 0, 0, i));
             } else {
                 if (!Convert(this->GetData(0, 0, 0, i), this->GetThumbnailData(), uiMipmapWidth,
-                                       uiMipmapHeight, this->Header->ImageFormat, this->Header->LowResImageFormat, error)) {
+                             uiMipmapHeight, this->Header->ImageFormat, this->Header->LowResImageFormat, error)) {
                     return vlFalse;
                 }
             }
@@ -2500,12 +2518,12 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
 
     // We don't have a matching mipmap (maybe we have no mipmaps) so generate one.
     vlByte *lpImageData = new vlByte[ComputeImageSize(this->Header->Width, this->Header->Height, 1,
-                                                                IMAGE_FORMAT_RGBA8888)];
+                                                      IMAGE_FORMAT_RGBA8888)];
     vlByte *lpThumbnailImageData = new vlByte[ComputeImageSize(
         this->Header->LowResImageWidth, this->Header->LowResImageHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
     if (!ConvertToRGBA8888(this->GetData(0, 0, 0, 0), lpImageData, this->Header->Width, this->Header->Height,
-                                     this->GetDecodeFormat(), error)) {
+                           this->GetDecodeFormat(), error)) {
         delete []lpImageData;
         delete []lpThumbnailImageData;
 
@@ -2513,8 +2531,8 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
     }
 
     if (!Resize(lpImageData, lpThumbnailImageData, this->Header->Width, this->Header->Height,
-                          this->Header->LowResImageWidth, this->Header->LowResImageHeight, MIPMAP_FILTER_CATROM,
-                          bSRGB, error)) {
+                this->Header->LowResImageWidth, this->Header->LowResImageHeight, MIPMAP_FILTER_CATROM,
+                bSRGB, error)) {
         delete []lpImageData;
         delete []lpThumbnailImageData;
 
@@ -2522,7 +2540,7 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
     }
 
     if (!ConvertFromRGBA8888(lpThumbnailImageData, this->GetThumbnailData(), this->Header->LowResImageWidth,
-                                       this->Header->LowResImageHeight, this->Header->LowResImageFormat, error)) {
+                             this->Header->LowResImageHeight, this->Header->LowResImageFormat, error)) {
         delete []lpImageData;
         delete []lpThumbnailImageData;
 
@@ -2541,7 +2559,8 @@ vlBool CVTFFile::GenerateThumbnail(vlBool bSRGB, Diagnostics::CError &error) {
 // Convert the first level mipmap of each frame to a normal map.
 //
 vlBool CVTFFile::GenerateNormalMap(Diagnostics::CError &error, VTFKernelFilter KernelFilter,
-                                   VTFHeightConversionMethod HeightConversionMethod, VTFNormalAlphaResult NormalAlphaResult) {
+                                   VTFHeightConversionMethod HeightConversionMethod,
+                                   VTFNormalAlphaResult NormalAlphaResult) {
     if (!this->IsLoaded())
         return vlFalse;
 
@@ -2562,7 +2581,8 @@ vlBool CVTFFile::GenerateNormalMap(Diagnostics::CError &error, VTFKernelFilter K
 //
 vlBool CVTFFile::GenerateNormalMap(vlUInt uiFrame, Diagnostics::CError &error,
                                    VTFKernelFilter KernelFilter,
-                                   VTFHeightConversionMethod HeightConversionMethod, VTFNormalAlphaResult NormalAlphaResult) {
+                                   VTFHeightConversionMethod HeightConversionMethod,
+                                   VTFNormalAlphaResult NormalAlphaResult) {
     if (!this->IsLoaded())
         return vlFalse;
 
@@ -2639,7 +2659,7 @@ struct NColour {
 // GenerateSphereMap()
 // Generate a sphere map from the first six faces (the cube map) of an enviroment map.
 //
-vlBool CVTFFile::GenerateSphereMap(Diagnostics::CError& error) {
+vlBool CVTFFile::GenerateSphereMap(Diagnostics::CError &error) {
     if (!this->IsLoaded())
         return vlFalse;
 
@@ -2662,7 +2682,8 @@ vlBool CVTFFile::GenerateSphereMap(Diagnostics::CError& error) {
     vlUInt uiHeight = (vlUInt) this->Header->Height;
 
     // lets go!
-    vlByte *lpImageData[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}; // 6 pointers to memory for our faces.
+    vlByte *lpImageData[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    // 6 pointers to memory for our faces.
     vlByte *lpSphereMapData = nullptr; // SphereMap buffer
     vlUInt map[6] = {2, 0, 5, 4, 3, 1}; // used to remap valves face order to my face order.
     vlUInt samples = 4; // pixel samples for rendering
@@ -2830,7 +2851,7 @@ vlBool CVTFFile::GenerateSphereMap(Diagnostics::CError& error) {
 // ComputeReflectivity()
 // Compute the reflectivity value of the texture using all faces and frames.
 //
-vlBool CVTFFile::ComputeReflectivity(Diagnostics::CError& error) {
+vlBool CVTFFile::ComputeReflectivity(Diagnostics::CError &error) {
     if (!this->IsLoaded())
         return vlFalse;
 
@@ -2855,7 +2876,8 @@ vlBool CVTFFile::ComputeReflectivity(Diagnostics::CError& error) {
         for (vlUInt uiFace = 0; uiFace < uiFaceCount; uiFace++) {
             for (vlUInt uiSlice = 0; uiSlice < uiSliceCount; uiSlice++) {
                 if (!this->ConvertToRGBA8888(this->GetData(uiFrame, uiFace, uiSlice, 0), lpImageData,
-                                             this->Header->Width, this->Header->Height, this->GetDecodeFormat(), error)) {
+                                             this->Header->Width, this->Header->Height, this->GetDecodeFormat(),
+                                             error)) {
                     delete []lpImageData;
 
                     return vlFalse;
@@ -3122,7 +3144,7 @@ vlUInt CVTFFile::ComputeMipmapSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDep
     // figure out the width/height of this MIP level
     vlUInt uiMipmapWidth, uiMipmapHeight, uiMipmapDepth;
     ComputeMipmapDimensions(uiWidth, uiHeight, uiDepth, uiMipmapLevel, uiMipmapWidth, uiMipmapHeight,
-                                      uiMipmapDepth);
+                            uiMipmapDepth);
 
     // return the memory requirements
     return ComputeImageSize(uiMipmapWidth, uiMipmapHeight, uiMipmapDepth, ImageFormat);
@@ -3206,7 +3228,7 @@ static vlUInt BlockAlign(vlUInt uiSize) {
 // and written to *dst. Width and height are needed to it knows how much data to process
 //-----------------------------------------------------------------------------------------------------
 vlBool CVTFFile::DecompressDXTn(const vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight,
-                                VTFImageFormat SourceFormat, Diagnostics::CError& error) {
+                                VTFImageFormat SourceFormat, Diagnostics::CError &error) {
     vlBool bHDRSource = GetUncompressedFormat(SourceFormat) == IMAGE_FORMAT_RGBA16161616F;
 
     // block compressed formats work on 4x4 blocks
@@ -3280,7 +3302,7 @@ vlBool CVTFFile::ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt ui
 // where DestFormat is a block compressed format (DXTn, BC7).  Uses Compressonator.
 //
 vlBool CVTFFile::CompressDXTn(const vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight,
-                              VTFImageFormat DestFormat, Diagnostics::CError& error) {
+                              VTFImageFormat DestFormat, Diagnostics::CError &error) {
     vlBool bHDR = GetUncompressedFormat(DestFormat) == IMAGE_FORMAT_RGBA16161616F;
 
     // pad images whose dimensions are not a multiple of four out to whole 4x4 blocks
@@ -3833,7 +3855,7 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
                         uiWidth, uiHeight, 1, DestIntermediateFormat)];
 
                     bResult = Convert(lpSourceIntermediate, lpDestIntermediate, uiWidth, uiHeight,
-                                                SourceIntermediateFormat, DestIntermediateFormat, error);
+                                      SourceIntermediateFormat, DestIntermediateFormat, error);
                 }
 
                 if (bResult) {
@@ -3841,7 +3863,7 @@ vlBool CVTFFile::Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUIn
                 }
             } else {
                 bResult = Convert(lpSourceIntermediate, lpDest, uiWidth, uiHeight, SourceIntermediateFormat,
-                                            DestFormat, error);
+                                  DestFormat, error);
             }
         }
 
@@ -3952,7 +3974,8 @@ static vlVoid GenerateNiceFilter(vlUInt uiWidthRatio, vlUInt uiHeightRatio, vlUI
     }
 }
 
-static vlBool ResizeNice(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight,
+static vlBool ResizeNice(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth,
+                         vlUInt uiSourceHeight,
                          vlUInt uiDestWidth, vlUInt uiDestHeight, vlBool bSRGB) {
     const vlUInt uiDiameter = 6;
 
@@ -4004,7 +4027,8 @@ static vlBool ResizeNice(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888,
                                    ? 0
                                    : (iSourceX > (vlInt) uiSourceWidth - 1 ? (vlInt) uiSourceWidth - 1 : iSourceX);
 
-                    const vlByte *lpPixel = lpSourceRGBA8888 + ((vlUInt) iSourceY * uiSourceWidth + (vlUInt) iSourceX) * 4;
+                    const vlByte *lpPixel = lpSourceRGBA8888 + ((vlUInt) iSourceY * uiSourceWidth + (vlUInt) iSourceX) *
+                                            4;
 
                     sAccum[0] += sWeight * sToLinear[lpPixel[0]];
                     sAccum[1] += sWeight * sToLinear[lpPixel[1]];
@@ -4028,8 +4052,10 @@ static vlBool ResizeNice(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888,
     return vlTrue;
 }
 
-vlBool CVTFFile::Resize(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight,
-                        vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB, Diagnostics::CError& error) {
+vlBool CVTFFile::Resize(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth,
+                        vlUInt uiSourceHeight,
+                        vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB,
+                        Diagnostics::CError &error) {
     assert(ResizeFilter >= 0 && ResizeFilter < MIPMAP_FILTER_COUNT);
 
     // prevent too large of a kernel
@@ -4048,7 +4074,8 @@ vlBool CVTFFile::Resize(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, 
     if (!stbir_resize_uint8_generic(
         lpSourceRGBA8888, uiSourceWidth, uiSourceHeight, 0,
         lpDestRGBA8888, uiDestWidth, uiDestHeight, 0,
-        4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, bSRGB ? STBIR_COLORSPACE_SRGB : STBIR_COLORSPACE_LINEAR, nullptr)) {
+        4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, bSRGB ? STBIR_COLORSPACE_SRGB : STBIR_COLORSPACE_LINEAR,
+        nullptr)) {
         error.Set("Error resizing image.");
         return vlFalse;
     }
@@ -4089,7 +4116,8 @@ vlVoid CVTFFile::CorrectImageGamma(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, 
 // ComputeImageReflectivity()
 // Compute the image data reflectivity value.
 //
-vlVoid CVTFFile::ComputeImageReflectivity(const vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle &sX,
+vlVoid CVTFFile::ComputeImageReflectivity(const vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight,
+                                          vlSingle &sX,
                                           vlSingle &sY, vlSingle &sZ) {
     sX = sY = sZ = 0.0f;
 
