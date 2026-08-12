@@ -13,6 +13,7 @@
 #define READER_H
 
 #include "vtflib_shared.h"
+#include "Error.h"
 
 namespace VTFLib
 {
