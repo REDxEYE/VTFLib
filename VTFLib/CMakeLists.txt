@@ -80,5 +80,6 @@ target_compile_definitions(vtflib_static
 target_include_directories(vtflib_obj PRIVATE ${VTFLIB_THIRDPARTY}/include ${VTFLIB_THIRDPARTY}/miniz)
 target_link_libraries(vtflib_obj PRIVATE CMP_Compressonator miniz libzstd_static)
 
+target_include_directories(vtflib_static PUBLIC ./../lib)
 
 
