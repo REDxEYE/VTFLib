@@ -13,6 +13,7 @@
 *.userprefs
 
 # Build results
+build-win/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
