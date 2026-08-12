@@ -20,7 +20,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 
 namespace VTFLib
 {

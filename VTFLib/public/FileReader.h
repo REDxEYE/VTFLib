@@ -12,7 +12,7 @@
 #ifndef FILEREADER_H
 #define FILEREADER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Reader.h"
 
 namespace VTFLib

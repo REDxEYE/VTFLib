@@ -12,7 +12,7 @@
 #ifndef MEMORYREADER_H
 #define MEMORYREADER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Reader.h"
 
 namespace VTFLib

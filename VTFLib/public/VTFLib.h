@@ -99,7 +99,7 @@
 #ifndef VTFLIB_H
 #define VTFLIB_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Error.h"
 #include "VTFFile.h"
 #include "VMTFile.h"

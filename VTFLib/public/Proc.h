@@ -12,7 +12,7 @@
 #ifndef PROC_H
 #define PROC_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Error.h"
 
 #ifdef __cplusplus

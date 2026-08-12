@@ -12,7 +12,7 @@
 #ifndef PROCWRITER_H
 #define PROCWRITER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Writer.h"
 
 namespace VTFLib

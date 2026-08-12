@@ -12,7 +12,7 @@
 #ifndef PROCREADER_H
 #define PROCREADER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Reader.h"
 
 namespace VTFLib

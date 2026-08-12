@@ -20,7 +20,7 @@
 #ifndef VTFFILE_H
 #define VTFFILE_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Readers.h"
 #include "Writers.h"
 #include "VTFFormat.h"

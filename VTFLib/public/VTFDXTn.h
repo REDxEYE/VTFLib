@@ -12,7 +12,7 @@
 #ifndef VTFDXTN_H
 #define VTFDXTN_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 
 //-----------------------------------------------------------------------------
 //

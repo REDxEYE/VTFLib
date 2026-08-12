@@ -12,7 +12,7 @@
 #ifndef VMTNODE_H
 #define VMTNODE_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 
 #ifdef __cplusplus
 extern "C" {

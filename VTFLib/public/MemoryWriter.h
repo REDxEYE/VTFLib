@@ -12,7 +12,7 @@
 #ifndef MEMORYWRITER_H
 #define MEMORYWRITER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Writer.h"
 
 namespace VTFLib

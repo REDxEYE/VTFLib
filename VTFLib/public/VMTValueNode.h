@@ -12,7 +12,7 @@
 #ifndef VMTVALUENODE_H
 #define VMTVALUENODE_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "VMTNode.h"
 
 namespace VTFLib

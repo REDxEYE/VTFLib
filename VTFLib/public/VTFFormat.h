@@ -33,7 +33,7 @@
 
 #pragma once
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,7 +12,7 @@
 #ifndef VMTFILE_H
 #define VMTFILE_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 #include "Readers.h"
 #include "Writers.h"
 #include "VMTNodes.h"

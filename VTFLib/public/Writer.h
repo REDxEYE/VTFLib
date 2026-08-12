@@ -12,7 +12,7 @@
 #ifndef WRITER_H
 #define WRITER_H
 
-#include "stdafx.h"
+#include "vtflib_shared.h"
 
 namespace VTFLib
 {
