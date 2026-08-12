@@ -251,6 +251,7 @@ namespace VTFEdit
 
 		VTFLib::CVMTFile *m_pVMTFile;
 		VTFLib::CVTFFile *m_pVTFFile;
+		VTFLib::Diagnostics::CError m_Error;
 
 		QString m_sFileName;
 

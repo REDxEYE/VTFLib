@@ -108,11 +108,10 @@
 
 namespace VTFLib
 {
-	typedef std::vector<VTFLib::CVTFFile *> CImageVector;
-	typedef std::vector<VTFLib::CVMTFile *> CMaterialVector;
+	typedef std::vector<CVTFFile *> CImageVector;
+	typedef std::vector<CVMTFile *> CMaterialVector;
 
 	extern vlBool bInitialized;
-	extern Diagnostics::CError LastError;
 
 	extern CVTFFile *Image;
 	extern CImageVector *ImageVector;
@@ -172,10 +171,10 @@ VTFLIB_API vlUInt vlGetVersion();
 VTFLIB_API const vlChar *vlGetVersionString();
 
 //! Return the last error message as a string.
-VTFLIB_API const vlChar *vlGetLastError();
+// VTFLIB_API const vlChar *vlGetLastError();
 
 //! Initialisation function
-VTFLIB_API vlBool vlInitialize();
+VTFLIB_API vlBool vlInitialize(VTFLib::Diagnostics::CError& error);
 
 //! Shutdown function
 VTFLIB_API vlVoid vlShutdown();

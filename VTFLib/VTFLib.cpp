@@ -18,13 +18,12 @@ using namespace VTFLib;
 namespace VTFLib
 {
 	vlBool bInitialized = vlFalse;
-	Diagnostics::CError LastError;
 
-	CVTFFile *Image = 0;
-	CImageVector *ImageVector = 0;
+	CVTFFile *Image = nullptr;
+	CImageVector *ImageVector = nullptr;
 
-	CVMTFile *Material = 0;
-	CMaterialVector *MaterialVector = 0;
+	CVMTFile *Material = nullptr;
+	CMaterialVector *MaterialVector = nullptr;
 
 	vlSingle sLuminanceWeightR = 0.299f;
 	vlSingle sLuminanceWeightG = 0.587f;
@@ -61,24 +60,17 @@ VTFLIB_API const vlChar *vlGetVersionString()
 	return VL_VERSION_STRING;
 }
 
-//
-// vlGetLastError()
-// Gets the last error of a failed function.
-//
-VTFLIB_API const vlChar *vlGetLastError()
-{
-	return LastError.Get();
-}
+
 
 //
 // vlInitialize()
 // Initializes all resources.
 //
-VTFLIB_API vlBool vlInitialize()
+VTFLIB_API vlBool vlInitialize(VTFLib::Diagnostics::CError& error)
 {
 	if(bInitialized)
 	{
-		LastError.Set("VTFLib already initialized.");
+		error.Set("VTFLib already initialized.");
 		return vlFalse;
 	}
 
@@ -103,8 +95,8 @@ VTFLIB_API vlVoid vlShutdown()
 
 	bInitialized = vlFalse;
 
-	Image = 0;
-	Material = 0;
+	Image = nullptr;
+	Material = nullptr;
 
 	for(i = 0; i < ImageVector->size(); i++)
 	{
@@ -112,7 +104,7 @@ VTFLIB_API vlVoid vlShutdown()
 	}
 
 	delete ImageVector;
-	ImageVector = 0;
+	ImageVector = nullptr;
 
 	for(i = 0; i < MaterialVector->size(); i++)
 	{
@@ -120,7 +112,7 @@ VTFLIB_API vlVoid vlShutdown()
 	}
 
 	delete MaterialVector;
-	MaterialVector = 0;
+	MaterialVector = nullptr;
 }
 
 VTFLIB_API vlBool vlGetBoolean(VTFLibOption Option)
@@ -135,24 +127,23 @@ VTFLIB_API vlVoid vlSetBoolean(VTFLibOption Option, vlBool bValue)
 
 VTFLIB_API vlInt vlGetInteger(VTFLibOption Option)
 {
-	switch(Option)
-	{
-	case VTFLIB_BLUESCREEN_MASK_R:
-		return (vlInt)uiBlueScreenMaskR;
-	case VTFLIB_BLUESCREEN_MASK_G:
-		return (vlInt)uiBlueScreenMaskG;
-	case VTFLIB_BLUESCREEN_MASK_B:
-		return (vlInt)uiBlueScreenMaskB;
+	switch(Option) {
+		case VTFLIB_BLUESCREEN_MASK_R:
+			return (vlInt)uiBlueScreenMaskR;
+		case VTFLIB_BLUESCREEN_MASK_G:
+			return (vlInt)uiBlueScreenMaskG;
+		case VTFLIB_BLUESCREEN_MASK_B:
+			return (vlInt)uiBlueScreenMaskB;
 
-	case VTFLIB_BLUESCREEN_CLEAR_R:
-		return (vlInt)uiBlueScreenClearR;
-	case VTFLIB_BLUESCREEN_CLEAR_G:
-		return (vlInt)uiBlueScreenClearG;
-	case VTFLIB_BLUESCREEN_CLEAR_B:
-		return (vlInt)uiBlueScreenClearB;
+		case VTFLIB_BLUESCREEN_CLEAR_R:
+			return (vlInt)uiBlueScreenClearR;
+		case VTFLIB_BLUESCREEN_CLEAR_G:
+			return (vlInt)uiBlueScreenClearG;
+		case VTFLIB_BLUESCREEN_CLEAR_B:
+			return (vlInt)uiBlueScreenClearB;
 
-	case VTFLIB_VMT_PARSE_MODE:
-		return (vlInt)uiVMTParseMode;
+		case VTFLIB_VMT_PARSE_MODE:
+			return (vlInt)uiVMTParseMode;
 	}
 
 	return 0;

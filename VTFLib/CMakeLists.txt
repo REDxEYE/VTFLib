@@ -29,7 +29,7 @@ if (WIN32)
     )
 else ()
     list(APPEND VTFLIB_SOURCES
-            FIleReader_linux.cpp
+            FileReader_linux.cpp
             FileWriter_linux.cpp
     )
 endif ()

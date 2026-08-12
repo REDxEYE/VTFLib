@@ -32,25 +32,25 @@ vlBool CProcWriter::Opened() const
 	return this->bOpened;
 }
 
-vlBool CProcWriter::Open()
+vlBool CProcWriter::Open(Diagnostics::CError &error)
 {
 	this->Close();
 
-	if(pWriteOpenProc == 0)
+	if(pWriteOpenProc == nullptr)
 	{
-		LastError.Set("pWriteOpenProc not set.");
+		error.Set("pWriteOpenProc not set.");
 		return vlFalse;
 	}
 
 	if(this->bOpened)
 	{
-		LastError.Set("Writer already open.");
+		error.Set("Writer already open.");
 		return vlFalse;
 	}
 
 	if(!pWriteOpenProc(this->pUserData))
 	{
-		LastError.Set("Error opening file.");
+		error.Set("Error opening file.");
 		return vlFalse;
 	}
 
@@ -61,7 +61,7 @@ vlBool CProcWriter::Open()
 
 vlVoid CProcWriter::Close()
 {
-	if(pWriteCloseProc == 0)
+	if(pWriteCloseProc == nullptr)
 	{
 		return;
 	}
@@ -73,64 +73,64 @@ vlVoid CProcWriter::Close()
 	}
 }
 
-vlUInt CProcWriter::GetStreamSize() const
+vlUInt CProcWriter::GetStreamSize(VTFLib::Diagnostics::CError& error) const
 {
 	if(!this->bOpened)
 	{
 		return 0;
 	}
 
-	if(pWriteSizeProc == 0)
+	if(pWriteSizeProc == nullptr)
 	{
-		LastError.Set("pWriteTellProc not set.");
+		error.Set("pWriteTellProc not set.");
 		return 0xffffffff;
 	}
 
 	return pWriteSizeProc(this->pUserData);
 }
 
-vlUInt CProcWriter::GetStreamPointer() const
+vlUInt CProcWriter::GetStreamPointer(VTFLib::Diagnostics::CError& error) const
 {
 	if(!this->bOpened)
 	{
 		return 0;
 	}
 
-	if(pWriteTellProc == 0)
+	if(pWriteTellProc == nullptr)
 	{
-		LastError.Set("pWriteTellProc not set.");
+		error.Set("pWriteTellProc not set.");
 		return 0;
 	}
 
 	return pWriteTellProc(this->pUserData);
 }
 
-vlUInt CProcWriter::Seek(vlLong lOffset, vlUInt uiMode)
+vlUInt CProcWriter::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
 {
 	if(!this->bOpened)
 	{
 		return 0;
 	}
 
-	if(pWriteSeekProc == 0)
+	if(pWriteSeekProc == nullptr)
 	{
-		LastError.Set("pWriteSeekProc not set.");
+		error.Set("pWriteSeekProc not set.");
 		return 0;
 	}
 
 	return pWriteSeekProc(lOffset, (VLSeekMode)uiMode, this->pUserData);
 }
 
-vlBool CProcWriter::Write(vlChar cChar)
+vlBool CProcWriter::Write(vlChar cChar, Diagnostics::CError &error)
 {
 	if(!this->bOpened)
 	{
 		return vlFalse;
 	}
 
-	if(pWriteWriteProc == 0)
+	if(pWriteWriteProc == nullptr)
 	{
-		LastError.Set("pWriteWriteProc not set.");
+		error.Set("pWriteWriteProc not set.");
 		return vlFalse;
 	}
 
@@ -138,22 +138,22 @@ vlBool CProcWriter::Write(vlChar cChar)
 
 	if(uiBytesWritten == 0)
 	{
-		LastError.Set("pWriteWriteProc() failed.");
+		error.Set("pWriteWriteProc() failed.");
 	}
 
 	return uiBytesWritten == 1;
 }
 
-vlUInt CProcWriter::Write(vlVoid *vData, vlUInt uiBytes)
+vlUInt CProcWriter::Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
 {
 	if(!this->bOpened)
 	{
 		return 0;
 	}
 
-	if(pWriteWriteProc == 0)
+	if(pWriteWriteProc == nullptr)
 	{
-		LastError.Set("pWriteWriteProc not set.");
+		error.Set("pWriteWriteProc not set.");
 		return 0;
 	}
 
@@ -161,7 +161,7 @@ vlUInt CProcWriter::Write(vlVoid *vData, vlUInt uiBytes)
 
 	if(uiBytesWritten == 0)
 	{
-		LastError.Set("pWriteWriteProc() failed.");
+		error.Set("pWriteWriteProc() failed.");
 	}
 
 	return uiBytesWritten;

@@ -23,7 +23,7 @@ vlBool CFileReader::Opened() const
     return this->hFile != nullptr;
 }
 
-vlBool CFileReader::Open()
+vlBool CFileReader::Open(Diagnostics::CError &error)
 {
     this->Close();
 
@@ -31,7 +31,7 @@ vlBool CFileReader::Open()
 
     if(this->hFile == nullptr)
     {
-        LastError.Set("Error opening file.", vlTrue);
+        error.Set("Error opening file.", vlTrue);
         return vlFalse;
     }
 
@@ -47,7 +47,7 @@ vlVoid CFileReader::Close()
     }
 }
 
-vlUInt CFileReader::GetStreamSize() const
+vlUInt CFileReader::GetStreamSize(Diagnostics::CError &error) const
 {
     if(this->hFile == nullptr)
     {
@@ -78,7 +78,7 @@ vlUInt CFileReader::GetStreamSize() const
     return static_cast<vlUInt>(lSize);
 }
 
-vlUInt CFileReader::GetStreamPointer() const
+vlUInt CFileReader::GetStreamPointer(Diagnostics::CError &error) const
 {
     if(this->hFile == nullptr)
     {
@@ -95,7 +95,7 @@ vlUInt CFileReader::GetStreamPointer() const
     return static_cast<vlUInt>(lPosition);
 }
 
-vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode)
+vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode, VTFLib::Diagnostics::CError& error)
 {
     if(this->hFile == nullptr)
     {
@@ -124,14 +124,14 @@ vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode)
 
     if(fseek(this->hFile, lOffset, iOrigin) != 0)
     {
-        LastError.Set("fseek() failed.", vlTrue);
+        error.Set("fseek() failed.", vlTrue);
         return 0;
     }
 
-    return this->GetStreamPointer();
+    return this->GetStreamPointer(error);
 }
 
-vlBool CFileReader::Read(vlChar &cChar)
+vlBool CFileReader::Read(vlChar &cChar, Diagnostics::CError &error)
 {
     if(this->hFile == nullptr)
     {
@@ -142,13 +142,13 @@ vlBool CFileReader::Read(vlChar &cChar)
 
     if(uiBytesRead != 1 && ferror(this->hFile))
     {
-        LastError.Set("fread() failed.", vlTrue);
+        error.Set("fread() failed.", vlTrue);
     }
 
     return uiBytesRead == 1;
 }
 
-vlUInt CFileReader::Read(vlVoid *vData, vlUInt uiBytes)
+vlUInt CFileReader::Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
 {
     if(this->hFile == nullptr)
     {
@@ -159,7 +159,7 @@ vlUInt CFileReader::Read(vlVoid *vData, vlUInt uiBytes)
 
     if(uiBytesRead < uiBytes && ferror(this->hFile))
     {
-        LastError.Set("fread() failed.", vlTrue);
+        error.Set("fread() failed.", vlTrue);
     }
 
     return static_cast<vlUInt>(uiBytesRead);

@@ -147,7 +147,7 @@ namespace VTFLib
 			Returns false if compression is off or the image cannot be compressed. 
 			Reuses the cached result unless bForce is set.
 		*/
-		vlBool ComputeAuxCompression(vlBool bForce);
+		vlBool ComputeAuxCompression(vlBool bForce, Diagnostics::CError &error);
 
 		/*!
 			Throws away any cached compression result. 
@@ -176,7 +176,7 @@ namespace VTFLib
 			\param VTFFile is the CVTFFile class you want to copy.
 			\param ImageFormat the format you want to convert the copied image data to.
 		*/
-		CVTFFile(const CVTFFile &VTFFile, VTFImageFormat ImageFormat);
+		CVTFFile(const CVTFFile &VTFFile, VTFImageFormat ImageFormat, VTFLib::Diagnostics::CError& error);
 
 		~CVTFFile();	//!< Deconstructor
 
@@ -198,7 +198,7 @@ namespace VTFLib
 			\note Animated and static textures have 1 face. Cubemaps have 6, one for each side of the cube.
 			\see tagSVTFCreateOptions
 		*/
-		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames = 1, vlUInt uiFaces = 1, vlUInt uiSlices = 1, VTFImageFormat ImageFormat = IMAGE_FORMAT_RGBA8888, vlBool bThumbnail = vlTrue, vlBool bMipmaps = vlTrue, vlBool bNullImageData = vlFalse);
+		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, VTFLib::Diagnostics::CError& error, vlUInt uiFrames = 1, vlUInt uiFaces = 1, vlUInt uiSlices = 1, VTFImageFormat ImageFormat = IMAGE_FORMAT_RGBA8888, vlBool bThumbnail = vlTrue, vlBool bMipmaps = vlTrue, vlBool bNullImageData = vlFalse);
 		
 		//! Create a new VTF image from existing data.
 		/*!
@@ -212,7 +212,7 @@ namespace VTFLib
 			\return true on successful creation, otherwise false.
 			\see tagSVTFCreateOptions
 		*/
-		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, vlByte *lpImageDataRGBA8888, const SVTFCreateOptions &VTFCreateOptions);
+		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, vlByte *lpImageDataRGBA8888, const SVTFCreateOptions &VTFCreateOptions, VTFLib::Diagnostics::CError& error);
 
 		//! Create a new VTF multi-frame or cubemap image from existing data.
 		/*!
@@ -230,7 +230,7 @@ namespace VTFLib
 			\note Animated and static textures have 1 face. Cubemaps have 6, one for each side of the cube.
 			\see tagSVTFCreateOptions
 		*/
-		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt uiFaces, vlUInt vlSlices, vlByte **lpImageDataRGBA8888, const SVTFCreateOptions &VTFCreateOptions);
+		vlBool Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt uiFaces, vlUInt vlSlices, vlByte **lpImageDataRGBA8888, const SVTFCreateOptions &VTFCreateOptions, VTFLib::Diagnostics::CError& error);
 		
 		//! Destroys the current VTF image by setting the header, thumbnail and image data to zero.
 		vlVoid Destroy();
@@ -254,7 +254,7 @@ namespace VTFLib
 			\param bHeaderOnly sets whether to load just the VTF header or not (default false).
 			\return true on sucessful load, otherwise false.
 		*/
-		vlBool Load(const vlChar *cFileName, vlBool bHeaderOnly = vlFalse);
+		vlBool Load(const vlChar *cFileName, VTFLib::Diagnostics::CError& error, vlBool bHeaderOnly = vlFalse);
 
 		//! Loads a VTF image from memory. 
 		/*!
@@ -267,7 +267,7 @@ namespace VTFLib
 			\param bHeaderOnly sets whether to load just the VTF header or not (default false).
 			\return true on sucessful load, otherwise false.
 		*/
-		vlBool Load(const vlVoid *lpData, vlUInt uiBufferSize, vlBool bHeaderOnly = vlFalse);
+		vlBool Load(const vlVoid *lpData, vlUInt uiBufferSize, VTFLib::Diagnostics::CError& error, vlBool bHeaderOnly = vlFalse);
 
 		//! Loads a VTF image using callback functions. 
 		/*!
@@ -279,7 +279,7 @@ namespace VTFLib
 			\param bHeaderOnly sets whether to load just the VTF header or not (default false).
 			\return true on sucessful load, otherwise false.
 		*/
-		vlBool Load(vlVoid *pUserData, vlBool bHeaderOnly = vlFalse);
+		vlBool Load(vlVoid *pUserData, VTFLib::Diagnostics::CError& error, vlBool bHeaderOnly = vlFalse);
 
 		//! Save a VTF image from disk.
 		/*!
@@ -288,7 +288,7 @@ namespace VTFLib
 			\param cFileName is the path and filename of the file to load.
 			\return true on sucessful save, otherwise false.
 		*/
-		vlBool Save(const vlChar *cFileName) const;
+		vlBool Save(const vlChar *cFileName, VTFLib::Diagnostics::CError& error) const;
 
 		//! Save a VTF image to memory.
 		/*!
@@ -298,7 +298,7 @@ namespace VTFLib
 			\param uiBufferSize is the size of the VTF file in bytes.
 			\return true on sucessful save, otherwise false.
 		*/
-		vlBool Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize) const;
+		vlBool Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize, VTFLib::Diagnostics::CError& error) const;
 
 		//! Save a VTF image using callback functions.
 		/*!
@@ -317,8 +317,8 @@ namespace VTFLib
 		vlVoid ComputeResources();	 //!< Computes header VTF directory resources.
 
 		// Interface with out reader/writer classes
-		vlBool Load(IO::Readers::IReader *Reader, vlBool bHeaderOnly);
-		vlBool Save(IO::Writers::IWriter *Writer) const;
+		vlBool Load(IO::Readers::IReader *Reader, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
+		vlBool Save(IO::Writers::IWriter *Writer, VTFLib::Diagnostics::CError& error) const;
 
 	public:
 
@@ -342,13 +342,14 @@ namespace VTFLib
 
 			\param uiMajor is the major version to convert to
 			\param uiMinor is the minor version to convert to
+			\param error
 			\return true on success, false on failure.
 			\see GetMajorVersion()
 			\see GetMinorVersion()
 		*/
-		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor);
+		vlBool SetVersion(vlUInt uiMajor, vlUInt uiMinor, Diagnostics::CError &error);
 
-		vlUInt GetSize() const;			 //!< Returns the VTF file size in bytes.
+		vlUInt GetSize(Diagnostics::CError &error) const;			 //!< Returns the VTF file size in bytes.
 
 		vlUInt GetWidth() const;	//!< Returns the width of the image in pixels from the VTF header.
 		vlUInt GetHeight() const;	//!< Returns the height of the image in pixels from the VTF header.
@@ -492,7 +493,7 @@ namespace VTFLib
 			\param uiSize is the size of the resource data.
 			\return a pointer to the resource data buffer if the resource exists.
 		*/
-		vlVoid *GetResourceData(vlUInt uiType, vlUInt &uiSize) const;
+		vlVoid *GetResourceData(vlUInt uiType, vlUInt &uiSize, VTFLib::Diagnostics::CError& error) const;
 
 		//! Set a VTF resource type's data.
 		/*!
@@ -504,7 +505,7 @@ namespace VTFLib
 			\param lpData is the resource data; if null the resource data is zeroed.
 			\return a pointer to the resource data buffer if the resource exists or was created.
 		*/
-		vlVoid *SetResourceData(vlUInt uiType, vlUInt uiSize, vlVoid *lpData);
+		vlVoid *SetResourceData(vlUInt uiType, vlUInt uiSize, vlVoid *lpData, VTFLib::Diagnostics::CError& error);
 
 	public:
 
@@ -523,9 +524,10 @@ namespace VTFLib
 		//! Sets the CPU compression strength.
 		/*!
 			\param sLevel is 0 to disable compression, -1 for the codec default, otherwise 1 to 9.
+			\param error
 			\return true if the level was set, false if it is out of range or the file version is below v7.6
 		*/
-		vlBool SetAuxCompressionLevel(vlShort sLevel);
+		vlBool SetAuxCompressionLevel(vlShort sLevel, Diagnostics::CError &error);
 
 		//! Returns the CPU compression method.
 		/*!
@@ -536,9 +538,10 @@ namespace VTFLib
 		//! Sets the CPU compression method.
 		/*!
 			\param sMethod is a VTFAuxCompressionMethod value
+			\param error
 			\return true if the method was set, false if it is not a supported method or the file version is below v7.6.
 		*/
-		vlBool SetAuxCompressionMethod(vlShort sMethod);
+		vlBool SetAuxCompressionMethod(vlShort sMethod, Diagnostics::CError &error);
 
 	public:
 
@@ -551,7 +554,7 @@ namespace VTFLib
 			\param bSRGB is whether we are generating mips for color data or not.
 			\return true on sucessful creation, otherwise false.
 		*/
-		vlBool GenerateMipmaps(VTFMipmapFilter MipmapFilter, vlBool bSRGB);
+		vlBool GenerateMipmaps(VTFLib::Diagnostics::CError& error, VTFMipmapFilter MipmapFilter, vlBool bSRGB);
 
 		//! Generate MIP maps from a specific face and frame.
 		/*!
@@ -566,7 +569,7 @@ namespace VTFLib
 			for the first face. Cubemaps have 6 faces, others only 1.
 			\return true on sucessful creation, otherwise false.
 		*/
-		vlBool GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, VTFMipmapFilter MipmapFilter, vlBool bSRGB);
+		vlBool GenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, VTFLib::Diagnostics::CError& error, VTFMipmapFilter MipmapFilter, vlBool bSRGB);
 
 		//! Generate a thumbnail image.
 		/*!
@@ -576,7 +579,7 @@ namespace VTFLib
 			\return true on sucessful creation, otherwise false.
 			\see SetThumbnailData()
 		*/
-		vlBool GenerateThumbnail(vlBool bSRGB);
+		vlBool GenerateThumbnail(vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 
 		//! Convert image to a normal map.
 		/*!
@@ -589,7 +592,7 @@ namespace VTFLib
 			\return true on sucessful creation, otherwise false.
 			\note  The options for conversion are the same used in the nVidea NormalMap Photoshop plug-in.
 		*/
-		vlBool GenerateNormalMap(VTFKernelFilter KernelFilter = KERNEL_FILTER_3X3, VTFHeightConversionMethod HeightConversionMethod = HEIGHT_CONVERSION_METHOD_AVERAGE_RGB, VTFNormalAlphaResult NormalAlphaResult = NORMAL_ALPHA_RESULT_WHITE);
+		vlBool GenerateNormalMap(VTFLib::Diagnostics::CError& error, VTFKernelFilter KernelFilter = KERNEL_FILTER_3X3, VTFHeightConversionMethod HeightConversionMethod = HEIGHT_CONVERSION_METHOD_AVERAGE_RGB, VTFNormalAlphaResult NormalAlphaResult = NORMAL_ALPHA_RESULT_WHITE);
 		
 		//! Convert image to a normal map from a specific frame.
 		/*!
@@ -603,13 +606,13 @@ namespace VTFLib
 			\return true on sucessful creation, otherwise false.
 			\note  The options for conversion are the same used in the nVidea NormalMap Photoshop plug-in.
 		*/
-		vlBool GenerateNormalMap(vlUInt uiFrame, VTFKernelFilter KernelFilter = KERNEL_FILTER_3X3, VTFHeightConversionMethod HeightConversionMethod = HEIGHT_CONVERSION_METHOD_AVERAGE_RGB, VTFNormalAlphaResult NormalAlphaResult = NORMAL_ALPHA_RESULT_WHITE);
+		vlBool GenerateNormalMap(vlUInt uiFrame, VTFLib::Diagnostics::CError& error, VTFKernelFilter KernelFilter = KERNEL_FILTER_3X3, VTFHeightConversionMethod HeightConversionMethod = HEIGHT_CONVERSION_METHOD_AVERAGE_RGB, VTFNormalAlphaResult NormalAlphaResult = NORMAL_ALPHA_RESULT_WHITE);
 
-		vlBool GenerateSphereMap();		//!< Creates a spheremap from using the 6 faces of the image making up its cubemap.
+		vlBool GenerateSphereMap(VTFLib::Diagnostics::CError& error);		//!< Creates a spheremap from using the 6 faces of the image making up its cubemap.
 
 	public:
 
-		vlBool ComputeReflectivity();	//!< Calculates and sets the reflectivity vector values for the VTF image based on the colour averages of each pixel.
+		vlBool ComputeReflectivity(VTFLib::Diagnostics::CError& error);	//!< Calculates and sets the reflectivity vector values for the VTF image based on the colour averages of each pixel.
 	
 	public:
 
@@ -710,7 +713,7 @@ namespace VTFLib
 			\param SourceFormat is the image format of the source data.
 			\return true on sucessful conversion, otherwise false.
 		*/
-		static vlBool ConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat);
+		static vlBool ConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, VTFLib::Diagnostics::CError& error);
 
 		//! Convert an image from RGBA8888 format.
 		/*!
@@ -723,7 +726,7 @@ namespace VTFLib
 			\param DestFormat is the image format you wish to convert to.
 			\return true on sucessful conversion, otherwise false.
 		*/
-		static vlBool ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat);
+		static vlBool ConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
 
 		//! Convert an image from any format to any format.
 		/*!
@@ -737,7 +740,7 @@ namespace VTFLib
 			\param DestFormat is the image format you wish to convert to.
 			\return true on sucessful conversion, otherwise false.
 		*/
-		static vlBool Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, VTFImageFormat DestFormat);
+		static vlBool Convert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
 
 		//! Re-sizes an image.
 		/*!
@@ -753,7 +756,7 @@ namespace VTFLib
 			\param bRGB is whether we are generating mips for color data or not.
 			\return true on sucessful re-size, otherwise false.
 		*/
-		static vlBool Resize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB);
+		static vlBool Resize(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 
 		//! Converts an image's alpha channel into a signed distance field.
 		/*!
@@ -769,15 +772,17 @@ namespace VTFLib
 			\param pbClipped optionally receives true if the field ran off the edge of the image and had to be clipped, which loses information.
 			\return true on sucessful conversion, otherwise false.
 		*/
-		static vlBool ConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped);
+		static vlBool ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped, VTFLib::Diagnostics::CError& error);
 
 	private:
 		
 		// DXTn format decompression function
-		static vlBool DecompressDXTn(vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat);
+		static vlBool DecompressDXTn(const vlByte *src, vlByte *dst, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, Diagnostics::CError &
+		                             error);
 
 		// DXTn format compression function
-		static vlBool CompressDXTn(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat);
+		static vlBool CompressDXTn(const vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat, Diagnostics::CError
+		                           &error);
 
 	public:
 
@@ -805,7 +810,7 @@ namespace VTFLib
 			\see GetReflectivity()
 			\see SetReflectivity()
 		*/
-		static vlVoid ComputeImageReflectivity(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle &sX, vlSingle &sY, vlSingle &sZ);
+		static vlVoid ComputeImageReflectivity(const vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle &sX, vlSingle &sY, vlSingle &sZ);
 
 		static vlVoid FlipImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);		//!< Flips an image vertically along its X-axis.
 		static vlVoid MirrorImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);	//!< Flips an image horizontally along its Y-axis.

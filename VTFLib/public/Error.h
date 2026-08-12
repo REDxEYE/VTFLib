@@ -49,6 +49,7 @@ namespace VTFLib
 			//! Set the error message buffer.
 			vlVoid SetFormatted(const vlChar *cFormat, ...);
 			vlVoid Set(const vlChar *cErrorMessage, vlBool bSystemError = vlFalse);
+			vlBool isSet() const;
 		};
 	}
 }

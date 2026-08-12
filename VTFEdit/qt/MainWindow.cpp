@@ -80,6 +80,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "VTFWrapper.h"
+
 namespace VTFEdit
 {
 	namespace
@@ -134,11 +136,6 @@ namespace VTFEdit
 		QString hex32(vlUInt uiValue)
 		{
 			return QStringLiteral("%1").arg(uiValue, 8, 16, QLatin1Char('0')).toUpper();
-		}
-
-		QString lastErrorString()
-		{
-			return QString::fromLatin1(vlGetLastError());
 		}
 
 		QLabel *addInfoRow(QFormLayout *pForm, const QString &sLabel)
@@ -823,7 +820,7 @@ namespace VTFEdit
 
 		vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
 		m_pVTFFile->ConvertToRGBA8888(m_pVTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap),
-			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
+			Buffer.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat(), m_Error);
 
 		m_fEffectiveImageScale = fScale;
 
@@ -1040,7 +1037,7 @@ namespace VTFEdit
 		m_bUpdatingFileInfo = false;
 
 		m_pFileSize->setText(tr("%1 KB").arg(
-			QLocale().toString(static_cast<double>(m_pVTFFile->GetSize()) / 1024.0, 'f', 3)));
+			QLocale().toString(static_cast<double>(m_pVTFFile->GetSize(m_Error)) / 1024.0, 'f', 3)));
 
 		const vlShort sAuxCompressionLevel = m_pVTFFile->GetAuxCompressionLevel();
 		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
@@ -1087,7 +1084,7 @@ namespace VTFEdit
 			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
 
 			vlUInt uiSize = 0;
-			vlVoid *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize);
+			vlVoid *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize, m_Error);
 
 			switch(uiResource)
 			{
@@ -1142,7 +1139,7 @@ namespace VTFEdit
 				{
 					VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
 
-					if(pVMTFile->Load(lpData, uiSize))
+					if(pVMTFile->Load(lpData, uiSize, m_Error))
 					{
 						pItem->setText(0, QString::fromLatin1(pVMTFile->GetRoot()->GetName()));
 						setResourceInformation(pItem, pVMTFile->GetRoot());
@@ -1176,7 +1173,7 @@ namespace VTFEdit
 		const bool bSupported = m_pVTFFile != nullptr && m_pVTFFile->GetSupportsResources();
 
 		vlUInt uiSize = 0;
-		const bool bHasSheet = bSupported && m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize) != nullptr;
+		const bool bHasSheet = bSupported && m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize, m_Error) != nullptr;
 
 		m_pEditSheetButton->setEnabled(bSupported);
 		m_pEditSheetButton->setText(bHasSheet ? tr("&Edit...") : tr("&Create..."));
@@ -1197,7 +1194,7 @@ namespace VTFEdit
 		SheetFile Sheet;
 
 		vlUInt uiSize = 0;
-		if(vlVoid *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize))
+		if(vlVoid *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize, m_Error))
 		{
 			if(uiSize && !Sheet.load(lpData, uiSize))
 			{
@@ -1222,17 +1219,17 @@ namespace VTFEdit
 
 		if(NewSheet.isEmpty())
 		{
-			m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+			m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr, m_Error);
 		}
 		else
 		{
 			QByteArray Data = NewSheet.save();
 			if(m_pVTFFile->SetResourceData(VTF_RSRC_SHEET,
-				static_cast<vlUInt>(Data.size()), Data.data()) == nullptr)
+				static_cast<vlUInt>(Data.size()), Data.data(), m_Error) == nullptr)
 			{
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Failed to write the sprite sheet resource:\n%1")
-						.arg(QString::fromLatin1(vlGetLastError())));
+						.arg(QString::fromLatin1(m_Error.Get())));
 				return;
 			}
 		}
@@ -1255,7 +1252,7 @@ namespace VTFEdit
 			return;
 		}
 
-		m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr);
+		m_pVTFFile->SetResourceData(VTF_RSRC_SHEET, 0, nullptr, m_Error);
 
 		updateResourceList();
 		onVtfPropertyChanged();
@@ -1312,7 +1309,7 @@ namespace VTFEdit
 		}
 
 		const QByteArray Text = m_pVmtEdit->toPlainText().toLocal8Bit();
-		const vlBool bResult = m_pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()));
+		const vlBool bResult = m_pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()), m_Error);
 
 		if(bResult)
 		{
@@ -1322,7 +1319,7 @@ namespace VTFEdit
 		else
 		{
 			m_iVmtErrorLine = static_cast<int>(m_pVMTFile->GetParseErrorLine());
-			m_pStatusInfo1->setText(lastErrorString());
+			m_pStatusInfo1->setText(m_Error.Get());
 		}
 
 		return bResult != vlFalse;
@@ -1333,14 +1330,14 @@ namespace VTFEdit
 		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
 
 		const QByteArray Text = pDocument->pTextDocument->toPlainText().toLocal8Bit();
-		if(pDocument->pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length())))
+		if(pDocument->pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()), m_Error))
 		{
 			return true;
 		}
 
 		return QMessageBox::warning(this, QApplication::applicationName(),
 			tr("\"%1\" has a syntax error:\n\n%2\n\nSave it anyway?")
-				.arg(documentTitle(pDocument), lastErrorString()),
+				.arg(documentTitle(pDocument), m_Error.Get()),
 			QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
 	}
 
@@ -1768,12 +1765,12 @@ namespace VTFEdit
 		{
 			VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
 
-			if(!pVTFFile->Load(Path.constData()))
+			if(!pVTFFile->Load(Path.constData(), m_Error))
 			{
 				delete pVTFFile;
 
 				QMessageBox::critical(this, QApplication::applicationName(),
-					tr("Error loading VTF texture:\n\n%1").arg(lastErrorString()));
+					tr("Error loading VTF texture:\n\n%1").arg(m_Error.Get()));
 				return;
 			}
 
@@ -1802,7 +1799,7 @@ namespace VTFEdit
 			File.close();
 
 			VTFLib::CVMTFile *pVMTFile = new VTFLib::CVMTFile();
-			pVMTFile->Load(Path.constData());
+			pVMTFile->Load(Path.constData(), m_Error);
 
 			Document *pDocument = new Document();
 			pDocument->pVMTFile = pVMTFile;
@@ -1840,10 +1837,10 @@ namespace VTFEdit
 		{
 			const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
 
-			if(!pDocument->pVTFFile->Save(Path.constData()))
+			if(!pDocument->pVTFFile->Save(Path.constData(), m_Error))
 			{
 				QMessageBox::critical(this, QApplication::applicationName(),
-					tr("Error saving VTF texture:\n\n%1").arg(lastErrorString()));
+					tr("Error saving VTF texture:\n\n%1").arg(m_Error.Get()));
 				return false;
 			}
 
@@ -2057,7 +2054,7 @@ namespace VTFEdit
 		VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
 
 		const bool bCreated =
-			pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions) != vlFalse;
+			pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions, m_Error) != vlFalse;
 		if(bCreated)
 		{
 			VtfFileUtility::ApplyFlags(m_Options, pVTFFile);
@@ -2086,7 +2083,7 @@ namespace VTFEdit
 			delete pVTFFile;
 
 			QMessageBox::critical(this, QApplication::applicationName(),
-				tr("Error creating VTF texture:\n\n%1").arg(lastErrorString()));
+				tr("Error creating VTF texture:\n\n%1").arg(m_Error.Get()));
 		}
 	}
 
@@ -2106,7 +2103,7 @@ namespace VTFEdit
 		m_pVTFFile->ConvertToRGBA8888(
 			m_pVTFFile->GetData(static_cast<vlUInt>(m_pFrame->value()), static_cast<vlUInt>(m_pFace->value()),
 				static_cast<vlUInt>(m_pSlice->value()), static_cast<vlUInt>(m_pMipmap->value())),
-			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
+			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat(), m_Error);
 
 		// DevIL likes image data upside down...
 		m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
@@ -2147,7 +2144,7 @@ namespace VTFEdit
 				{
 					m_pVTFFile->ConvertToRGBA8888(
 						m_pVTFFile->GetData(i, j, k, static_cast<vlUInt>(m_pMipmap->value())),
-						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat());
+						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat(), m_Error);
 
 					m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
 
@@ -2661,12 +2658,12 @@ namespace VTFEdit
 		// push the pending header edits in first so they are not lost by the refresh below
 		getVtfFile();
 
-		if(!m_pVTFFile->SetVersion(VTF_MAJOR_VERSION, uiMinor))
+		if(!m_pVTFFile->SetVersion(VTF_MAJOR_VERSION, uiMinor, m_Error))
 		{
 			QMessageBox::critical(this, QApplication::applicationName(),
 				tr("Failed to convert the texture to version %1.%2:\n%3")
 					.arg(VTF_MAJOR_VERSION).arg(uiMinor)
-					.arg(QString::fromLatin1(vlGetLastError())));
+					.arg(QString::fromLatin1(m_Error.Get())));
 
 			updateFileInfo();
 			return;
@@ -2948,7 +2945,7 @@ namespace VTFEdit
 		else
 		{
 			QMessageBox::critical(this, QApplication::applicationName(),
-				tr("Error validating VMT:\n\n%1").arg(lastErrorString()));
+				tr("Error validating VMT:\n\n%1").arg(m_Error.Get()));
 		}
 
 		updateVmtErrorHighlight();

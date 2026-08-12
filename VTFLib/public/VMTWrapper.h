@@ -9,8 +9,8 @@
  * version.
  */
 
-#ifndef VTFWRAPPER_H
-#define VTFWRAPPER_H
+#ifndef VMTWRAPPER_H
+#define VMTWRAPPER_H
 
 #include "vtflib_shared.h"
 
@@ -22,28 +22,28 @@ extern "C" {
 // Memory managment routines.
 //
 
-VTFLIB_API vlBool vlMaterialIsBound();
-VTFLIB_API vlBool vlBindMaterial(vlUInt uiMaterial);
+VTFLIB_API vlBool vlMaterialIsBound(VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlBindMaterial(vlUInt uiMaterial, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlCreateMaterial(vlUInt *uiMaterial);
+VTFLIB_API vlBool vlCreateMaterial(vlUInt *uiMaterial, VTFLib::Diagnostics::CError& error);
 VTFLIB_API vlVoid vlDeleteMaterial(vlUInt uiMaterial);
 
 //
 // Library routines.  (Basically class wrappers.)
 //
 
-VTFLIB_API vlBool vlMaterialCreate(const vlChar *cRoot);
+VTFLIB_API vlBool vlMaterialCreate(const vlChar *cRoot, VTFLib::Diagnostics::CError& error);
 VTFLIB_API vlVoid vlMaterialDestroy();
 
-VTFLIB_API vlBool vlMaterialIsLoaded();
+VTFLIB_API vlBool vlMaterialIsLoaded(VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlMaterialLoad(const vlChar *cFileName);
-VTFLIB_API vlBool vlMaterialLoadLump(const vlVoid *lpData, vlUInt uiBufferSize);
-VTFLIB_API vlBool vlMaterialLoadProc(vlVoid *pUserData);
+VTFLIB_API vlBool vlMaterialLoad(const vlChar *cFileName, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialLoadLump(const vlVoid *lpData, vlUInt uiBufferSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialLoadProc(vlVoid *pUserData, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlMaterialSave(const vlChar *cFileName);
-VTFLIB_API vlBool vlMaterialSaveLump(vlVoid *lpData, vlUInt uiBufferSize, vlUInt *uiSize);
-VTFLIB_API vlBool vlMaterialSaveProc(vlVoid *pUserData);
+VTFLIB_API vlBool vlMaterialSave(const vlChar *cFileName, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialSaveLump(vlVoid *lpData, vlUInt uiBufferSize, vlUInt *uiSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialSaveProc(vlVoid *pUserData, VTFLib::Diagnostics::CError& error);
 
 //
 // Node routines.

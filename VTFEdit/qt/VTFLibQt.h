@@ -26,7 +26,7 @@
 #	define NOMINMAX
 #endif
 
-#include "../../lib/VTFLib.h"
+#include "VTFLib.h"
 
 // DevIL switches ILstring between char * and wchar_t * on _UNICODE
 // which Qt defines for the whole target

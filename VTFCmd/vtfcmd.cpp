@@ -19,6 +19,8 @@
 
 #include "stdafx.h"
 #include "enumerations.h"
+#include "VMTWrapper.h"
+#include "VTFWrapper.h"
 #include "IL/il.h"
 
 #include "win32_findfile_polyfill.hpp"
@@ -640,14 +642,36 @@ int main(int argc, char* argv[])
 		return 2;
 	}
 
+	VTFLib::Diagnostics::CError error;
 	// Initialize VTFLib.
-	vlInitialize();
+	vlInitialize(error);
 
-	vlCreateImage(&uiVTFImage);
-	vlBindImage(uiVTFImage);
+	if (error.isSet()) {
+		Print(error.Get());
+		return 2;
+	}
 
-	vlCreateMaterial(&uiVMTMaterial);
-	vlBindMaterial(uiVMTMaterial);
+	vlCreateImage(&uiVTFImage, error);
+	if (error.isSet()) {
+		Print(error.Get());
+		return 2;
+	}
+	vlBindImage(uiVTFImage, error);
+	if (error.isSet()) {
+		Print(error.Get());
+		return 2;
+	}
+
+	vlCreateMaterial(&uiVMTMaterial, error);
+	if (error.isSet()) {
+		Print(error.Get());
+		return 2;
+	}
+	vlBindMaterial(uiVMTMaterial, error);
+	if (error.isSet()) {
+		Print(error.Get());
+		return 2;
+	}
 
 	// Initialize DevIL.
 	ilInit();
@@ -924,6 +948,7 @@ void FlipImage(vlByte *lpImageData, vlUInt uiWidth, vlUInt uiHeight, vlUInt uiCh
 void ProcessFile(vlChar *lpInputFile)
 {
 	vlUInt i;
+	VTFLib::Diagnostics::CError error;
 
 	vlChar *lpTemp;					// Temp variable for string manipulation.
 	vlChar lpVTFFile[512];			// Holds output .vtf file name.
@@ -1004,9 +1029,9 @@ void ProcessFile(vlChar *lpInputFile)
 
 			bClipped = vlFalse;
 
-			if(!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth, uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped))
+			if(!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth, uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped, error))
 			{
-				Print("  Error creating distance field:\n%s\n\n", vlGetLastError());
+				Print("  Error creating distance field:\n%s\n\n", error.Get());
 				free(lpDistanceData);
 				return;
 			}
@@ -1025,9 +1050,9 @@ void ProcessFile(vlChar *lpInputFile)
 		}
 
 		// Create vtf file.
-		if(!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions))
+		if(!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions, error))
 		{
-			Print("  Error creating vtf file:\n%s\n\n", vlGetLastError());
+			Print("  Error creating vtf file:\n%s\n\n", error.Get());
 			free(lpDistanceData);
 			return;
 		}
@@ -1038,9 +1063,9 @@ void ProcessFile(vlChar *lpInputFile)
 
 		// Write vtf file.
 		Print("  Writing %s...\n", lpVTFFile);
-		if(!vlImageSave(lpVTFFile))
+		if(!vlImageSave(lpVTFFile, error))
 		{
-			Print(" Error creating vtf file:\n%s\n\n", vlGetLastError());
+			Print(" Error creating vtf file:\n%s\n\n", error.Get());
 			return;
 		}
 		Print("  %s written.\n\n", lpVTFFile);
@@ -1066,7 +1091,7 @@ void ProcessFile(vlChar *lpInputFile)
 				*strrchr(lpVMTBaseTexture, '.') = '\0';
 				strrpl(lpVMTBaseTexture, '\\', '/');
 
-				vlMaterialCreate(lpShader); // Create the root node.
+				vlMaterialCreate(lpShader, error); // Create the root node.
 				vlMaterialGetFirstNode(); // Go to the root node.
 				vlMaterialAddNodeString("$basetexture", lpVMTBaseTexture); // Add a string node to the root node.
 
@@ -1094,9 +1119,9 @@ void ProcessFile(vlChar *lpInputFile)
 
 				// Write vmt file.
 				Print("  Writing %s...\n", lpVMTFile);
-				if(!vlMaterialSave(lpVMTFile))
+				if(!vlMaterialSave(lpVMTFile, error))
 				{
-					Print("Error creating vtf file:\n%s\n\n", vlGetLastError());
+					Print("Error creating vtf file:\n%s\n\n", error.Get());
 					return;
 				}
 				Print("  %s written.\n\n", lpVMTFile);
@@ -1105,9 +1130,9 @@ void ProcessFile(vlChar *lpInputFile)
 	}
 	else
 	{
-		if(!vlImageLoad(lpInputFile, vlFalse))
+		if(!vlImageLoad(lpInputFile, vlFalse, error))
 		{
-			Print(" Error loading input file:\n%s\n\n", vlGetLastError());
+			Print(" Error loading input file:\n%s\n\n", error.Get());
 			return;
 		}
 
@@ -1115,7 +1140,7 @@ void ProcessFile(vlChar *lpInputFile)
 
 		// Display input file info.
 		Print("  Version: v%u.%u\n", vlImageGetMajorVersion(), vlImageGetMinorVersion());
-		Print("  Size On Disk: %.2f KB\n", (vlSingle)vlImageGetSize() / 1024.0f);
+		Print("  Size On Disk: %.2f KB\n", (vlSingle)vlImageGetSize(error) / 1024.0f);
 		Print("  Width: %u\n", vlImageGetWidth());
 		Print("  Height: %u\n", vlImageGetHeight());
 		Print("  Depth: %u\n", vlImageGetDepth());
@@ -1149,11 +1174,11 @@ void ProcessFile(vlChar *lpInputFile)
 		}
 
 		// Convert the .vtf.
-		if(!vlImageConvert(vlImageGetData(0, 0, 0, 0), lpImageData, vlImageGetWidth(), vlImageGetHeight(), vlImageGetFormat(), DestFormat))
+		if(!vlImageConvert(vlImageGetData(0, 0, 0, 0), lpImageData, vlImageGetWidth(), vlImageGetHeight(), vlImageGetFormat(), DestFormat, error))
 		{
 			free(lpImageData);
 
-			Print(" Error converting input file:\n%s\n\n", vlGetLastError());
+			Print(" Error converting input file:\n%s\n\n", error.Get());
 			return;
 		}
 

@@ -152,9 +152,9 @@ namespace
 	}
 }
 
-vlBool CVTFFile::ConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888,
+vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888,
 	vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight,
-	vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped)
+	vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped, Diagnostics::CError& error)
 {
 	const int nWidth = static_cast<int>(uiSourceWidth);
 	const int nHeight = static_cast<int>(uiSourceHeight);
@@ -168,7 +168,7 @@ vlBool CVTFFile::ConvertToDistanceField(vlByte *lpSourceRGBA8888, vlByte *lpDest
 
 	if(nWidth <= 0 || nHeight <= 0 || nDestWidth <= 0 || nDestHeight <= 0)
 	{
-		LastError.Set("Invalid distance field dimensions.");
+		error.Set("Invalid distance field dimensions.");
 		return vlFalse;
 	}
 

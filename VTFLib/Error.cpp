@@ -15,7 +15,7 @@ using namespace VTFLib::Diagnostics;
 
 CError::CError()
 {
-	this->cErrorMessage = 0;
+	this->cErrorMessage = nullptr;
 }
 
 CError::~CError()
@@ -26,12 +26,12 @@ CError::~CError()
 vlVoid CError::Clear()
 {
 	delete []this->cErrorMessage;
-	this->cErrorMessage = 0;
+	this->cErrorMessage = nullptr;
 }
 
 const vlChar *CError::Get() const
 {
-	return this->cErrorMessage != 0 ? this->cErrorMessage : "";
+	return this->cErrorMessage != nullptr ? this->cErrorMessage : "";
 }
 
 vlVoid CError::SetFormatted(const vlChar *cFormat, ...)
@@ -110,4 +110,8 @@ vlVoid CError::Set(const vlChar *cErrorMessage, vlBool bSystemError)
 
 	this->cErrorMessage = new vlChar[strlen(cBuffer) + 1];
 	strcpy(this->cErrorMessage, cBuffer);
+}
+
+vlBool CError::isSet() const {
+	return this->cErrorMessage != nullptr;
 }

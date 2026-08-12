@@ -36,11 +36,11 @@ vlBool CMemoryWriter::Opened() const
 	return this->bOpened;
 }
 
-vlBool CMemoryWriter::Open()
+vlBool CMemoryWriter::Open(Diagnostics::CError& error)
 {
-	if(vData == 0)
+	if(vData == nullptr)
 	{
-		LastError.Set("Memory stream is null.");
+		error.Set("Memory stream is null.");
 		return vlFalse;
 	}
 
@@ -57,7 +57,7 @@ vlVoid CMemoryWriter::Close()
 	this->bOpened = vlFalse;
 }
 
-vlUInt CMemoryWriter::GetStreamSize() const
+vlUInt CMemoryWriter::GetStreamSize(Diagnostics::CError &error) const
 {
 	/*if(!this->bOpened)
 	{
@@ -67,7 +67,7 @@ vlUInt CMemoryWriter::GetStreamSize() const
 	return this->uiLength;
 }
 
-vlUInt CMemoryWriter::GetStreamPointer() const
+vlUInt CMemoryWriter::GetStreamPointer(Diagnostics::CError &error) const
 {
 	if(!this->bOpened)
 	{
@@ -77,7 +77,7 @@ vlUInt CMemoryWriter::GetStreamPointer() const
 	return this->uiPointer;
 }
 
-vlUInt CMemoryWriter::Seek(vlLong lOffset, vlUInt uiMode)
+vlUInt CMemoryWriter::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
 {
 	if(!this->bOpened)
 	{
@@ -114,7 +114,7 @@ vlUInt CMemoryWriter::Seek(vlLong lOffset, vlUInt uiMode)
 	return this->uiPointer;
 }
 
-vlBool CMemoryWriter::Write(vlChar cChar)
+vlBool CMemoryWriter::Write(vlChar cChar, Diagnostics::CError& error)
 {
 	if(!this->bOpened)
 	{
@@ -123,7 +123,7 @@ vlBool CMemoryWriter::Write(vlChar cChar)
 
 	if(this->uiPointer == this->uiBufferSize)
 	{
-		LastError.Set("End of memory stream.");
+		error.Set("End of memory stream.");
 
 		return vlFalse;
 	}
@@ -137,7 +137,7 @@ vlBool CMemoryWriter::Write(vlChar cChar)
 	}
 }
 
-vlUInt CMemoryWriter::Write(vlVoid *vData, vlUInt uiBytes)
+vlUInt CMemoryWriter::Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError& error)
 {
 	if(!this->bOpened)
 	{
@@ -158,7 +158,7 @@ vlUInt CMemoryWriter::Write(vlVoid *vData, vlUInt uiBytes)
 
 		this->uiPointer = this->uiBufferSize;
 
-		LastError.Set("End of memory stream.");
+		error.Set("End of memory stream.");
 
 		return uiBytes;
 	}

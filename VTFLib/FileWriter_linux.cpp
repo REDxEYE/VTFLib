@@ -20,7 +20,7 @@ using namespace VTFLib::IO::Writers;
 
 CFileWriter::CFileWriter(const vlChar *cFileName)
 {
-    this->hFile = NULL;
+    this->hFile = nullptr;
 
     this->cFileName = new vlChar[strlen(cFileName) + 1];
     strcpy(this->cFileName, cFileName);
@@ -35,18 +35,18 @@ CFileWriter::~CFileWriter()
 
 vlBool CFileWriter::Opened() const
 {
-    return this->hFile != NULL;
+    return this->hFile != nullptr;
 }
 
-vlBool CFileWriter::Open()
+vlBool CFileWriter::Open(Diagnostics::CError &error)
 {
     this->Close();
 
     this->hFile = fopen(this->cFileName, "wb");
 
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
-        LastError.Set("Error opening file.", vlTrue);
+        error.Set("Error opening file.", vlTrue);
         return vlFalse;
     }
 
@@ -55,16 +55,16 @@ vlBool CFileWriter::Open()
 
 vlVoid CFileWriter::Close()
 {
-    if(this->hFile != NULL)
+    if(this->hFile != nullptr)
     {
         fclose(this->hFile);
-        this->hFile = NULL;
+        this->hFile = nullptr;
     }
 }
 
-vlUInt CFileWriter::GetStreamSize() const
+vlUInt CFileWriter::GetStreamSize(Diagnostics::CError &error) const
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -93,9 +93,9 @@ vlUInt CFileWriter::GetStreamSize() const
     return static_cast<vlUInt>(lSize);
 }
 
-vlUInt CFileWriter::GetStreamPointer() const
+vlUInt CFileWriter::GetStreamPointer(Diagnostics::CError &error) const
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -110,9 +110,9 @@ vlUInt CFileWriter::GetStreamPointer() const
     return static_cast<vlUInt>(lPosition);
 }
 
-vlUInt CFileWriter::Seek(vlLong lOffset, vlUInt uiMode)
+vlUInt CFileWriter::Seek(vlLong lOffset, vlUInt uiMode, VTFLib::Diagnostics::CError& error)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -139,16 +139,16 @@ vlUInt CFileWriter::Seek(vlLong lOffset, vlUInt uiMode)
 
     if(fseek(this->hFile, lOffset, iOrigin) != 0)
     {
-        LastError.Set("fseek() failed.", vlTrue);
+        error.Set("fseek() failed.", vlTrue);
         return 0;
     }
 
-    return this->GetStreamPointer();
+    return this->GetStreamPointer(error);
 }
 
-vlBool CFileWriter::Write(vlChar cChar)
+vlBool CFileWriter::Write(vlChar cChar, Diagnostics::CError &error)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return vlFalse;
     }
@@ -157,15 +157,15 @@ vlBool CFileWriter::Write(vlChar cChar)
 
     if(uiBytesWritten != 1)
     {
-        LastError.Set("fwrite() failed.", vlTrue);
+        error.Set("fwrite() failed.", vlTrue);
     }
 
     return uiBytesWritten == 1;
 }
 
-vlUInt CFileWriter::Write(vlVoid *vData, vlUInt uiBytes)
+vlUInt CFileWriter::Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
 {
-    if(this->hFile == NULL)
+    if(this->hFile == nullptr)
     {
         return 0;
     }
@@ -174,7 +174,7 @@ vlUInt CFileWriter::Write(vlVoid *vData, vlUInt uiBytes)
 
     if(uiBytesWritten != uiBytes && ferror(this->hFile))
     {
-        LastError.Set("fwrite() failed.", vlTrue);
+        error.Set("fwrite() failed.", vlTrue);
     }
 
     return static_cast<vlUInt>(uiBytesWritten);

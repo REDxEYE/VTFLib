@@ -39,16 +39,16 @@ namespace VTFLib
 			public:
 				virtual vlBool Opened() const;
 
-				virtual vlBool Open();
+				virtual vlBool Open(Diagnostics::CError &error);
 				virtual vlVoid Close();
 
-				virtual vlUInt GetStreamSize() const;
-				virtual vlUInt GetStreamPointer() const;
+				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
+				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode);
+				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
 
-				virtual vlBool Write(vlChar cChar);
-				virtual vlUInt Write(vlVoid *vData, vlUInt uiBytes);
+				virtual vlBool Write(vlChar cChar, Diagnostics::CError &error);
+				virtual vlUInt Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
 			};
 		}
 	}

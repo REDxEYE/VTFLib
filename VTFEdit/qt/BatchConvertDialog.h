@@ -60,7 +60,7 @@ namespace VTFEdit
 
 		void settingsToControls();
 		void controlsToSettings();
-
+		VTFLib::Diagnostics::CError m_Error;
 		VtfOptions *m_pOptions;
 		BatchConvertSettings *m_pSettings;
 		VtfOptionsDialog *m_pOptionsDialog;

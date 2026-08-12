@@ -103,8 +103,8 @@ namespace VTFEdit
 			{
 				VMTFile.GetRoot()->AddIntegerNode("$translucent", 1);
 			}
-
-			return VMTFile.Save(sVMTFile.toLocal8Bit().constData()) != vlFalse;
+			VTFLib::Diagnostics::CError error;
+			return VMTFile.Save(sVMTFile.toLocal8Bit().constData(), error) != vlFalse;
 		}
 	}
 

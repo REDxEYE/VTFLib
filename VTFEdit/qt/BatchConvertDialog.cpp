@@ -349,7 +349,7 @@ namespace VTFEdit
 						VTFCreateOptions.ImageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;
 
 						const bool bCreated = VTFFile.Create(uiWidth, uiHeight, static_cast<vlUInt>(vImageData.size()),
-							1, 1, &vImageData[0], VTFCreateOptions) != vlFalse;
+							1, 1, &vImageData[0], VTFCreateOptions, m_Error) != vlFalse;
 						if(bCreated)
 						{
 							VtfFileUtility::ApplyFlags(*m_pOptions, &VTFFile);
@@ -359,7 +359,7 @@ namespace VTFEdit
 						{
 							QDir().mkpath(sOutputFolder);
 
-							if(VTFFile.Save(sVTFFile.toLocal8Bit().constData()))
+							if(VTFFile.Save(sVTFFile.toLocal8Bit().constData(), m_Error))
 							{
 								log(tr("Wrote %1.").arg(sVTFFile), LogGreen);
 
@@ -373,13 +373,13 @@ namespace VTFEdit
 							else
 							{
 								log(tr("Error writing %1.%2").arg(sName,
-									QString::fromLatin1(vlGetLastError()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
+									QString::fromLatin1(m_Error.Get()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
 							}
 						}
 						else
 						{
 							log(tr("Error creating %1.%2").arg(sName,
-								QString::fromLatin1(vlGetLastError()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
+								QString::fromLatin1(m_Error.Get()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
 						}
 					}
 
@@ -397,7 +397,7 @@ namespace VTFEdit
 			}
 			else if(bIsVTF)
 			{
-				if(VTFFile.Load(Path.constData()))
+				if(VTFFile.Load(Path.constData(), m_Error))
 				{
 					const vlUInt uiWidth = VTFFile.GetWidth();
 					const vlUInt uiHeight = VTFFile.GetHeight();
@@ -428,10 +428,10 @@ namespace VTFEdit
 										+ QLatin1Char('.') + m_pFromVTFFormat->currentText()));
 
 								if(!VTFFile.ConvertToRGBA8888(VTFFile.GetData(uiFrame, uiFace, uiSlice, 0),
-									ImageData.data(), uiWidth, uiHeight, VTFFile.GetDecodeFormat()))
+									ImageData.data(), uiWidth, uiHeight, VTFFile.GetDecodeFormat(), m_Error))
 								{
 									log(tr("Error converting %1.%2").arg(sName,
-										QString::fromLatin1(vlGetLastError()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
+										QString::fromLatin1(m_Error.Get()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
 									continue;
 								}
 
@@ -461,7 +461,7 @@ namespace VTFEdit
 				else
 				{
 					log(tr("Error loading %1.%2").arg(sName,
-						QString::fromLatin1(vlGetLastError()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
+						QString::fromLatin1(m_Error.Get()).replace(QLatin1Char('\n'), QLatin1Char(' '))), LogRed);
 				}
 
 				log(tr("%1 processed.").arg(sName), LogGray);

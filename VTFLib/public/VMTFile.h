@@ -53,22 +53,22 @@ namespace VTFLib
 
 		vlBool IsLoaded() const;
 
-		vlBool Load(const vlChar *cFileName);
-		vlBool Load(const vlVoid *lpData, vlUInt uiBufferSize);
-		vlBool Load(vlVoid *pUserData);
+		vlBool Load(const vlChar *cFileName, Diagnostics::CError &error);
+		vlBool Load(const vlVoid *lpData, vlUInt uiBufferSize, Diagnostics::CError& error);
+		vlBool Load(vlVoid *pUserData, Diagnostics::CError& error);
 
-		vlBool Save(const vlChar *cFileName) const;
-		vlBool Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize) const;
-		vlBool Save(vlVoid *pUserData) const;
+		vlBool Save(const vlChar *cFileName, Diagnostics::CError& error) const;
+		vlBool Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize, Diagnostics::CError& error) const;
+		vlBool Save(vlVoid *pUserData, Diagnostics::CError& error) const;
 
 	private:
-		vlBool Load(IO::Readers::IReader *Reader);
-		vlBool Save(IO::Writers::IWriter *Writer) const;
+		vlBool Load(IO::Readers::IReader *Reader, Diagnostics::CError &error);
+		vlBool Save(IO::Writers::IWriter *Writer, Diagnostics::CError &error) const;
 
 		//Nodes::CVMTNode *Load(IO::Readers::IReader *Reader, vlBool bInGroup);
 
-		vlVoid Indent(IO::Writers::IWriter *Writer, vlUInt uiLevel) const;
-		vlVoid Save(IO::Writers::IWriter *Writer, Nodes::CVMTNode *Node, vlUInt uiLevel = 0) const;
+		vlVoid Indent(IO::Writers::IWriter *Writer, vlUInt uiLevel, VTFLib::Diagnostics::CError& error) const;
+		vlVoid Save(IO::Writers::IWriter *Writer, Nodes::CVMTNode *Node, VTFLib::Diagnostics::CError& error, vlUInt uiLevel = 0) const;
 
 	public:
 		Nodes::CVMTGroupNode *GetRoot() const;

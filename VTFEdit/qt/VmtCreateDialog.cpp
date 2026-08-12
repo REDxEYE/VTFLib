@@ -359,7 +359,7 @@ namespace VTFEdit
 				VMTFile.GetRoot()->AddIntegerNode(sParameter.toLocal8Bit().constData(), 1);
 			}
 		}
-
-		VMTFile.Save(sFileName.toLocal8Bit().constData());
+		VTFLib::Diagnostics::CError error;
+		VMTFile.Save(sFileName.toLocal8Bit().constData(), error);
 	}
 }
