@@ -1,6 +1,6 @@
 include(FetchContent)
 
-if (not TARGET CMP_Core)
+if (NOT TARGET CMP_Core)
 
     FetchContent_Declare(
             compressonator
@@ -32,7 +32,7 @@ if (not TARGET CMP_Core)
 
 endif ()
 
-if (not TARGET IL)
+if (NOT TARGET IL)
 
     FetchContent_Declare(
             DevIL
@@ -57,7 +57,7 @@ if (not TARGET IL)
     endif ()
 endif ()
 
-if (not TARGET miniz)
+if (NOT TARGET miniz)
 
     FetchContent_Declare(
             miniz
@@ -71,7 +71,7 @@ if (not TARGET miniz)
     FetchContent_MakeAvailable(miniz)
 endif ()
 
-if (not TARGET libzstd_static)
+if (NOT TARGET libzstd_static)
 
     FetchContent_Declare(
             zstd
