@@ -254,7 +254,7 @@ VTFLIB_API vlBool vlImageSaveProc(vlVoid *pUserData, Diagnostics::CError& error)
 		return vlFalse;
 	}
 
-	return Image->Save(pUserData);
+	return Image->Save(pUserData, error);
 }
 
 VTFLIB_API vlUInt vlImageGetMajorVersion()

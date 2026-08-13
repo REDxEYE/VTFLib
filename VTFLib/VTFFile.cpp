@@ -1047,16 +1047,16 @@ vlBool CVTFFile::Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize, Diagn
 
     IO::Writers::CMemoryWriter MemoryWriter = IO::Writers::CMemoryWriter(lpData, uiBufferSize);
 
-    vlBool bResult = this->Save(&MemoryWriter);
+    vlBool bResult = this->Save(&MemoryWriter, error);
 
     uiSize = MemoryWriter.GetStreamSize(error);
 
     return bResult;
 }
 
-vlBool CVTFFile::Save(vlVoid *pUserData) const {
+vlBool CVTFFile::Save(vlVoid *pUserData, Diagnostics::CError &error) const {
     IO::Writers::CProcWriter writer(pUserData);
-    return this->Save(&writer);
+    return this->Save(&writer, error);
 }
 
 // -----------------------------------------------------------------------------------

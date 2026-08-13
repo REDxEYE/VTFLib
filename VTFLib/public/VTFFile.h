@@ -307,7 +307,7 @@ namespace VTFLib
 			\param pUserData is a pointer to custom user data.
 			\return true on sucessful save, otherwise false.
 		*/
-		vlBool Save(vlVoid *pUserData) const;
+		vlBool Save(vlVoid *pUserData, Diagnostics::CError &error) const;
 
 	private:
 		vlBool IsPowerOfTwo(vlUInt uiSize);
