@@ -19,10 +19,9 @@
 	A small collection of math functions and defines used by VTFLib.
 */
 
-#ifndef VTFMATHLIB_H
-#define VTFMATHLIB_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 
 // Defines for data alignment
 //---------------------------
@@ -37,7 +36,7 @@
 
 // Macros
 //-------
-#define drand48() (((vlSingle) rand())/((vlSingle) RAND_MAX))		//!< Random number generator for the spheremap generation function.
+#define drand48() (((float) rand())/((float) RAND_MAX))		//!< Random number generator for the spheremap generation function.
 
 // Vector class
 //-------------
@@ -49,12 +48,12 @@ class Vector
 {
 	public:
 
-		vlSingle x;		//!< Vector value in the X axis.
-		vlSingle y;		//!< Vector value in the Y axis.
-		vlSingle z;		//!< Vector value in the Z axis.
+		float x;		//!< Vector value in the X axis.
+		float y;		//!< Vector value in the Y axis.
+		float z;		//!< Vector value in the Z axis.
 	
 	//! Initialise the vector with the three given values.
-	inline void Init(vlSingle vX, vlSingle vY, vlSingle vZ)
+	inline void Init(float vX, float vY, float vZ)
 	{
 		x = vX;
 		y = vY;
@@ -82,12 +81,12 @@ class CACHE_ALIGN VectorAligned
 {
 	public:
 		
-	vlSingle x;		//!< Vector value in the X axis.
-		vlSingle y;		//!< Vector value in the Y axis.
-		vlSingle z;		//!< Vector value in the Z axis.
+	float x;		//!< Vector value in the X axis.
+		float y;		//!< Vector value in the Y axis.
+		float z;		//!< Vector value in the Z axis.
 
 		//! Initialise the vector with the three given values.
-		inline VectorAligned(vlSingle vX, vlSingle vY, vlSingle vZ) 
+		inline VectorAligned(float vX, float vY, float vZ)
 		{
 			x = vX;
 			y = vY;
@@ -105,9 +104,8 @@ class CACHE_ALIGN VectorAligned
 
 void VecAdd(Vector *a, Vector *b, Vector *sum);			//!< Vector addition function.
 void VecSub(Vector *a, Vector *b, Vector *diff);		//!< Vector subtraction function.
-void VecScale(Vector *v, vlSingle scale);				//!< Vector scale function.
-vlSingle VecDot(Vector *u, Vector *v);					//!< Vector dot-product function.
+void VecScale(Vector *v, float scale);				//!< Vector scale function.
+float VecDot(Vector *u, Vector *v);					//!< Vector dot-product function.
 void VecReflect(Vector *axis, Vector *v, Vector *r);	//!< Vector reflect function.
-vlInt Intersect(Vector *v);								//!< Vector intersect function.
+int32_t Intersect(Vector *v);								//!< Vector intersect function.
 
-#endif //VTF_MATHLIB

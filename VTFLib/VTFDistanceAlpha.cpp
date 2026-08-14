@@ -106,8 +106,8 @@ namespace
 
 	// signed distance in source pixels from each pixel to the coverage boundary
 	// positive inside the shape and negative outside of it
-	void ComputeSignedDistance(const vlByte *lpImageData, int nWidth, int nHeight,
-		vlByte nThreshold, std::vector<float> &vDistance)
+	void ComputeSignedDistance(const uint8_t *lpImageData, int nWidth, int nHeight,
+		uint8_t nThreshold, std::vector<float> &vDistance)
 	{
 		const size_t uiPixels = static_cast<size_t>(nWidth) * nHeight;
 
@@ -152,9 +152,9 @@ namespace
 	}
 }
 
-vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888,
-	vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight,
-	vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped, Diagnostics::CError& error)
+vlBool CVTFFile::ConvertToDistanceField(const uint8_t *lpSourceRGBA8888, uint8_t *lpDestRGBA8888,
+	uint32_t uiSourceWidth, uint32_t uiSourceHeight, uint32_t uiDestWidth, uint32_t uiDestHeight,
+	float sSpread, uint8_t bThreshold, vlBool *pbClipped, Diagnostics::CError& error)
 {
 	const int nWidth = static_cast<int>(uiSourceWidth);
 	const int nHeight = static_cast<int>(uiSourceHeight);
@@ -168,7 +168,7 @@ vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *
 
 	if(nWidth <= 0 || nHeight <= 0 || nDestWidth <= 0 || nDestHeight <= 0)
 	{
-		error.Set("Invalid distance field dimensions.");
+		VTFError_Set(error, "Invalid distance field dimensions.");
 		return vlFalse;
 	}
 
@@ -185,7 +185,7 @@ vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *
 	{
 		for(int x = 0; x < nDestWidth; x++)
 		{
-			vlByte *lpDestPixel = lpDestRGBA8888 + (static_cast<size_t>(y) * nDestWidth + x) * 4;
+			uint8_t *lpDestPixel = lpDestRGBA8888 + (static_cast<size_t>(y) * nDestWidth + x) * 4;
 
 			// box filter the colour channels down, leaving the alpha to the field
 			const int nSrcX0 = static_cast<int>(x * flScaleX);
@@ -193,14 +193,14 @@ vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *
 			const int nSrcX1 = std::min(nWidth, std::max(nSrcX0 + 1, static_cast<int>((x + 1) * flScaleX)));
 			const int nSrcY1 = std::min(nHeight, std::max(nSrcY0 + 1, static_cast<int>((y + 1) * flScaleY)));
 
-			vlUInt uiSum[3] = { 0, 0, 0 };
-			vlUInt uiCount = 0;
+			uint32_t uiSum[3] = { 0, 0, 0 };
+			uint32_t uiCount = 0;
 
 			for(int sy = nSrcY0; sy < nSrcY1; sy++)
 			{
 				for(int sx = nSrcX0; sx < nSrcX1; sx++)
 				{
-					const vlByte *lpSrcPixel = lpSourceRGBA8888 + (static_cast<size_t>(sy) * nWidth + sx) * 4;
+					const uint8_t *lpSrcPixel = lpSourceRGBA8888 + (static_cast<size_t>(sy) * nWidth + sx) * 4;
 
 					uiSum[0] += lpSrcPixel[0];
 					uiSum[1] += lpSrcPixel[1];
@@ -211,7 +211,7 @@ vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *
 
 			for(int c = 0; c < 3; c++)
 			{
-				lpDestPixel[c] = static_cast<vlByte>(uiSum[c] / uiCount);
+				lpDestPixel[c] = static_cast<uint8_t>(uiSum[c] / uiCount);
 			}
 
 			// sample the field at the centre of the destination pixel and map the
@@ -220,7 +220,7 @@ vlBool CVTFFile::ConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *
 				(x + 0.5f) * flScaleX - 0.5f, (y + 0.5f) * flScaleY - 0.5f);
 			const float flAlpha = 0.5f + 0.5f * std::max(-1.0f, std::min(1.0f, flDistance / flMaxDistance));
 
-			vlByte bAlpha = static_cast<vlByte>(std::min(255.0f, 255.0f * flAlpha + 0.5f));
+			uint8_t bAlpha = static_cast<uint8_t>(std::min(255.0f, 255.0f * flAlpha + 0.5f));
 
 			if(bAlpha != 0 && (x == 0 || y == 0 || x == nDestWidth - 1 || y == nDestHeight - 1))
 			{

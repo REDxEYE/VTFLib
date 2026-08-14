@@ -21,7 +21,7 @@
 
 #include "VTFLib.h"
 
-VTFImageFormat StringToImageFormat(const vlChar *cString)
+VTFImageFormat StringToImageFormat(const char *cString)
 {
 	if(stricmp(cString, "RGBA8888") == 0)
 	{
@@ -145,7 +145,7 @@ VTFImageFormat StringToImageFormat(const vlChar *cString)
 	}
 }
 
-VTFImageFlag StringToImageFlag(const vlChar *cString)
+VTFImageFlag StringToImageFlag(const char *cString)
 {
 	if(stricmp(cString, "POINTSAMPLE") == 0)
 	{
@@ -233,7 +233,7 @@ VTFImageFlag StringToImageFlag(const vlChar *cString)
 	}
 }
 
-VTFMipmapFilter StringToMipmapFilter(const vlChar *cString)
+VTFMipmapFilter StringToMipmapFilter(const char *cString)
 {
 	if(stricmp(cString, "POINT") == 0)
 	{
@@ -302,7 +302,7 @@ VTFMipmapFilter StringToMipmapFilter(const vlChar *cString)
 }
 
 
-VTFResizeMethod StringToResizeMethod(const vlChar *cString)
+VTFResizeMethod StringToResizeMethod(const char *cString)
 {
 	if(stricmp(cString, "NEAREST") == 0)
 	{

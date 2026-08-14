@@ -96,10 +96,9 @@
 */
 
 
-#ifndef VTFLIB_H
-#define VTFLIB_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Error.h"
 #include "VTFFile.h"
 #include "VMTFile.h"
@@ -119,23 +118,23 @@ namespace VTFLib
 	extern CVMTFile *Material;
 	extern CMaterialVector *MaterialVector;
 
-	extern vlUInt uiDXTQuality;
+	extern uint32_t uiDXTQuality;
 
-	extern vlSingle sLuminanceWeightR;
-	extern vlSingle sLuminanceWeightG;
-	extern vlSingle sLuminanceWeightB;
+	extern float sLuminanceWeightR;
+	extern float sLuminanceWeightG;
+	extern float sLuminanceWeightB;
 
-	extern vlUShort uiBlueScreenMaskR;
-	extern vlUShort uiBlueScreenMaskG;
-	extern vlUShort uiBlueScreenMaskB;
+	extern uint16_t uiBlueScreenMaskR;
+	extern uint16_t uiBlueScreenMaskG;
+	extern uint16_t uiBlueScreenMaskB;
 
-	extern vlUShort uiBlueScreenClearR;
-	extern vlUShort uiBlueScreenClearG;
-	extern vlUShort uiBlueScreenClearB;
+	extern uint16_t uiBlueScreenClearR;
+	extern uint16_t uiBlueScreenClearG;
+	extern uint16_t uiBlueScreenClearB;
 
-	extern vlSingle sFP16HDRExposure;
+	extern float sFP16HDRExposure;
 
-	extern vlUInt uiVMTParseMode;
+	extern uint32_t uiVMTParseMode;
 }
 
 #define VL_VERSION			210			//!< VTFLib version as integer
@@ -165,37 +164,36 @@ typedef enum tagVTFLibOption
 } VTFLibOption;
 
 //! Return the VTFLib version as an integer.
-VTFLIB_API vlUInt vlGetVersion();
+VTFLIB_API uint32_t vlGetVersion();
 
 //! Return the VTFLib version as a string.
-VTFLIB_API const vlChar *vlGetVersionString();
+VTFLIB_API const char *vlGetVersionString();
 
 //! Return the last error message as a string.
-// VTFLIB_API const vlChar *vlGetLastError();
+// VTFLIB_API const char *vlGetLastError();
 
 //! Initialisation function
 VTFLIB_API vlBool vlInitialize(VTFLib::Diagnostics::CError& error);
 
 //! Shutdown function
-VTFLIB_API vlVoid vlShutdown();
+VTFLIB_API void vlShutdown();
 
 //! Return the specified option.
 VTFLIB_API vlBool vlGetBoolean(VTFLibOption Option);
 //! Set the specified option.
-VTFLIB_API vlVoid vlSetBoolean(VTFLibOption Option, vlBool bValue);
+VTFLIB_API void vlSetBoolean(VTFLibOption Option, vlBool bValue);
 
 //! Return the specified option.
-VTFLIB_API vlInt vlGetInteger(VTFLibOption Option);
+VTFLIB_API int32_t vlGetInteger(VTFLibOption Option);
 //! Set the specified option.
-VTFLIB_API vlVoid vlSetInteger(VTFLibOption Option, vlInt iValue);
+VTFLIB_API void vlSetInteger(VTFLibOption Option, int32_t iValue);
 
 //! Return the specified option.
-VTFLIB_API vlSingle vlGetFloat(VTFLibOption Option);
+VTFLIB_API float vlGetFloat(VTFLibOption Option);
 //! Set the specified option.
-VTFLIB_API vlVoid vlSetFloat(VTFLibOption Option, vlSingle sValue);
+VTFLIB_API void vlSetFloat(VTFLibOption Option, float sValue);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif

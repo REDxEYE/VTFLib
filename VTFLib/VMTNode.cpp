@@ -15,32 +15,26 @@
 
 using namespace VTFLib::Nodes;
 
-CVMTNode::CVMTNode(const vlChar *cName)
-{
-	this->cName = new vlChar[strlen(cName) + 1];
-	strcpy(this->cName, cName);
-
-	this->Parent = 0;
+CVMTNode::CVMTNode(const char *name) {
+    mName = new char[strlen(name) + 1];
+    strcpy(mName, name);
+    mParent = nullptr;
 }
 
-CVMTNode::~CVMTNode()
-{
-	delete []this->cName;
+CVMTNode::~CVMTNode() {
+    delete[] mName;
 }
 
-vlVoid CVMTNode::SetName(const vlChar *cName)
-{
-	delete []this->cName;
-	this->cName = new vlChar[strlen(cName) + 1];
-	strcpy(this->cName, cName);
+void CVMTNode::SetName(const char *name) {
+    delete[] mName;
+    mName = new char[strlen(name) + 1];
+    strcpy(mName, name);
 }
 
-const vlChar *CVMTNode::GetName() const
-{
-	return this->cName;
+const char *CVMTNode::GetName() const {
+    return mName;
 }
 
-CVMTGroupNode *CVMTNode::GetParent()
-{
-	return this->Parent;
+CVMTGroupNode *CVMTNode::GetParent() const {
+    return mParent;
 }

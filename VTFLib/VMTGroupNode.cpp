@@ -11,142 +11,106 @@
 
 #include "VMTGroupNode.h"
 
+#include <algorithm>
+
 using namespace VTFLib::Nodes;
 
-CVMTGroupNode::CVMTGroupNode(const vlChar *cName) : CVMTNode(cName)
-{
-	this->VMTNodeList = new CVMTNodeList();
+CVMTGroupNode::CVMTGroupNode(const char *name) : CVMTNode(name) {
+    mVMTNodeList = new CVMTNodeList();
 }
 
-CVMTGroupNode::CVMTGroupNode(const CVMTGroupNode &GroupNode) : CVMTNode(GroupNode.GetName())
-{
-	this->VMTNodeList = new CVMTNodeList();
-
-	for(CVMTNodeList::const_iterator it = GroupNode.VMTNodeList->begin(); it != GroupNode.VMTNodeList->end(); ++it)
-	{
-		this->AddNode((*it)->Clone());
-	}
+CVMTGroupNode::CVMTGroupNode(const CVMTGroupNode &other) : CVMTNode(other.GetName()) {
+    mVMTNodeList = new CVMTNodeList();
+    for (const auto &it: *other.mVMTNodeList) {
+        AddNode(it->Clone());
+    }
 }
 
-CVMTGroupNode::~CVMTGroupNode()
-{
-	for(CVMTNodeList::const_iterator it = this->VMTNodeList->begin(); it != this->VMTNodeList->end(); ++it)
-	{
-		delete *it;
-	}
-
-	delete this->VMTNodeList;
+CVMTGroupNode::~CVMTGroupNode() {
+    for (const auto &it: *mVMTNodeList) {
+        delete it;
+    }
+    delete mVMTNodeList;
 }
 
-VMTNodeType CVMTGroupNode::GetType() const
-{
-	return NODE_TYPE_GROUP;
+VMTNodeType CVMTGroupNode::GetType() const {
+    return NODE_TYPE_GROUP;
 }
 
-vlUInt CVMTGroupNode::GetNodeCount() const
-{
-	return (vlUInt)this->VMTNodeList->size();
+size_t CVMTGroupNode::GetNodeCount() const {
+    return mVMTNodeList->size();
 }
 
-CVMTNode *CVMTGroupNode::AddNode(CVMTNode *VMTNode)
-{
-	// We can do this because we are friends.
-	VMTNode->Parent = this;
-
-	this->VMTNodeList->push_back(VMTNode);
-
-	return VMTNode;
+CVMTNode *CVMTGroupNode::AddNode(CVMTNode *node) {
+    // We can do this because we are friends.
+    node->mParent = this;
+    mVMTNodeList->push_back(node);
+    return node;
 }
 
-CVMTGroupNode *CVMTGroupNode::AddGroupNode(const vlChar *cName)
-{
-	CVMTGroupNode *Group = new CVMTGroupNode(cName);
-	
-	this->AddNode(Group);
-
-	return Group;
+CVMTGroupNode *CVMTGroupNode::AddGroupNode(const char *name) {
+    auto *group = new CVMTGroupNode(name);
+    AddNode(group);
+    return group;
 }
 
-CVMTStringNode *CVMTGroupNode::AddStringNode(const vlChar *cName, const vlChar *cValue)
-{
-	CVMTStringNode *String = new CVMTStringNode(cName, cValue);
-	
-	this->AddNode(String);
-
-	return String;
+CVMTStringNode *CVMTGroupNode::AddStringNode(const char *name, const char *value) {
+    auto *strNode = new CVMTStringNode(name, value);
+    AddNode(strNode);
+    return strNode;
 }
 
-CVMTIntegerNode *CVMTGroupNode::AddIntegerNode(const vlChar *cName, vlInt iValue)
-{
-	CVMTIntegerNode *Integer = new CVMTIntegerNode(cName, iValue);
-	
-	this->AddNode(Integer);
-
-	return Integer;
+CVMTIntegerNode *CVMTGroupNode::AddIntegerNode(const char *name, const int32_t value) {
+    auto *intNode = new CVMTIntegerNode(name, value);
+    AddNode(intNode);
+    return intNode;
 }
 
-CVMTSingleNode *CVMTGroupNode::AddSingleNode(const vlChar *cName, vlFloat fValue)
-{
-	CVMTSingleNode *Single = new CVMTSingleNode(cName, fValue);
-	
-	this->AddNode(Single);
-
-	return Single;
+CVMTSingleNode *CVMTGroupNode::AddSingleNode(const char *name, const float value) {
+    auto *floatNode = new CVMTSingleNode(name, value);
+    AddNode(floatNode);
+    return floatNode;
 }
 
-vlVoid CVMTGroupNode::RemoveNode(CVMTNode *VMTNode)
-{
-	for(CVMTNodeList::const_iterator it = this->VMTNodeList->begin(); it != this->VMTNodeList->end(); ++it)
-	{
-		if(*it == VMTNode)
-		{
-			delete *it;
-			this->VMTNodeList->remove(*it);
+void CVMTGroupNode::RemoveNode(const CVMTNode *node) const {
+    const auto it = std::find(mVMTNodeList->begin(), mVMTNodeList->end(), node);
+    if (it == mVMTNodeList->end())
+        return;
 
-			return;
-		}
-	}
+    delete *it;
+    mVMTNodeList->erase(it);
 }
 
-vlVoid CVMTGroupNode::RemoveAllNodes()
-{
-	for(CVMTNodeList::const_iterator it = this->VMTNodeList->begin(); it != this->VMTNodeList->end(); ++it)
-	{
-		delete *it;
-	}
+void CVMTGroupNode::RemoveAllNodes() const {
+    for (const auto &it: *mVMTNodeList) {
+        delete it;
+    }
 
-	this->VMTNodeList->clear();
+    mVMTNodeList->clear();
 }
 
-CVMTNode *CVMTGroupNode::GetNode(vlUInt uiIndex) const
-{
-	vlUInt uiCount = 0;
-	for(CVMTNodeList::const_iterator it = this->VMTNodeList->begin(); it != this->VMTNodeList->end(); ++it)
-	{
-		if(uiCount == uiIndex)
-		{
-			return *it;
-		}
-		uiCount++;
-	}
+CVMTNode *CVMTGroupNode::GetNode(const size_t index) const {
+    size_t count = 0;
+    for (const auto &it: *mVMTNodeList) {
+        if (count == index) {
+            return it;
+        }
+        count++;
+    }
 
-	return 0;
+    return nullptr;
 }
 
-CVMTNode *CVMTGroupNode::GetNode(const vlChar *cName) const
-{
-	for(CVMTNodeList::const_iterator it = this->VMTNodeList->begin(); it != this->VMTNodeList->end(); ++it)
-	{
-		if(stricmp(cName, (*it)->GetName()) == 0)
-		{
-			return *it;
-		}
-	}
+CVMTNode *CVMTGroupNode::GetNode(const char *name) const {
+    for (const auto &it: *mVMTNodeList) {
+        if (stricmp(name, it->GetName()) == 0) {
+            return it;
+        }
+    }
 
-	return 0;
+    return nullptr;
 }
 
-CVMTNode *CVMTGroupNode::Clone() const
-{
-	return new CVMTGroupNode(*this);
+CVMTNode *CVMTGroupNode::Clone() const {
+    return new CVMTGroupNode(*this);
 }

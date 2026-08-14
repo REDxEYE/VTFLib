@@ -33,11 +33,7 @@
 
 #pragma once
 
-#include "vtflib_shared.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "VTFLibShared.h"
 
 // VTF version numbers (current version is 7.6)
 //---------------------------------------------
@@ -274,8 +270,8 @@ typedef enum tagVTFLookDir
 	LOOK_DOWN_NEGZ
 } VTFLookDir;
 
-#define MAKE_VTF_RSRC_ID(a, b, c) ((vlUInt)(((vlByte)a) | ((vlByte)b << 8) | ((vlByte)c << 16)))
-#define MAKE_VTF_RSRC_IDF(a, b, c, d) ((vlUInt)(((vlByte)a) | ((vlByte)b << 8) | ((vlByte)c << 16) | ((vlByte)d << 24)))
+#define MAKE_VTF_RSRC_ID(a, b, c) ((uint32_t)(((uint8_t)a) | ((uint8_t)b << 8) | ((uint8_t)c << 16)))
+#define MAKE_VTF_RSRC_IDF(a, b, c, d) ((uint32_t)(((uint8_t)a) | ((uint8_t)b << 8) | ((uint8_t)c << 16) | ((uint8_t)d << 24)))
 
 //! Resource entry type flags.
 //--------------------------------------------
@@ -310,15 +306,15 @@ typedef enum tagVTFAuxCompressionMethod
 	AUX_COMPRESSION_METHOD_ZSTD = 93		//!< Zstandard
 } VTFAuxCompressionMethod;
 
-#define VTF_AUX_COMPRESSION_LEVEL_DEFAULT	-1
+#define VTF_AUX_COMPRESSION_LEVEL_DEFAULT	(-1)
 #define VTF_AUX_COMPRESSION_LEVEL_NONE		0
 #define VTF_AUX_COMPRESSION_LEVEL_MAX		9
 
 //! Layout of the Auxiliary Compression Info (AXC) resource
 typedef struct tagSVTFAuxCompressionInfoHeader
 {
-	vlShort		Level;						//!< Compression strength: -1 (default), 0, or 1-9
-	vlShort		Method;						//!< VTFAuxCompressionMethod
+	int16_t		level;						//!< Compression strength: -1 (default), 0, or 1-9
+	int16_t		method;						//!< VTFAuxCompressionMethod
 } SVTFAuxCompressionInfoHeader;
 
 #pragma pack(1)
@@ -331,9 +327,9 @@ typedef struct tagSVTFAuxCompressionInfoHeader
 */
 struct SVTFFileHeader
 {
-	vlChar			TypeString[4];					//!< "Magic number" identifier- "VTF\0".
-	vlUInt			Version[2];						//!< Version[0].version[1] (currently 7.2)
-	vlUInt			HeaderSize;						//!< Size of the header struct (currently 80 bytes)				
+	char			typeString[4];					//!< "Magic number" identifier- "VTF\0".
+	uint32_t		version[2];						//!< Version[0].version[1] (currently 7.2)
+	uint32_t		headerSize;						//!< Size of the header struct (currently 80 bytes)
 };
 
 //! VTFHeader_70 struct.
@@ -343,20 +339,20 @@ struct SVTFFileHeader
 */
 struct SVTFHeader_70 : public SVTFFileHeader
 {
-	vlUShort		Width;							//!< Width of the largest image
-	vlUShort		Height;							//!< Height of the largest image
-	vlUInt			Flags;							//!< Flags for the image
-	vlUShort		Frames;							//!< Number of frames if animated (1 for no animation)
-	vlUShort		StartFrame;						//!< Start frame (always 0)
-	vlByte			Padding0[4];					//!< Reflectivity padding (16 byte alignment)
-	vlSingle		Reflectivity[3];				//!< Reflectivity vector
-	vlByte			Padding1[4];					//!< Reflectivity padding (8 byte packing)
-	vlSingle		BumpScale;						//!< Bump map scale
-	VTFImageFormat	ImageFormat;					//!< Image format index
-	vlByte			MipCount;						//!< Number of MIP levels (including the largest image)
-	VTFImageFormat	LowResImageFormat;				//!< Image format of the thumbnail image
-	vlByte			LowResImageWidth;				//!< Thumbnail image width
-	vlByte			LowResImageHeight;				//!< Thumbnail image height
+	uint16_t		width;							//!< Width of the largest image
+	uint16_t		height;							//!< Height of the largest image
+	uint32_t		flags;							//!< Flags for the image
+	uint16_t		frames;							//!< Number of frames if animated (1 for no animation)
+	uint16_t		startFrame;						//!< Start frame (always 0)
+	uint8_t			padding0[4];					//!< Reflectivity padding (16 byte alignment)
+	float			reflectivity[3];				//!< Reflectivity vector
+	uint8_t			padding1[4];					//!< Reflectivity padding (8 byte packing)
+	float			bumpScale;						//!< Bump map scale
+	VTFImageFormat	imageFormat;					//!< Image format index
+	uint8_t			mipCount;						//!< Number of MIP levels (including the largest image)
+	VTFImageFormat	lowResImageFormat;				//!< Image format of the thumbnail image
+	uint8_t			lowResImageWidth;				//!< Thumbnail image width
+	uint8_t			lowResImageHeight;				//!< Thumbnail image height
 };
 
 //! VTFHeader_70_A struct.
@@ -390,7 +386,7 @@ struct VL_ALIGN(16) SVTFHeader_71_A : public SVTFHeader_71 {};
 */
 struct SVTFHeader_72 : public SVTFHeader_71
 {
-	vlUShort		Depth;							//!< Depth of the largest image
+	uint16_t		depth;							//!< Depth of the largest image
 };
 
 //! VTFHeader_72_A struct.
@@ -407,8 +403,8 @@ struct VL_ALIGN(16) SVTFHeader_72_A : public SVTFHeader_72 {};
 */
 struct SVTFHeader_73 : public SVTFHeader_72
 {
-	vlByte		Padding2[3];
-	vlUInt		ResourceCount;							//!< Number of image resources
+	uint8_t			padding2[3];
+	uint32_t		resourceCount;							//!< Number of image resources
 };
 
 //! VTFHeader_72_A struct.
@@ -473,46 +469,42 @@ struct SVTFResource
 {
 	union
 	{ 
-		vlUInt Type;
+		uint32_t type;
 		struct
 		{
-			vlByte ID[3];	//!< Unique resource ID
-			vlByte Flags;	//!< Resource flags
+			uint8_t id[3];	//!< Unique resource ID
+			uint8_t flags;	//!< Resource flags
 		};
 	};
-	vlUInt Data;	//!< Resource data (e.g. for a  CRC) or offset from start of the file
+	uint32_t data;	//!< Resource data (e.g. for a  CRC) or offset from start of the file
 };
 
 struct SVTFResourceData
 {
-	vlUInt Size;	//!< Resource data buffer size
-	vlByte *Data;	//!< Resource data bufffer
+	uint32_t size;	//!< Resource data buffer size
+	uint8_t *data;	//!< Resource data bufffer
 };
 
 typedef struct tagSVTFTextureLODControlResource
 {
-	vlByte ResolutionClampU;
-	vlByte ResolutionClampV;
-	vlByte Padding[2];
+	uint8_t resolutionClampU;
+	uint8_t resolutionClampV;
+	uint8_t padding[2];
 } SVTFTextureLODControlResource;
 
 typedef struct tagSVTFTextureSettingsExResource
 {
-	vlByte Flags0;
-	vlByte Flags1;
-	vlByte Flags2;
-	vlByte Flags3;
+	uint8_t flags0;
+	uint8_t flags1;
+	uint8_t flags2;
+	uint8_t flags3;
 } SVTFTextureSettingsExResource;
 
 struct SVTFHeader : public SVTFHeader_74_A
 {
-	vlByte				Padding3[8];
-	SVTFResource		Resources[VTF_RSRC_MAX_DICTIONARY_ENTRIES];
-	SVTFResourceData	Data[VTF_RSRC_MAX_DICTIONARY_ENTRIES];
+	uint8_t				padding3[8];
+	SVTFResource		resources[VTF_RSRC_MAX_DICTIONARY_ENTRIES];
+	SVTFResourceData	data[VTF_RSRC_MAX_DICTIONARY_ENTRIES];
 };
 
 #pragma pack()
-
-#ifdef __cplusplus
-}
-#endif

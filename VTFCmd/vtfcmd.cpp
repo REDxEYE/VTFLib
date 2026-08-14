@@ -27,46 +27,46 @@
 
 #define MAX_ITEMS	1024
 
-vlUInt uiFileCount = 0;
-vlChar *lpFiles[MAX_ITEMS];							// Files to convert.
-vlUInt uiFolderCount = 0;
-vlChar *lpFolders[MAX_ITEMS];						// Folders to convert.
+uint32_t uiFileCount = 0;
+char *lpFiles[MAX_ITEMS];							// Files to convert.
+uint32_t uiFolderCount = 0;
+char *lpFolders[MAX_ITEMS];						// Folders to convert.
 vlBool bRecursive = vlFalse;						// Recursively search folders.
 
-vlUInt uiProcessed = 0;								// Files processed.
-vlUInt uiCompleted = 0;								// Files processed without error.
+uint32_t uiProcessed = 0;								// Files processed.
+uint32_t uiCompleted = 0;								// Files processed without error.
 
-vlChar *lpPrefix = "";								// String to add to start of output file name.
-vlChar *lpPostfix = "";								// String to add to end of output file name.
-vlChar *lpOutput = 0;								// Output folder.
+char *lpPrefix = "";								// String to add to start of output file name.
+char *lpPostfix = "";								// String to add to end of output file name.
+char *lpOutput = 0;								// Output folder.
 
 vlBool bSilent = vlFalse;							// Don't display output.
 vlBool bPause = vlFalse;							// Don't pause the console.
 vlBool bHelp = vlFalse;								// Display help.
 
-vlUInt uiVTFImage;									// VTF image handle.
-vlUInt uiVMTMaterial;								// VMT material handle.
+uint32_t uiVTFImage;									// VTF image handle.
+uint32_t uiVMTMaterial;								// VMT material handle.
 ILuint uiDevILImage;								// DevIL image handle.
 
 VTFImageFormat AlphaFormat = IMAGE_FORMAT_DXT5;		// VTF image format for alpha textures.
 VTFImageFormat NormalFormat = IMAGE_FORMAT_DXT1;	// VTF image format for non-alpha textures.
 SVTFCreateOptions CreateOptions;					// VTF creation options.
-vlChar *lpShader = 0;								// VMT shader to use.
-vlUInt uiParameterCount = 0;
-vlChar *lpParameters[MAX_ITEMS][2];					// VMT parameters.
-vlChar *lpExportFormat = "tga";						// Format extension for exporting VTF images.
+char *lpShader = 0;								// VMT shader to use.
+uint32_t uiParameterCount = 0;
+char *lpParameters[MAX_ITEMS][2];					// VMT parameters.
+char *lpExportFormat = "tga";						// Format extension for exporting VTF images.
 
 vlBool bDistanceAlpha = vlFalse;					// Encode the alpha channel as a distance field.
-vlSingle sDistanceAlphaSpread = 1.0f;				// Width of the distance field gradient in output pixels.
-vlUInt uiDistanceAlphaReduce = 1;					// Amount to shrink the image by after computing the field.
-vlByte bDistanceAlphaThreshold = 10;				// Source alpha above which a pixel is inside the shape.
+float sDistanceAlphaSpread = 1.0f;				// Width of the distance field gradient in output pixels.
+uint32_t uiDistanceAlphaReduce = 1;					// Amount to shrink the image by after computing the field.
+uint8_t bDistanceAlphaThreshold = 10;				// Source alpha above which a pixel is inside the shape.
 
 void Pause();
-void Print(const vlChar *lpFormat, ...);
-void PrintUsage(const vlChar *lpError, ...);
+void Print(const char *lpFormat, ...);
+void PrintUsage(const char *lpError, ...);
 
-void ProcessFile(vlChar *lpInputFile);
-void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard);
+void ProcessFile(char *lpInputFile);
+void ProcessFolder(char *lpInputFolder, char *lpWildcard);
 
 //
 // stristr()
@@ -122,14 +122,14 @@ void strrpl(char *string, char chr, char rplChr)
 int main(int argc, char* argv[])
 {
 	int i;
-	vlChar *lpWildcard;					// Holds wildcard string for folder searches.
+	char *lpWildcard;					// Holds wildcard string for folder searches.
 
 	VTFImageFormat ImageFormat;			// Temp variable for string to VTFImageFormat test.
 	VTFImageFlag ImageFlag;				// Temp variable for string to VTFImageFlag test.
 
-	vlUInt uiTemp0, uiTemp1;			// Temp variables for string to integer test.
-	vlInt iTemp0;						// Temp variable for signed string to integer test.
-	vlSingle sTemp;						// Temp variable for string to single test.
+	uint32_t uiTemp0, uiTemp1;			// Temp variables for string to integer test.
+	int32_t iTemp0;						// Temp variable for signed string to integer test.
+	float sTemp;						// Temp variable for string to single test.
 
 	VTFResizeMethod ResizeMethod;		// Temp variable for string to VTFResizeMethod test.
 
@@ -164,13 +164,13 @@ int main(int argc, char* argv[])
 			if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				lpFolders[uiFolderCount++] = argv[1];
-				CreateOptions.bResize = vlTrue;
+				CreateOptions.resize = vlTrue;
 				bPause = vlTrue;
 			}
 			else
 			{
 				lpFiles[uiFileCount++] = argv[1];
-				CreateOptions.bResize = vlTrue;
+				CreateOptions.resize = vlTrue;
 				bPause = vlTrue;
 			}
 
@@ -245,8 +245,8 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u.%u", &uiTemp0, &uiTemp1) == 2)
 				{
-					CreateOptions.uiVersion[0] = uiTemp0;
-					CreateOptions.uiVersion[1] = uiTemp1;
+					CreateOptions.version[0] = uiTemp0;
+					CreateOptions.version[1] = uiTemp1;
 				}
 				else
 				{
@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
 				if(i + 1 < argc && sscanf(argv[++i], "%d", &iTemp0) == 1
 					&& iTemp0 >= VTF_AUX_COMPRESSION_LEVEL_DEFAULT && iTemp0 <= VTF_AUX_COMPRESSION_LEVEL_MAX)
 				{
-					CreateOptions.sAuxCompressionLevel = (vlShort)iTemp0;
+					CreateOptions.auxCompressionLevel = (int16_t)iTemp0;
 				}
 				else
 				{
@@ -275,11 +275,11 @@ int main(int argc, char* argv[])
 					i++;
 					if(stricmp(argv[i], "deflate") == 0)
 					{
-						CreateOptions.sAuxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
+						CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
 					}
 					else if(stricmp(argv[i], "zstd") == 0)
 					{
-						CreateOptions.sAuxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
+						CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
 					}
 					else
 					{
@@ -316,8 +316,8 @@ int main(int argc, char* argv[])
 			}
 			else if(stricmp(argv[i], "-srgb") == 0)
 			{
-				CreateOptions.bSRGB = vlTrue;
-				CreateOptions.uiFlags |= TEXTUREFLAGS_SRGB;
+				CreateOptions.sRGB = vlTrue;
+				CreateOptions.flags |= TEXTUREFLAGS_SRGB;
 			}
 			else if(stricmp(argv[i], "-alphaformat") == 0)
 			{
@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 					ImageFlag = StringToImageFlag(argv[++i]);
 					if(ImageFlag != TEXTUREFLAGS_COUNT)
 					{
-						CreateOptions.uiFlags |= ImageFlag;
+						CreateOptions.flags |= ImageFlag;
 					}
 					else
 					{
@@ -375,7 +375,7 @@ int main(int argc, char* argv[])
 			}
 			else if(stricmp(argv[i], "-resize") == 0)
 			{
-				CreateOptions.bResize = vlTrue;
+				CreateOptions.resize = vlTrue;
 			}
 			else if(stricmp(argv[i], "-rmethod") == 0)
 			{
@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
 					ResizeMethod = StringToResizeMethod(argv[++i]);
 					if(ResizeMethod != RESIZE_COUNT)
 					{
-						CreateOptions.ResizeMethod = ResizeMethod;
+						CreateOptions.resizeMethod = ResizeMethod;
 					}
 					else
 					{
@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
 					MipmapFilter = StringToMipmapFilter(argv[++i]);
 					if(MipmapFilter != MIPMAP_FILTER_COUNT)
 					{
-						CreateOptions.ResizeFilter = MipmapFilter;
+						CreateOptions.resizeFilter = MipmapFilter;
 					}
 					else
 					{
@@ -423,10 +423,10 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
 				{
-					CreateOptions.uiResizeWidth = uiTemp0;
-					if(CreateOptions.uiResizeWidth != 0 && CreateOptions.uiResizeHeight != 0)
+					CreateOptions.resizeWidth = uiTemp0;
+					if(CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0)
 					{
-						CreateOptions.ResizeMethod = RESIZE_SET;
+						CreateOptions.resizeMethod = RESIZE_SET;
 					}
 				}
 				else
@@ -439,10 +439,10 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
 				{
-					CreateOptions.uiResizeHeight = uiTemp0;
-					if(CreateOptions.uiResizeWidth != 0 && CreateOptions.uiResizeHeight != 0)
+					CreateOptions.resizeHeight = uiTemp0;
+					if(CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0)
 					{
-						CreateOptions.ResizeMethod = RESIZE_SET;
+						CreateOptions.resizeMethod = RESIZE_SET;
 					}
 				}
 				else
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
 				{
-					CreateOptions.uiResizeClampWidth = uiTemp0;
+					CreateOptions.resizeClampWidth = uiTemp0;
 				}
 				else
 				{
@@ -467,7 +467,7 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
 				{
-					CreateOptions.uiResizeClampHeight = uiTemp0;
+					CreateOptions.resizeClampHeight = uiTemp0;
 				}
 				else
 				{
@@ -477,13 +477,13 @@ int main(int argc, char* argv[])
 			}
 			else if(stricmp(argv[i], "-gamma") == 0)
 			{
-				CreateOptions.bGammaCorrection = vlTrue;
+				CreateOptions.gammaCorrection = vlTrue;
 			}
 			else if(stricmp(argv[i], "-gcorrection") == 0)
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1)
 				{
-					CreateOptions.sGammaCorrection = sTemp;
+					CreateOptions.gammaCorrectionValue = sTemp;
 				}
 				else
 				{
@@ -523,7 +523,7 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 <= 255)
 				{
-					bDistanceAlphaThreshold = (vlByte)uiTemp0;
+					bDistanceAlphaThreshold = (uint8_t)uiTemp0;
 				}
 				else
 				{
@@ -533,7 +533,7 @@ int main(int argc, char* argv[])
 			}
 			else if(stricmp(argv[i], "-nomipmaps") == 0)
 			{
-				CreateOptions.bMipmaps = vlFalse;
+				CreateOptions.mipmaps = vlFalse;
 			}
 			else if(stricmp(argv[i], "-mfilter") == 0)
 			{
@@ -542,7 +542,7 @@ int main(int argc, char* argv[])
 					MipmapFilter = StringToMipmapFilter(argv[++i]);
 					if(MipmapFilter != MIPMAP_FILTER_COUNT)
 					{
-						CreateOptions.MipmapFilter = MipmapFilter;
+						CreateOptions.mipmapFilter = MipmapFilter;
 					}
 					else
 					{
@@ -560,7 +560,7 @@ int main(int argc, char* argv[])
 			{
 				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1)
 				{
-					CreateOptions.sBumpScale = sTemp;
+					CreateOptions.bumpScale = sTemp;
 				}
 				else
 				{
@@ -570,11 +570,11 @@ int main(int argc, char* argv[])
 			}
 			else if(stricmp(argv[i], "-nothumbnail") == 0)
 			{
-				CreateOptions.bThumbnail = vlFalse;
+				CreateOptions.thumbnail = vlFalse;
 			}
 			else if(stricmp(argv[i], "-noreflectivity") == 0)
 			{
-				CreateOptions.bReflectivity = vlFalse;
+				CreateOptions.reflectivity = vlFalse;
 			}
 			else if(stricmp(argv[i], "-shader") == 0)
 			{
@@ -749,7 +749,7 @@ void Pause()
 // Print()
 // Wrap printf() so we don't have to keep checking for silent mode.
 //
-void Print(const vlChar *lpFormat, ...)
+void Print(const char *lpFormat, ...)
 {
 	va_list ArgumentList;
 
@@ -765,7 +765,7 @@ void Print(const vlChar *lpFormat, ...)
 // PrintUsage()
 // Print VTFCmd command line usage help string.
 //
-void PrintUsage(const vlChar *lpError, ...)
+void PrintUsage(const char *lpError, ...)
 {
 	va_list ArgumentList;
 
@@ -865,9 +865,9 @@ void PrintUsage(const vlChar *lpError, ...)
 // CreateOutputPath()
 // Create an output file path from the input file path.
 //
-void CreateOutputPath(vlChar *lpOutputFile, vlChar *lpInputFile, vlChar *lpExtension)
+void CreateOutputPath(char *lpOutputFile, char *lpInputFile, char *lpExtension)
 {
-	vlChar *lpTemp;
+	char *lpTemp;
 
 	// Create output file string.
 	if(lpOutput != 0 && *lpOutput != '\0')
@@ -919,17 +919,17 @@ void CreateOutputPath(vlChar *lpOutputFile, vlChar *lpInputFile, vlChar *lpExten
 // FlipImage()
 // Flip lpImageData over the horizontal axis.
 //
-void FlipImage(vlByte *lpImageData, vlUInt uiWidth, vlUInt uiHeight, vlUInt uiChannels)
+void FlipImage(uint8_t *lpImageData, uint32_t uiWidth, uint32_t uiHeight, uint32_t uiChannels)
 {
-	vlUInt i, j, k;
-	vlByte bTemp;
+	uint32_t i, j, k;
+	uint8_t bTemp;
 
 	for(i = 0; i < uiWidth; i++)
 	{
 		for(j = 0; j < uiHeight / 2; j++)
 		{
-			vlByte *pOne = lpImageData + (i + j * uiWidth) * uiChannels;
-			vlByte *pTwo = lpImageData + (i + (uiHeight - j - 1) * uiWidth) * uiChannels;
+			uint8_t *pOne = lpImageData + (i + j * uiWidth) * uiChannels;
+			uint8_t *pTwo = lpImageData + (i + (uiHeight - j - 1) * uiWidth) * uiChannels;
 
 			for(k = 0; k < uiChannels; k++)
 			{
@@ -945,29 +945,29 @@ void FlipImage(vlByte *lpImageData, vlUInt uiWidth, vlUInt uiHeight, vlUInt uiCh
 // ProcessFile()
 // Convert input file to a vtf file and place it in the output folder.
 //
-void ProcessFile(vlChar *lpInputFile)
+void ProcessFile(char *lpInputFile)
 {
-	vlUInt i;
+	uint32_t i;
 	VTFLib::Diagnostics::CError error;
 
-	vlChar *lpTemp;					// Temp variable for string manipulation.
-	vlChar lpVTFFile[512];			// Holds output .vtf file name.
-	vlChar lpVMTFile[512];			// Holds output .vmt file name.
-	vlChar lpVMTBaseTexture[512];	// Holds $basetexture .vmt param.
-	vlChar lpExportFile[512];		// Holds output export file name.
+	char *lpTemp;					// Temp variable for string manipulation.
+	char lpVTFFile[512];			// Holds output .vtf file name.
+	char lpVMTFile[512];			// Holds output .vmt file name.
+	char lpVMTBaseTexture[512];	// Holds $basetexture .vmt param.
+	char lpExportFile[512];		// Holds output export file name.
 
-	vlInt iTest;					// Holds .vmt integer test result.
-	vlSingle sTest;					// Holds .vmt float test result.
-	vlChar cTest[4096];				// Holds .vmt string test result.
+	int32_t iTest;					// Holds .vmt integer test result.
+	float sTest;					// Holds .vmt float test result.
+	char cTest[4096];				// Holds .vmt string test result.
 
-	vlUInt uiImageWidth, uiImageHeight;	// Dimensions of the image being created.
-	vlByte *lpSourceData;				// Image data to create the texture from.
-	vlByte *lpDistanceData;				// Distance field data.
-	vlUInt uiDestWidth, uiDestHeight;	// Distance field dimensions.
+	uint32_t uiImageWidth, uiImageHeight;	// Dimensions of the image being created.
+	uint8_t *lpSourceData;				// Image data to create the texture from.
+	uint8_t *lpDistanceData;				// Distance field data.
+	uint32_t uiDestWidth, uiDestHeight;	// Distance field dimensions.
 	vlBool bClipped;					// Was the distance field clipped?
 
-	vlSingle sR, sG, sB;			// Reflectivity.
-	vlByte *lpImageData;			// Export data.
+	float sR, sG, sB;			// Reflectivity.
+	uint8_t *lpImageData;			// Export data.
 	VTFImageFormat DestFormat;		// Export format.
 
 	uiProcessed++;
@@ -992,7 +992,7 @@ void ProcessFile(vlChar *lpInputFile)
 		Print("  Height: %d\n", ilGetInteger(IL_IMAGE_HEIGHT));
 		Print("  BPP: %d\n\n", ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL));
 
-		CreateOptions.ImageFormat = ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL) == 4 ? AlphaFormat : NormalFormat;
+		CreateOptions.imageFormat = ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL) == 4 ? AlphaFormat : NormalFormat;
 
 		Print(" Creating texture:\n");
 
@@ -1003,8 +1003,8 @@ void ProcessFile(vlChar *lpInputFile)
 			return;
 		}
 
-		uiImageWidth = (vlUInt)ilGetInteger(IL_IMAGE_WIDTH);
-		uiImageHeight = (vlUInt)ilGetInteger(IL_IMAGE_HEIGHT);
+		uiImageWidth = (uint32_t)ilGetInteger(IL_IMAGE_WIDTH);
+		uiImageHeight = (uint32_t)ilGetInteger(IL_IMAGE_HEIGHT);
 		lpSourceData = ilGetData();
 		lpDistanceData = 0;
 
@@ -1019,7 +1019,7 @@ void ProcessFile(vlChar *lpInputFile)
 			if(uiDestHeight == 0)
 				uiDestHeight = 1;
 
-			lpDistanceData = (vlByte *)malloc(uiDestWidth * uiDestHeight * 4);
+			lpDistanceData = (uint8_t *)malloc(uiDestWidth * uiDestHeight * 4);
 
 			if(lpDistanceData == 0)
 			{
@@ -1046,7 +1046,7 @@ void ProcessFile(vlChar *lpInputFile)
 			uiImageHeight = uiDestHeight;
 
 			// The distance field always needs an alpha channel.
-			CreateOptions.ImageFormat = AlphaFormat;
+			CreateOptions.imageFormat = AlphaFormat;
 		}
 
 		// Create vtf file.
@@ -1140,7 +1140,7 @@ void ProcessFile(vlChar *lpInputFile)
 
 		// Display input file info.
 		Print("  Version: v%u.%u\n", vlImageGetMajorVersion(), vlImageGetMinorVersion());
-		Print("  Size On Disk: %.2f KB\n", (vlSingle)vlImageGetSize(error) / 1024.0f);
+		Print("  Size On Disk: %.2f KB\n", (float)vlImageGetSize(error) / 1024.0f);
 		Print("  Width: %u\n", vlImageGetWidth());
 		Print("  Height: %u\n", vlImageGetHeight());
 		Print("  Depth: %u\n", vlImageGetDepth());
@@ -1165,7 +1165,7 @@ void ProcessFile(vlChar *lpInputFile)
 		DestFormat = (vlImageGetFlags() & (TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA)) ? IMAGE_FORMAT_RGBA8888 : IMAGE_FORMAT_RGB888;
 
 		// Alocate the required memory to convert the vtf to.
-		lpImageData = static_cast<vlByte *>(malloc(vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat)));
+		lpImageData = static_cast<uint8_t *>(malloc(vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat)));
 
 		if(lpImageData == 0)
 		{
@@ -1217,10 +1217,10 @@ void ProcessFile(vlChar *lpInputFile)
 // ProcessFile()
 // Process all files in the input folder.
 //
-void ProcessFolder(vlChar *lpInputFolder, vlChar *lpWildcard)
+void ProcessFolder(char *lpInputFolder, char *lpWildcard)
 {
-	vlChar lpSearchString[512];
-	vlChar lpPath[512];
+	char lpSearchString[512];
+	char lpPath[512];
 
 	winfind::WIN32_FIND_DATA FindData;
 	winfind::HANDLE Handle;

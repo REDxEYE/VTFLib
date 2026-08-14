@@ -9,44 +9,37 @@
  * version.
  */
 
-#ifndef PROCREADER_H
-#define PROCREADER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Reader.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Readers
-		{
-			class CProcReader : public IReader
-			{
-			private:
-				vlBool bOpened;
-				vlVoid *pUserData;
 
-			public:
-				CProcReader(vlVoid *pUserData);
-				~CProcReader();
+namespace VTFLib::IO::Readers {
+    class CProcReader : public IReader {
+    public:
+        explicit CProcReader(void *userData);
 
-			public:
-				virtual vlBool Opened() const;
+        ~CProcReader() override;
 
-				virtual vlBool Open(Diagnostics::CError &error);
-				virtual vlVoid Close();
+        [[nodiscard]] bool IsOpen() const override;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
+        bool Open(Diagnostics::CError &error) override;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
+        void Close() override;
 
-				virtual vlBool Read(vlChar &cChar, Diagnostics::CError &error);
-				virtual vlUInt Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
-			};
-		}
-	}
+        ssize_t GetStreamSize(Diagnostics::CError &error) const override;
+
+        ssize_t GetStreamPointer(Diagnostics::CError &error) const override;
+
+        ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) override;
+
+        bool Read(char &dstChr, Diagnostics::CError &error) override;
+
+        ssize_t Read(void *dst, uint32_t size, Diagnostics::CError &error) override;
+
+    private:
+        bool mIsOpen;
+        void *mUserData;
+    };
 }
-
-#endif

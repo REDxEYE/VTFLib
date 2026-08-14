@@ -15,22 +15,22 @@ using namespace VTFLib;
 
 namespace VTFLib
 {
-	PReadCloseProc pReadCloseProc = 0;
-	PReadOpenProc pReadOpenProc = 0;
-	PReadReadProc pReadReadProc = 0;
-	PReadSeekProc pReadSeekProc = 0;
-	PReadSizeProc pReadSizeProc = 0;
-	PReadTellProc pReadTellProc = 0;
+	PReadCloseProc pReadCloseProc = nullptr;
+	PReadOpenProc pReadOpenProc = nullptr;
+	PReadReadProc pReadReadProc = nullptr;
+	PReadSeekProc pReadSeekProc = nullptr;
+	PReadSizeProc pReadSizeProc = nullptr;
+	PReadTellProc pReadTellProc = nullptr;
 
-	PWriteCloseProc pWriteCloseProc = 0;
-	PWriteOpenProc pWriteOpenProc = 0;
-	PWriteWriteProc pWriteWriteProc = 0;
-	PWriteSeekProc pWriteSeekProc = 0;
-	PWriteSizeProc pWriteSizeProc = 0;
-	PWriteTellProc pWriteTellProc = 0;
+	PWriteCloseProc pWriteCloseProc = nullptr;
+	PWriteOpenProc pWriteOpenProc = nullptr;
+	PWriteWriteProc pWriteWriteProc = nullptr;
+	PWriteSeekProc pWriteSeekProc = nullptr;
+	PWriteSizeProc pWriteSizeProc = nullptr;
+	PWriteTellProc pWriteTellProc = nullptr;
 }
 
-VTFLIB_API vlVoid vlSetProc(VLProc Proc, vlVoid *pProc)
+VTFLIB_API void vlSetProc(VLProc Proc, void *pProc)
 {
 	switch(Proc)
 	{
@@ -73,34 +73,34 @@ VTFLIB_API vlVoid vlSetProc(VLProc Proc, vlVoid *pProc)
 	}
 }
 
-VTFLIB_API vlVoid *vlGetProc(VLProc Proc)
+VTFLIB_API void *vlGetProc(VLProc Proc)
 {
 	switch(Proc)
 	{
 	case PROC_READ_CLOSE:
-		return reinterpret_cast<vlVoid *>(pReadCloseProc);
+		return reinterpret_cast<void *>(pReadCloseProc);
 	case PROC_READ_OPEN:
-		return reinterpret_cast<vlVoid *>(pReadOpenProc);
+		return reinterpret_cast<void *>(pReadOpenProc);
 	case PROC_READ_READ:
-		return reinterpret_cast<vlVoid *>(pReadReadProc);
+		return reinterpret_cast<void *>(pReadReadProc);
 	case PROC_READ_SEEK:
-		return reinterpret_cast<vlVoid *>(pReadSeekProc);
+		return reinterpret_cast<void *>(pReadSeekProc);
 	case PROC_READ_SIZE:
-		return reinterpret_cast<vlVoid *>(pReadSizeProc);
+		return reinterpret_cast<void *>(pReadSizeProc);
 	case PROC_READ_TELL:
-		return reinterpret_cast<vlVoid *>(pReadTellProc);
+		return reinterpret_cast<void *>(pReadTellProc);
 	case PROC_WRITE_CLOSE:
-		return reinterpret_cast<vlVoid *>(pWriteCloseProc);
+		return reinterpret_cast<void *>(pWriteCloseProc);
 	case PROC_WRITE_OPEN:
-		return reinterpret_cast<vlVoid *>(pWriteOpenProc);
+		return reinterpret_cast<void *>(pWriteOpenProc);
 	case PROC_WRITE_WRITE:
-		return reinterpret_cast<vlVoid *>(pWriteWriteProc);
+		return reinterpret_cast<void *>(pWriteWriteProc);
 	case PROC_WRITE_SEEK:
-		return reinterpret_cast<vlVoid *>(pWriteSeekProc);
+		return reinterpret_cast<void *>(pWriteSeekProc);
 	case PROC_WRITE_SIZE:
-		return reinterpret_cast<vlVoid *>(pWriteSizeProc);
+		return reinterpret_cast<void *>(pWriteSizeProc);
 	case PROC_WRITE_TELL:
-		return reinterpret_cast<vlVoid *>(pWriteTellProc);
+		return reinterpret_cast<void *>(pWriteTellProc);
 	default:
 		return nullptr;
 	}

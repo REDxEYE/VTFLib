@@ -1,127 +1,168 @@
-/*
- * VTFLib
- * Copyright (C) 2005-2010 Neil Jedrzejewski & Ryan Gregg
-
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later
- * version.
- */
-
 #include "VTFLib.h"
 #include "FileReader.h"
 
 using namespace VTFLib;
 using namespace VTFLib::IO::Readers;
 
-CFileReader::CFileReader(const vlChar *cFileName)
+CFileReader::CFileReader(const char *filePath)
 {
-	this->hFile = NULL;
+    this->mHandle = nullptr;
 
-	this->cFileName = new vlChar[strlen(cFileName) + 1];
-	strcpy(this->cFileName, cFileName);
+    this->mFilePath = new char[strlen(filePath) + 1];
+    strcpy(this->mFilePath, filePath);
 }
 
 CFileReader::~CFileReader()
 {
-	this->Close();
-
-	delete []this->cFileName;
+    this->CFileReader::Close();
+    delete[] this->mFilePath;
 }
 
-vlBool CFileReader::Opened() const
+bool CFileReader::IsOpen() const
 {
-	return this->hFile != NULL;
+    return this->mHandle != nullptr;
 }
 
-vlBool CFileReader::Open(Diagnostics::CError &error)
+bool CFileReader::Open(Diagnostics::CError &error)
 {
-	this->Close();
+    this->Close();
 
-	this->hFile = CreateFile(this->cFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    this->mHandle = fopen(this->mFilePath, "rb");
 
-	if(this->hFile == INVALID_HANDLE_VALUE)
-	{
-		this->hFile = NULL;
+    if(this->mHandle == nullptr)
+    {
+        VTFError_Set_SE(error, "Error opening file.");
+        return false;
+    }
 
-		error.Set("Error opening file.", vlTrue);
-
-		return vlFalse;
-	}
-
-	return vlTrue;
+    return true;
 }
 
-vlVoid CFileReader::Close()
+void CFileReader::Close()
 {
-	if(this->hFile != NULL)
-	{
-		CloseHandle(this->hFile);
-		this->hFile = NULL;
-	}
+    if(this->mHandle != nullptr)
+    {
+        fclose(this->mHandle);
+        this->mHandle = nullptr;
+    }
 }
 
-vlUInt CFileReader::GetStreamSize(Diagnostics::CError &error) const
+ssize_t CFileReader::GetStreamSize(Diagnostics::CError &error) const
 {
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+    if(this->mHandle == nullptr)
+    {
+        return 0;
+    }
 
-	return GetFileSize(this->hFile, NULL);
+    const ssize_t currentPos = ftell(this->mHandle);
+
+    if(currentPos < 0)
+    {
+        return 0;
+    }
+
+    if(fseek(this->mHandle, 0, SEEK_END) != 0)
+    {
+        return 0;
+    }
+
+    const ssize_t size = ftell(this->mHandle);
+
+    fseek(this->mHandle, currentPos, SEEK_SET);
+
+    if(size < 0)
+    {
+        return 0;
+    }
+
+    return size;
 }
 
-vlUInt CFileReader::GetStreamPointer(Diagnostics::CError &error) const
+ssize_t CFileReader::GetStreamPointer(Diagnostics::CError &error) const
 {
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+    if(this->mHandle == nullptr)
+    {
+        return 0;
+    }
 
-	return (vlUInt)SetFilePointer(this->hFile, 0, NULL, FILE_CURRENT);
+    const long lPosition = ftell(this->mHandle);
+
+    if(lPosition < 0)
+    {
+        return 0;
+    }
+
+    return static_cast<uint32_t>(lPosition);
 }
 
-vlUInt CFileReader::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
+ssize_t CFileReader::Seek(const ssize_t offset, const uint32_t seekMode, Diagnostics::CError &error)
 {
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+    if(this->mHandle == nullptr)
+    {
+        return 0;
+    }
 
-	return (vlUInt)SetFilePointer(this->hFile, lOffset, NULL, uiMode);
+    int origin;
+
+    switch(seekMode)
+    {
+        case FILE_BEGIN:
+            origin = SEEK_SET;
+            break;
+
+        case FILE_CURRENT:
+            origin = SEEK_CUR;
+            break;
+
+        case FILE_END:
+            origin = SEEK_END;
+            break;
+
+        default:
+            VTFError_Set(error, "Invalid seek mode.");
+            return 0;
+    }
+
+    if(fseek(this->mHandle, offset, origin) != 0)
+    {
+        VTFError_Set_SE(error, "fseek() failed.");
+        return 0;
+    }
+
+    return this->GetStreamPointer(error);
 }
 
-vlBool CFileReader::Read(vlChar &cChar, Diagnostics::CError &error)
+bool CFileReader::Read(char &dstChr, Diagnostics::CError &error)
 {
-	if(this->hFile == NULL)
-	{
-		return vlFalse;
-	}
+    if(this->mHandle == nullptr)
+    {
+        VTFError_Set(error,"Error file handle is null.");
+        return false;
+    }
 
-	vlULong ulBytesRead = 0;
+    const size_t uiBytesRead = fread(&dstChr, 1, 1, this->mHandle);
 
-	if(!ReadFile(this->hFile, &cChar, 1, &ulBytesRead, NULL))
-	{
-		error.Set("ReadFile() failed.", vlTrue);
-	}
+    if(uiBytesRead != 1 && ferror(this->mHandle))
+    {
+        VTFError_Set_SE(error, "fread() failed.");
+    }
 
-	return ulBytesRead == 1;
+    return uiBytesRead == 1;
 }
 
-vlUInt CFileReader::Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
+ssize_t CFileReader::Read(void *dst, const uint32_t size, Diagnostics::CError &error)
 {
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+    if(this->mHandle == nullptr)
+    {
+        return 0;
+    }
 
-	vlULong ulBytesRead = 0;
+    const size_t uiBytesRead = fread(dst, 1, size, this->mHandle);
 
-	if(!ReadFile(this->hFile, vData, uiBytes, &ulBytesRead, NULL))
-	{
-		error.Set("ReadFile() failed.", vlTrue);
-	}
+    if(uiBytesRead < size && ferror(this->mHandle))
+    {
+        VTFError_Set_SE(error, "fread() failed.");
+    }
 
-	return (vlUInt)ulBytesRead;
+    return static_cast<uint32_t>(uiBytesRead);
 }

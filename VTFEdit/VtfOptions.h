@@ -64,15 +64,15 @@ namespace VTFEdit
 		VTFResizeMethod ResizeMethod;
 		VTFMipmapFilter ResizeFilter;
 		vlBool ResizeClamp;
-		vlUInt ResizeClampWidth;
-		vlUInt ResizeClampHeight;
+		uint32_t ResizeClampWidth;
+		uint32_t ResizeClampHeight;
 
 		vlBool GenerateMipmaps;
 		VTFMipmapFilter MipmapFilter;
 
 		QString Version;
-		vlShort AuxCompressionLevel;
-		vlShort AuxCompressionMethod;
+		int16_t AuxCompressionLevel;
+		int16_t AuxCompressionMethod;
 
 		vlBool ComputeReflectivity;
 		vlBool GenerateThumbnail;
@@ -81,20 +81,20 @@ namespace VTFEdit
 		vlBool sRGB;
 
 		vlBool DistanceAlpha;
-		vlSingle DistanceAlphaSpread;
-		vlUInt DistanceAlphaReduce;
-		vlUInt DistanceAlphaThreshold;
+		float DistanceAlphaSpread;
+		uint32_t DistanceAlphaReduce;
+		uint32_t DistanceAlphaThreshold;
 
 		vlBool CorrectGamma;
-		vlSingle GammaCorrection;
+		float GammaCorrection;
 
-		vlSingle LuminanceWeightR;
-		vlSingle LuminanceWeightG;
-		vlSingle LuminanceWeightB;
+		float LuminanceWeightR;
+		float LuminanceWeightG;
+		float LuminanceWeightB;
 
 		vlBool CreateLODControlResource;
-		vlUInt LODControlClampU;
-		vlUInt LODControlClampV;
+		uint32_t LODControlClampU;
+		uint32_t LODControlClampV;
 
 		vlBool CreateInformationResource;
 		QString InformationAuthor;

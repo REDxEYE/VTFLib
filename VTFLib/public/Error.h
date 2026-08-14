@@ -17,41 +17,43 @@
 	\brief Error handling class header.
 */
 
-#ifndef ERROR_H
-#define ERROR_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 
-namespace VTFLib
-{
-	namespace Diagnostics
-	{
-		//! VTFLib Error handling class
-		/*!
-			The Error handling class allows you to aceess a text description 
-			for the last error encountered.
-		*/
-		class CError
-		{
-		private:
-			vlChar *cErrorMessage;
 
-		public:
-			CError();
-			~CError();
+namespace VTFLib::Diagnostics {
+    //! VTFLib Error handling class
+    /*!
+        The Error handling class allows you to access a text description
+        for the last error encountered.
+    */
+    class CError {
+    public:
+        CError();
 
-			//! Clear the error message buffer.
-			vlVoid Clear();
+        ~CError();
 
-			//! Get the error message text.
-			const vlChar *Get() const;
+        //! Clear the error message buffer.
+        void Clear();
 
-			//! Set the error message buffer.
-			vlVoid SetFormatted(const vlChar *cFormat, ...);
-			vlVoid Set(const vlChar *cErrorMessage, vlBool bSystemError = vlFalse);
-			vlBool isSet() const;
-		};
-	}
+        //! Get the error message text.
+        [[nodiscard]] const char *Get() const;
+
+        //! Set the error message buffer.
+        void SetFormatted(const char *format, ...);
+
+        void Set(const char *errorMessage, bool systemError = vlFalse);
+
+        [[nodiscard]] bool isSet() const;
+
+    private:
+        char *mErrorMessage;
+    };
 }
 
-#endif
+#define VTFError_Set(error, message) error.SetFormatted("[%s:%i:%s]: %s",__FILE__, __LINE__, __FUNCTION__, message)
+#define VTFError_Set_SE(error, message) error.SetFormatted("[%s:%i:%s]: %s",__FILE__, __LINE__, __FUNCTION__, message, true)
+#define VTFError_Set_Formatted(error, format, ...) error.SetFormatted("[%s:%i:%s]: " #format ,__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
+

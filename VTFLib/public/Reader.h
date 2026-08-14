@@ -9,36 +9,32 @@
  * version.
  */
 
-#ifndef READER_H
-#define READER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Error.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Readers
-		{
-			class IReader
-			{
-			public:
-				virtual vlBool Opened() const = 0;
 
-				virtual vlBool Open(Diagnostics::CError &error) = 0;
-				virtual vlVoid Close() = 0;
+namespace VTFLib::IO::Readers {
+    class IReader {
+    public:
+        virtual ~IReader() = default;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const = 0;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const = 0;
+        [[nodiscard]] virtual bool IsOpen() const = 0;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error) = 0;
+        virtual bool Open(Diagnostics::CError &error) = 0;
 
-				virtual vlBool Read(vlChar &cChar, Diagnostics::CError &error) = 0;
-				virtual vlUInt Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error) = 0;
-			};
-		}
-	}
+        virtual void Close() = 0;
+
+        virtual ssize_t GetStreamSize(Diagnostics::CError &error) const = 0;
+
+        virtual ssize_t GetStreamPointer(Diagnostics::CError &error) const = 0;
+
+        virtual ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) = 0;
+
+        virtual bool Read(char &dstChar, Diagnostics::CError &error) = 0;
+
+        virtual ssize_t Read(void *dst, uint32_t size, Diagnostics::CError &error) = 0;
+    };
 }
 
-#endif

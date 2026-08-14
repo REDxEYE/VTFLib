@@ -566,7 +566,7 @@ namespace VTFEdit
 			m_pOptions->AuxCompressionLevel = VTF_AUX_COMPRESSION_LEVEL_NONE;
 			break;
 		default:
-			m_pOptions->AuxCompressionLevel = static_cast<vlShort>(m_pCompressionLevel->currentIndex() - 1);
+			m_pOptions->AuxCompressionLevel = static_cast<int16_t>(m_pCompressionLevel->currentIndex() - 1);
 			break;
 		}
 		m_pOptions->AuxCompressionMethod = m_pCompressionMethod->currentIndex() == 1
@@ -579,20 +579,20 @@ namespace VTFEdit
 		m_pOptions->sRGB = m_pSrgb->isChecked() ? vlTrue : vlFalse;
 
 		m_pOptions->DistanceAlpha = m_pDistanceAlpha->isChecked() ? vlTrue : vlFalse;
-		m_pOptions->DistanceAlphaSpread = static_cast<vlSingle>(m_pDistanceAlphaSpread->value());
-		m_pOptions->DistanceAlphaReduce = static_cast<vlUInt>(m_pDistanceAlphaReduce->currentData().toInt());
-		m_pOptions->DistanceAlphaThreshold = static_cast<vlUInt>(m_pDistanceAlphaThreshold->value());
+		m_pOptions->DistanceAlphaSpread = static_cast<float>(m_pDistanceAlphaSpread->value());
+		m_pOptions->DistanceAlphaReduce = static_cast<uint32_t>(m_pDistanceAlphaReduce->currentData().toInt());
+		m_pOptions->DistanceAlphaThreshold = static_cast<uint32_t>(m_pDistanceAlphaThreshold->value());
 
 		m_pOptions->CorrectGamma = m_pGammaCorrection->isChecked() ? vlTrue : vlFalse;
-		m_pOptions->GammaCorrection = static_cast<vlSingle>(m_pGammaCorrectionValue->value());
+		m_pOptions->GammaCorrection = static_cast<float>(m_pGammaCorrectionValue->value());
 
-		m_pOptions->LuminanceWeightR = static_cast<vlSingle>(m_pLuminanceWeightR->value());
-		m_pOptions->LuminanceWeightG = static_cast<vlSingle>(m_pLuminanceWeightG->value());
-		m_pOptions->LuminanceWeightB = static_cast<vlSingle>(m_pLuminanceWeightB->value());
+		m_pOptions->LuminanceWeightR = static_cast<float>(m_pLuminanceWeightR->value());
+		m_pOptions->LuminanceWeightG = static_cast<float>(m_pLuminanceWeightG->value());
+		m_pOptions->LuminanceWeightB = static_cast<float>(m_pLuminanceWeightB->value());
 
 		m_pOptions->CreateLODControlResource = m_pCreateLODControlResource->isChecked() ? vlTrue : vlFalse;
-		m_pOptions->LODControlClampU = static_cast<vlUInt>(m_pLODControlClampU->value());
-		m_pOptions->LODControlClampV = static_cast<vlUInt>(m_pLODControlClampV->value());
+		m_pOptions->LODControlClampU = static_cast<uint32_t>(m_pLODControlClampU->value());
+		m_pOptions->LODControlClampV = static_cast<uint32_t>(m_pLODControlClampV->value());
 
 		m_pOptions->CreateInformationResource = m_pCreateInformationResource->isChecked() ? vlTrue : vlFalse;
 		m_pOptions->InformationAuthor = m_pInformationAuthor->text();

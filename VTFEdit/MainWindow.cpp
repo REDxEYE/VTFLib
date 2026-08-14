@@ -133,7 +133,7 @@ namespace VTFEdit
 			return QString();
 		}
 
-		QString hex32(vlUInt uiValue)
+		QString hex32(uint32_t uiValue)
 		{
 			return QStringLiteral("%1").arg(uiValue, 8, 16, QLatin1Char('0')).toUpper();
 		}
@@ -612,7 +612,7 @@ namespace VTFEdit
 		QGroupBox *pFileInfo = new QGroupBox(tr("File Info:"), pTab);
 		QFormLayout *pFileForm = new QFormLayout(pFileInfo);
 		m_pFileVersion = new QComboBox(pFileInfo);
-		for(vlUInt uiMinor = 0; uiMinor <= VTF_MINOR_VERSION; uiMinor++)
+		for(uint32_t uiMinor = 0; uiMinor <= VTF_MINOR_VERSION; uiMinor++)
 		{
 			m_pFileVersion->addItem(QStringLiteral("%1.%2").arg(VTF_MAJOR_VERSION).arg(uiMinor), uiMinor);
 		}
@@ -762,13 +762,13 @@ namespace VTFEdit
 		}
 		m_bUpdatingVtfFile = true;
 
-		const vlUInt uiFrame = static_cast<vlUInt>(m_pFrame->value());
-		const vlUInt uiFace = static_cast<vlUInt>(m_pFace->value());
-		vlUInt uiSlice = static_cast<vlUInt>(m_pSlice->value());
-		const vlUInt uiMipmap = static_cast<vlUInt>(m_pMipmap->value());
-		const vlSingle sHDRExposure = static_cast<vlSingle>(m_pHdrExposure->value()) / 100.0f;
+		const uint32_t uiFrame = static_cast<uint32_t>(m_pFrame->value());
+		const uint32_t uiFace = static_cast<uint32_t>(m_pFace->value());
+		uint32_t uiSlice = static_cast<uint32_t>(m_pSlice->value());
+		const uint32_t uiMipmap = static_cast<uint32_t>(m_pMipmap->value());
+		const float sHDRExposure = static_cast<float>(m_pHdrExposure->value()) / 100.0f;
 
-		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		uint32_t uiWidth = 0, uiHeight = 0, uiDepth = 0;
 		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
 			m_pVTFFile->GetDepth(), uiMipmap, uiWidth, uiHeight, uiDepth);
 
@@ -788,12 +788,12 @@ namespace VTFEdit
 
 		float fScale = m_fImageScale * fMipmapScale;
 
-		vlUInt uiScaledWidth = 0, uiScaledHeight = 0;
+		uint32_t uiScaledWidth = 0, uiScaledHeight = 0;
 
 		for(;;)
 		{
-			uiScaledWidth = static_cast<vlUInt>(static_cast<float>(uiWidth) * fScale);
-			uiScaledHeight = static_cast<vlUInt>(static_cast<float>(uiHeight) * fScale);
+			uiScaledWidth = static_cast<uint32_t>(static_cast<float>(uiWidth) * fScale);
+			uiScaledHeight = static_cast<uint32_t>(static_cast<float>(uiHeight) * fScale);
 
 			if(uiScaledWidth <= 4096 
 				&& uiScaledHeight <= 4096)
@@ -815,8 +815,8 @@ namespace VTFEdit
 		}
 
 		// Decode image data.
-		const vlUInt uiBufferSize = m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888);
-		std::vector<vlByte> Buffer(uiBufferSize);
+		const uint32_t uiBufferSize = m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888);
+		std::vector<uint8_t> Buffer(uiBufferSize);
 
 		vlSetFloat(VTFLIB_FP16_HDR_EXPOSURE, sHDRExposure);
 		m_pVTFFile->ConvertToRGBA8888(m_pVTFFile->GetData(uiFrame, uiFace, uiSlice, uiMipmap),
@@ -829,7 +829,7 @@ namespace VTFEdit
 		QImage Image(static_cast<int>(uiScaledWidth), static_cast<int>(uiScaledHeight), QImage::Format_RGB888);
 
 		// Pick which source channel feeds each output channel.
-		vlUInt uiR = 0, uiG = 1, uiB = 2;
+		uint32_t uiR = 0, uiG = 1, uiB = 2;
 		if(m_pChannelRAction->isChecked())
 		{
 			uiR = uiG = uiB = 0;
@@ -849,14 +849,14 @@ namespace VTFEdit
 
 		const bool bMask = m_pMaskAction->isChecked();
 
-		for(vlUInt j = 0; j < uiScaledHeight; j++)
+		for(uint32_t j = 0; j < uiScaledHeight; j++)
 		{
 			uchar *pScanline = Image.scanLine(static_cast<int>(j));
 
-			for(vlUInt i = 0; i < uiScaledWidth; i++)
+			for(uint32_t i = 0; i < uiScaledWidth; i++)
 			{
-				const vlUInt uiSrcIndex = (static_cast<vlUInt>(static_cast<float>(i) * fInverseImageScale)
-					+ static_cast<vlUInt>(static_cast<float>(j) * fInverseImageScale) * uiWidth) * 4;
+				const uint32_t uiSrcIndex = (static_cast<uint32_t>(static_cast<float>(i) * fInverseImageScale)
+					+ static_cast<uint32_t>(static_cast<float>(j) * fInverseImageScale) * uiWidth) * 4;
 
 				uchar *pPixel = pScanline + i * 3;
 
@@ -918,7 +918,7 @@ namespace VTFEdit
 		m_pHdrExposure->setEnabled(pVTFFile->GetFormat() == IMAGE_FORMAT_RGBA16161616F
 			|| pVTFFile->GetFormat() == IMAGE_FORMAT_BC6H);
 
-		const vlUInt uiFlags = pVTFFile->GetFlags();
+		const uint32_t uiFlags = pVTFFile->GetFlags();
 
 		m_bUpdatingFlags = true;
 		m_pFlags->clear();
@@ -946,7 +946,7 @@ namespace VTFEdit
 		m_pImageMipmaps->setText(QString::number(pVTFFile->GetMipmapCount()));
 		m_pImageBumpmapScale->setValue(pVTFFile->GetBumpmapScale());
 
-		vlSingle sX = 0.0f, sY = 0.0f, sZ = 0.0f;
+		float sX = 0.0f, sY = 0.0f, sZ = 0.0f;
 		pVTFFile->GetReflectivity(sX, sY, sZ);
 		m_pImageReflectivity->setText(QStringLiteral("%1, %2, %3")
 			.arg(sX, 0, 'f', 3).arg(sY, 0, 'f', 3).arg(sZ, 0, 'f', 3));
@@ -985,7 +985,7 @@ namespace VTFEdit
 
 	void MainWindow::setResourceInformation(QTreeWidgetItem *pItem, VTFLib::Nodes::CVMTGroupNode *pVMTNode)
 	{
-		for(vlUInt i = 0; i < pVMTNode->GetNodeCount(); i++)
+		for(uint32_t i = 0; i < pVMTNode->GetNodeCount(); i++)
 		{
 			VTFLib::Nodes::CVMTNode *pVMTChild = pVMTNode->GetNode(i);
 			const QString sName = QString::fromLatin1(pVMTChild->GetName());
@@ -1039,7 +1039,7 @@ namespace VTFEdit
 		m_pFileSize->setText(tr("%1 KB").arg(
 			QLocale().toString(static_cast<double>(m_pVTFFile->GetSize(m_Error)) / 1024.0, 'f', 3)));
 
-		const vlShort sAuxCompressionLevel = m_pVTFFile->GetAuxCompressionLevel();
+		const int16_t sAuxCompressionLevel = m_pVTFFile->GetAuxCompressionLevel();
 		if(sAuxCompressionLevel == VTF_AUX_COMPRESSION_LEVEL_NONE)
 		{
 			m_pFileCompression->setText(tr("None"));
@@ -1064,9 +1064,9 @@ namespace VTFEdit
 		m_pResourceCount->setText(QString::number(m_pVTFFile->GetResourceCount()));
 
 		m_pResources->clear();
-		for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+		for(uint32_t i = 0; i < m_pVTFFile->GetResourceCount(); i++)
 		{
-			const vlUInt uiResource = m_pVTFFile->GetResourceType(i);
+			const uint32_t uiResource = m_pVTFFile->GetResourceType(i);
 
 			QString sName;
 			switch(uiResource)
@@ -1083,8 +1083,8 @@ namespace VTFEdit
 
 			QTreeWidgetItem *pItem = new QTreeWidgetItem(m_pResources, QStringList(sName));
 
-			vlUInt uiSize = 0;
-			vlVoid *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize, m_Error);
+			uint32_t uiSize = 0;
+			void *lpData = m_pVTFFile->GetResourceData(uiResource, uiSize, m_Error);
 
 			switch(uiResource)
 			{
@@ -1119,7 +1119,7 @@ namespace VTFEdit
 				if(lpData != nullptr)
 				{
 					new QTreeWidgetItem(pItem, QStringList(tr("Checksum: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+						.arg(hex32(*static_cast<uint32_t *>(lpData)))));
 				}
 				break;
 
@@ -1128,8 +1128,8 @@ namespace VTFEdit
 				{
 					const SVTFTextureLODControlResource *pLODControl =
 						static_cast<SVTFTextureLODControlResource *>(lpData);
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->ResolutionClampU)));
-					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->ResolutionClampV)));
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp U: %1").arg(pLODControl->resolutionClampU)));
+					new QTreeWidgetItem(pItem, QStringList(tr("Clamp V: %1").arg(pLODControl->resolutionClampV)));
 					break;
 				}
 				[[fallthrough]];
@@ -1150,10 +1150,10 @@ namespace VTFEdit
 				[[fallthrough]];
 
 			default:
-				if(lpData && uiSize == sizeof(vlUInt))
+				if(lpData && uiSize == sizeof(uint32_t))
 				{
 					new QTreeWidgetItem(pItem, QStringList(tr("Data: 0x%1")
-						.arg(hex32(*static_cast<vlUInt *>(lpData)))));
+						.arg(hex32(*static_cast<uint32_t *>(lpData)))));
 				}
 				else
 				{
@@ -1172,7 +1172,7 @@ namespace VTFEdit
 	{
 		const bool bSupported = m_pVTFFile != nullptr && m_pVTFFile->GetSupportsResources();
 
-		vlUInt uiSize = 0;
+		uint32_t uiSize = 0;
 		const bool bHasSheet = bSupported && m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize, m_Error) != nullptr;
 
 		m_pEditSheetButton->setEnabled(bSupported);
@@ -1193,8 +1193,8 @@ namespace VTFEdit
 
 		SheetFile Sheet;
 
-		vlUInt uiSize = 0;
-		if(vlVoid *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize, m_Error))
+		uint32_t uiSize = 0;
+		if(void *lpData = m_pVTFFile->GetResourceData(VTF_RSRC_SHEET, uiSize, m_Error))
 		{
 			if(uiSize && !Sheet.load(lpData, uiSize))
 			{
@@ -1225,7 +1225,7 @@ namespace VTFEdit
 		{
 			QByteArray Data = NewSheet.save();
 			if(m_pVTFFile->SetResourceData(VTF_RSRC_SHEET,
-				static_cast<vlUInt>(Data.size()), Data.data(), m_Error) == nullptr)
+				static_cast<uint32_t>(Data.size()), Data.data(), m_Error) == nullptr)
 			{
 				QMessageBox::critical(this, QApplication::applicationName(),
 					tr("Failed to write the sprite sheet resource:\n%1")
@@ -1276,9 +1276,9 @@ namespace VTFEdit
 		// clearing it would change the face count out from under the image data
 		if(m_pVTFFile->GetStartFrame() != 0xffff)
 		{
-			m_pVTFFile->SetStartFrame(static_cast<vlUInt>(m_pImageStartFrame->value()));
+			m_pVTFFile->SetStartFrame(static_cast<uint32_t>(m_pImageStartFrame->value()));
 		}
-		m_pVTFFile->SetBumpmapScale(static_cast<vlSingle>(m_pImageBumpmapScale->value()));
+		m_pVTFFile->SetBumpmapScale(static_cast<float>(m_pImageBumpmapScale->value()));
 
 		return true;
 	}
@@ -1309,7 +1309,7 @@ namespace VTFEdit
 		}
 
 		const QByteArray Text = m_pVmtEdit->toPlainText().toLocal8Bit();
-		const vlBool bResult = m_pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()), m_Error);
+		const vlBool bResult = m_pVMTFile->Load(Text.constData(), static_cast<uint32_t>(Text.length()), m_Error);
 
 		if(bResult)
 		{
@@ -1330,7 +1330,7 @@ namespace VTFEdit
 		Document *pDocument = m_Documents.at(static_cast<size_t>(iIndex));
 
 		const QByteArray Text = pDocument->pTextDocument->toPlainText().toLocal8Bit();
-		if(pDocument->pVMTFile->Load(Text.constData(), static_cast<vlUInt>(Text.length()), m_Error))
+		if(pDocument->pVMTFile->Load(Text.constData(), static_cast<uint32_t>(Text.length()), m_Error))
 		{
 			return true;
 		}
@@ -1954,10 +1954,10 @@ namespace VTFEdit
 
 		bool bError = false;
 
-		vlUInt uiWidth = 0, uiHeight = 0;
+		uint32_t uiWidth = 0, uiHeight = 0;
 		bool bHasAlpha = false;
 
-		std::vector<vlByte *> vImageData;
+		std::vector<uint8_t *> vImageData;
 
 		for(const QString &sFileName : sFileNames)
 		{
@@ -1977,10 +1977,10 @@ namespace VTFEdit
 			}
 
 			const ILuint uiImage = static_cast<ILuint>(ilGetInteger(IL_CUR_IMAGE));
-			const vlUInt uiImages = static_cast<vlUInt>(ilGetInteger(IL_NUM_IMAGES)) + 1;
+			const uint32_t uiImages = static_cast<uint32_t>(ilGetInteger(IL_NUM_IMAGES)) + 1;
 
 			// Copy every animation frame the file contains.
-			for(vlUInt j = 0; j < uiImages; j++)
+			for(uint32_t j = 0; j < uiImages; j++)
 			{
 				ilBindImage(uiImage);
 				ilActiveImage(static_cast<ILuint>(j));
@@ -1995,11 +1995,11 @@ namespace VTFEdit
 
 				if(vImageData.empty())
 				{
-					uiWidth = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH));
-					uiHeight = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT));
+					uiWidth = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH));
+					uiHeight = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT));
 				}
-				else if(uiWidth != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH))
-					|| uiHeight != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT)))
+				else if(uiWidth != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH))
+					|| uiHeight != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT)))
 				{
 					bError = true;
 
@@ -2008,7 +2008,7 @@ namespace VTFEdit
 					break;
 				}
 
-				vlByte *lpFrameData = new vlByte[uiWidth * uiHeight * 4];
+				uint8_t *lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
 				memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
 				vImageData.push_back(lpFrameData);
 
@@ -2032,26 +2032,26 @@ namespace VTFEdit
 				sFileNames.isEmpty() ? QString() : sFileNames.first());
 		}
 
-		for(vlByte *lpFrameData : vImageData)
+		for(uint8_t *lpFrameData : vImageData)
 		{
 			delete[] lpFrameData;
 		}
 	}
 
-	void MainWindow::createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
+	void MainWindow::createFromImages(const std::vector<uint8_t *> &vImageData, uint32_t uiWidth, uint32_t uiHeight,
 		bool bHasAlpha, const QString &sSourceFileName)
 	{
 		VTFLib::CVTFFile *pVTFFile = new VTFLib::CVTFFile();
 
-		const vlUInt uiImages = static_cast<vlUInt>(vImageData.size());
-		vlByte **lpImageData = uiImages != 0 ? const_cast<vlByte **>(&vImageData[0]) : nullptr;
+		const uint32_t uiImages = static_cast<uint32_t>(vImageData.size());
+		uint8_t **lpImageData = uiImages != 0 ? const_cast<uint8_t **>(&vImageData[0]) : nullptr;
 
-		const vlUInt uiFrames = m_Options.TextureType == VtfTextureType::Animated ? uiImages : 1;
-		const vlUInt uiFaces = m_Options.TextureType == VtfTextureType::EnvironmentMap ? uiImages : 1;
-		const vlUInt uiSlices = m_Options.TextureType == VtfTextureType::Volume ? uiImages : 1;
+		const uint32_t uiFrames = m_Options.TextureType == VtfTextureType::Animated ? uiImages : 1;
+		const uint32_t uiFaces = m_Options.TextureType == VtfTextureType::EnvironmentMap ? uiImages : 1;
+		const uint32_t uiSlices = m_Options.TextureType == VtfTextureType::Volume ? uiImages : 1;
 
 		SVTFCreateOptions VTFCreateOptions = VtfFileUtility::GetCreateOptions(m_Options);
-		VTFCreateOptions.ImageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
+		VTFCreateOptions.imageFormat = bHasAlpha ? m_Options.AlphaFormat : m_Options.NormalFormat;
 
 		const bool bCreated =
 			pVTFFile->Create(uiWidth, uiHeight, uiFrames, uiFaces, uiSlices, lpImageData, VTFCreateOptions, m_Error) != vlFalse;
@@ -2094,15 +2094,15 @@ namespace VTFEdit
 			return;
 		}
 
-		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		uint32_t uiWidth = 0, uiHeight = 0, uiDepth = 0;
 		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
-			m_pVTFFile->GetDepth(), static_cast<vlUInt>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
+			m_pVTFFile->GetDepth(), static_cast<uint32_t>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
 
-		std::vector<vlByte> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
+		std::vector<uint8_t> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
 
 		m_pVTFFile->ConvertToRGBA8888(
-			m_pVTFFile->GetData(static_cast<vlUInt>(m_pFrame->value()), static_cast<vlUInt>(m_pFace->value()),
-				static_cast<vlUInt>(m_pSlice->value()), static_cast<vlUInt>(m_pMipmap->value())),
+			m_pVTFFile->GetData(static_cast<uint32_t>(m_pFrame->value()), static_cast<uint32_t>(m_pFace->value()),
+				static_cast<uint32_t>(m_pSlice->value()), static_cast<uint32_t>(m_pMipmap->value())),
 			ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat(), m_Error);
 
 		// DevIL likes image data upside down...
@@ -2130,20 +2130,20 @@ namespace VTFEdit
 		const QString sStem = Info.completeSuffix().isEmpty()
 			? sFileName : sFileName.left(sFileName.length() - sSuffix.length());
 
-		vlUInt uiWidth = 0, uiHeight = 0, uiDepth = 0;
+		uint32_t uiWidth = 0, uiHeight = 0, uiDepth = 0;
 		m_pVTFFile->ComputeMipmapDimensions(m_pVTFFile->GetWidth(), m_pVTFFile->GetHeight(),
-			m_pVTFFile->GetDepth(), static_cast<vlUInt>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
+			m_pVTFFile->GetDepth(), static_cast<uint32_t>(m_pMipmap->value()), uiWidth, uiHeight, uiDepth);
 
-		std::vector<vlByte> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
+		std::vector<uint8_t> ImageData(m_pVTFFile->ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
 
-		for(vlUInt i = 0; i < m_pVTFFile->GetFrameCount(); i++)
+		for(uint32_t i = 0; i < m_pVTFFile->GetFrameCount(); i++)
 		{
-			for(vlUInt j = 0; j < m_pVTFFile->GetFaceCount(); j++)
+			for(uint32_t j = 0; j < m_pVTFFile->GetFaceCount(); j++)
 			{
-				for(vlUInt k = 0; k < m_pVTFFile->GetDepth(); k++)
+				for(uint32_t k = 0; k < m_pVTFFile->GetDepth(); k++)
 				{
 					m_pVTFFile->ConvertToRGBA8888(
-						m_pVTFFile->GetData(i, j, k, static_cast<vlUInt>(m_pMipmap->value())),
+						m_pVTFFile->GetData(i, j, k, static_cast<uint32_t>(m_pMipmap->value())),
 						ImageData.data(), uiWidth, uiHeight, m_pVTFFile->GetDecodeFormat(), m_Error);
 
 					m_pVTFFile->FlipImage(ImageData.data(), uiWidth, uiHeight);
@@ -2505,11 +2505,11 @@ namespace VTFEdit
 
 		const QImage Source = Image.convertToFormat(QImage::Format_RGBA8888);
 
-		vlUInt uiWidth = static_cast<vlUInt>(Source.width());
-		vlUInt uiHeight = static_cast<vlUInt>(Source.height());
+		uint32_t uiWidth = static_cast<uint32_t>(Source.width());
+		uint32_t uiHeight = static_cast<uint32_t>(Source.height());
 
-		vlByte *lpImageData = new vlByte[static_cast<size_t>(uiWidth) * uiHeight * 4];
-		for(vlUInt j = 0; j < uiHeight; j++)
+		uint8_t *lpImageData = new uint8_t[static_cast<size_t>(uiWidth) * uiHeight * 4];
+		for(uint32_t j = 0; j < uiHeight; j++)
 		{
 			memcpy(lpImageData + static_cast<size_t>(j) * uiWidth * 4,
 				Source.constScanLine(static_cast<int>(j)), static_cast<size_t>(uiWidth) * 4);
@@ -2518,7 +2518,7 @@ namespace VTFEdit
 		bool bHasAlpha = !m_Options.StripAlpha
 			&& VtfFileUtility::HasAlphaData(lpImageData, uiWidth, uiHeight);
 
-		std::vector<vlByte *> vImageData{ lpImageData };
+		std::vector<uint8_t *> vImageData{ lpImageData };
 
 		if(m_Options.DistanceAlpha)
 		{
@@ -2623,7 +2623,7 @@ namespace VTFEdit
 			return;
 		}
 
-		const vlUInt uiMinor = m_pFileVersion->itemData(iIndex).value<vlUInt>();
+		const uint32_t uiMinor = m_pFileVersion->itemData(iIndex).value<uint32_t>();
 
 		if(uiMinor == m_pVTFFile->GetMinorVersion())
 		{
@@ -2633,10 +2633,10 @@ namespace VTFEdit
 		// dropping below v7.3 takes the whole resource directory with it
 		if(uiMinor < VTF_MINOR_VERSION_MIN_RESOURCE)
 		{
-			vlUInt uiExtraResources = 0;
-			for(vlUInt i = 0; i < m_pVTFFile->GetResourceCount(); i++)
+			uint32_t uiExtraResources = 0;
+			for(uint32_t i = 0; i < m_pVTFFile->GetResourceCount(); i++)
 			{
-				const vlUInt uiType = m_pVTFFile->GetResourceType(i);
+				const uint32_t uiType = m_pVTFFile->GetResourceType(i);
 				if(uiType != VTF_LEGACY_RSRC_LOW_RES_IMAGE && uiType != VTF_LEGACY_RSRC_IMAGE)
 				{
 					uiExtraResources++;
@@ -3183,9 +3183,9 @@ namespace VTFEdit
 			else if(sArg.compare(QLatin1String("VTFOptions.Version"), Qt::CaseInsensitive) == 0)
 				m_Options.Version = sVal;
 			else if(sArg.compare(QLatin1String("VTFOptions.AuxCompressionLevel"), Qt::CaseInsensitive) == 0)
-				m_Options.AuxCompressionLevel = static_cast<vlShort>(sVal.toInt());
+				m_Options.AuxCompressionLevel = static_cast<int16_t>(sVal.toInt());
 			else if(sArg.compare(QLatin1String("VTFOptions.AuxCompressionMethod"), Qt::CaseInsensitive) == 0)
-				m_Options.AuxCompressionMethod = static_cast<vlShort>(sVal.toInt());
+				m_Options.AuxCompressionMethod = static_cast<int16_t>(sVal.toInt());
 
 			else if(sArg.compare(QLatin1String("VTFOptions.ComputeReflectivity"), Qt::CaseInsensitive) == 0)
 				m_Options.ComputeReflectivity = toBool(sVal);

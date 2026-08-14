@@ -25,28 +25,28 @@ namespace VTFLib
 	CVMTFile *Material = nullptr;
 	CMaterialVector *MaterialVector = nullptr;
 
-	vlSingle sLuminanceWeightR = 0.299f;
-	vlSingle sLuminanceWeightG = 0.587f;
-	vlSingle sLuminanceWeightB = 0.114f;
+	float sLuminanceWeightR = 0.299f;
+	float sLuminanceWeightG = 0.587f;
+	float sLuminanceWeightB = 0.114f;
 
-	vlUShort uiBlueScreenMaskR = 0x0000;
-	vlUShort uiBlueScreenMaskG = 0x0000;
-	vlUShort uiBlueScreenMaskB = 0xffff;
+	uint16_t uiBlueScreenMaskR = 0x0000;
+	uint16_t uiBlueScreenMaskG = 0x0000;
+	uint16_t uiBlueScreenMaskB = 0xffff;
 
-	vlUShort uiBlueScreenClearR = 0x0000;
-	vlUShort uiBlueScreenClearG = 0x0000;
-	vlUShort uiBlueScreenClearB = 0x0000;
+	uint16_t uiBlueScreenClearR = 0x0000;
+	uint16_t uiBlueScreenClearG = 0x0000;
+	uint16_t uiBlueScreenClearB = 0x0000;
 
-	vlSingle sFP16HDRExposure = 2.0f;
+	float sFP16HDRExposure = 2.0f;
 
-	vlUInt uiVMTParseMode = PARSE_MODE_LOOSE;
+	uint32_t uiVMTParseMode = PARSE_MODE_LOOSE;
 }
 
 //
 // vlGetVersion()
 // Gets the library's version number.
 //
-VTFLIB_API vlUInt vlGetVersion()
+VTFLIB_API uint32_t vlGetVersion()
 {
 	return VL_VERSION;
 }
@@ -55,7 +55,7 @@ VTFLIB_API vlUInt vlGetVersion()
 // vlGetVersionString()
 // Gets the library's version number string.
 //
-VTFLIB_API const vlChar *vlGetVersionString()
+VTFLIB_API const char *vlGetVersionString()
 {
 	return VL_VERSION_STRING;
 }
@@ -66,11 +66,11 @@ VTFLIB_API const vlChar *vlGetVersionString()
 // vlInitialize()
 // Initializes all resources.
 //
-VTFLIB_API vlBool vlInitialize(VTFLib::Diagnostics::CError& error)
+VTFLIB_API vlBool vlInitialize(Diagnostics::CError& error)
 {
 	if(bInitialized)
 	{
-		error.Set("VTFLib already initialized.");
+		VTFError_Set(error, "VTFLib already initialized.");
 		return vlFalse;
 	}
 
@@ -86,12 +86,12 @@ VTFLIB_API vlBool vlInitialize(VTFLib::Diagnostics::CError& error)
 // vlShutdown()
 // Frees all resources.
 //
-VTFLIB_API vlVoid vlShutdown()
+VTFLIB_API void vlShutdown()
 {
 	if(!bInitialized)
 		return;
 
-	vlUInt i;
+	uint32_t i;
 
 	bInitialized = vlFalse;
 
@@ -120,36 +120,36 @@ VTFLIB_API vlBool vlGetBoolean(VTFLibOption Option)
 	return vlFalse;
 }
 
-VTFLIB_API vlVoid vlSetBoolean(VTFLibOption Option, vlBool bValue)
+VTFLIB_API void vlSetBoolean(VTFLibOption Option, vlBool bValue)
 {
 
 }
 
-VTFLIB_API vlInt vlGetInteger(VTFLibOption Option)
+VTFLIB_API int32_t vlGetInteger(VTFLibOption Option)
 {
 	switch(Option) {
 		case VTFLIB_BLUESCREEN_MASK_R:
-			return (vlInt)uiBlueScreenMaskR;
+			return (int32_t)uiBlueScreenMaskR;
 		case VTFLIB_BLUESCREEN_MASK_G:
-			return (vlInt)uiBlueScreenMaskG;
+			return (int32_t)uiBlueScreenMaskG;
 		case VTFLIB_BLUESCREEN_MASK_B:
-			return (vlInt)uiBlueScreenMaskB;
+			return (int32_t)uiBlueScreenMaskB;
 
 		case VTFLIB_BLUESCREEN_CLEAR_R:
-			return (vlInt)uiBlueScreenClearR;
+			return (int32_t)uiBlueScreenClearR;
 		case VTFLIB_BLUESCREEN_CLEAR_G:
-			return (vlInt)uiBlueScreenClearG;
+			return (int32_t)uiBlueScreenClearG;
 		case VTFLIB_BLUESCREEN_CLEAR_B:
-			return (vlInt)uiBlueScreenClearB;
+			return (int32_t)uiBlueScreenClearB;
 
 		case VTFLIB_VMT_PARSE_MODE:
-			return (vlInt)uiVMTParseMode;
+			return (int32_t)uiVMTParseMode;
 	}
 
 	return 0;
 }
 
-VTFLIB_API vlVoid vlSetInteger(VTFLibOption Option, vlInt iValue)
+VTFLIB_API void vlSetInteger(VTFLibOption Option, int32_t iValue)
 {
 	switch(Option)
 	{
@@ -158,21 +158,21 @@ VTFLIB_API vlVoid vlSetInteger(VTFLibOption Option, vlInt iValue)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenMaskR = (vlUShort)iValue;
+		uiBlueScreenMaskR = (uint16_t)iValue;
 		break;
 	case VTFLIB_BLUESCREEN_MASK_G:
 		if(iValue < 0)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenMaskG = (vlUShort)iValue;
+		uiBlueScreenMaskG = (uint16_t)iValue;
 		break;
 	case VTFLIB_BLUESCREEN_MASK_B:
 		if(iValue < 0)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenMaskB = (vlUShort)iValue;
+		uiBlueScreenMaskB = (uint16_t)iValue;
 		break;
 
 	case VTFLIB_BLUESCREEN_CLEAR_R:
@@ -180,32 +180,32 @@ VTFLIB_API vlVoid vlSetInteger(VTFLibOption Option, vlInt iValue)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenClearR = (vlUShort)iValue;
+		uiBlueScreenClearR = (uint16_t)iValue;
 		break;
 	case VTFLIB_BLUESCREEN_CLEAR_G:
 		if(iValue < 0)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenClearG = (vlUShort)iValue;
+		uiBlueScreenClearG = (uint16_t)iValue;
 		break;
 	case VTFLIB_BLUESCREEN_CLEAR_B:
 		if(iValue < 0)
 			iValue = 0;
 		else if(iValue > 65535)
 			iValue = 65535;
-		uiBlueScreenClearB = (vlUShort)iValue;
+		uiBlueScreenClearB = (uint16_t)iValue;
 		break;
 
 	case VTFLIB_VMT_PARSE_MODE:
 		if(iValue < 0 || iValue >= PARSE_MODE_COUNT)
 			return;
-		uiVMTParseMode = (vlUInt)iValue;
+		uiVMTParseMode = (uint32_t)iValue;
 		break;
 	}
 }
 
-VTFLIB_API vlSingle vlGetFloat(VTFLibOption Option)
+VTFLIB_API float vlGetFloat(VTFLibOption Option)
 {
 	switch(Option)
 	{
@@ -223,7 +223,7 @@ VTFLIB_API vlSingle vlGetFloat(VTFLibOption Option)
 	return 0.0f;
 }
 
-VTFLIB_API vlVoid vlSetFloat(VTFLibOption Option, vlSingle sValue)
+VTFLIB_API void vlSetFloat(VTFLibOption Option, float sValue)
 {
 	switch(Option)
 	{

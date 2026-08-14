@@ -9,48 +9,41 @@
  * version.
  */
 
-#ifndef MEMORYREADER_H
-#define MEMORYREADER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Reader.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Readers
-		{
-			class CMemoryReader : public IReader
-			{
-			private:
-				vlBool bOpened;
 
-				const vlVoid *vData;
-				vlUInt uiBufferSize;
+namespace VTFLib::IO::Readers {
+    class CMemoryReader : public IReader {
+    public:
+        CMemoryReader(const void *buffer, uint32_t bufferSize);
 
-				vlUInt uiPointer;
+        ~CMemoryReader() override = default;
 
-			public:
-				CMemoryReader(const vlVoid *vData, vlUInt uiBufferSize);
-				~CMemoryReader();
+        [[nodiscard]] bool IsOpen() const override;
 
-			public:
-				virtual vlBool Opened() const;
+        bool Open(Diagnostics::CError &error) override;
 
-				virtual vlBool Open(Diagnostics::CError &error);
-				virtual vlVoid Close();
+        void Close() override;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
+        ssize_t GetStreamSize(Diagnostics::CError &error) const override;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
+        ssize_t GetStreamPointer(Diagnostics::CError &error) const override;
 
-				virtual vlBool Read(vlChar &cChar, Diagnostics::CError &error);
-				virtual vlUInt Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
-			};
-		}
-	}
+        ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) override;
+
+        bool Read(char &dstChr, Diagnostics::CError &error) override;
+
+        ssize_t Read(void *dst, uint32_t size, Diagnostics::CError &error) override;
+
+    private:
+        bool mIsOpen;
+        const void *mBuffer;
+        ssize_t mBufferSize;
+        ssize_t mCursor;
+    };
 }
 
-#endif
+

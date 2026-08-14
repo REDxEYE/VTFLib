@@ -13,156 +13,133 @@
 #include "Proc.h"
 #include "ProcReader.h"
 
-using namespace VTFLib;
 using namespace VTFLib::IO::Readers;
 
-CProcReader::CProcReader(vlVoid *pUserData)
-{
-	this->bOpened = vlFalse;
-	this->pUserData = pUserData;
+CProcReader::CProcReader(void *userData) {
+    this->mIsOpen = false;
+    this->mUserData = userData;
 }
 
-CProcReader::~CProcReader()
-{
-	this->Close();
+CProcReader::~CProcReader() {
+    this->CProcReader::Close();
 }
 
-vlBool CProcReader::Opened() const
-{
-	return this->bOpened;
+bool CProcReader::IsOpen() const {
+    return this->mIsOpen;
 }
 
-vlBool CProcReader::Open(Diagnostics::CError &error)
-{
-	this->Close();
+bool CProcReader::Open(Diagnostics::CError &error) {
+    this->Close();
 
-	if(pReadOpenProc == nullptr)
-	{
-		error.Set("pReadOpenProc not set.");
-		return vlFalse;
-	}
+    if (pReadOpenProc == nullptr) {
+        VTFError_Set(error, "pReadOpenProc not set.");
+        return false;
+    }
 
-	if(this->bOpened)
-	{
-		error.Set("Reader already open.");
-		return vlFalse;
-	}
+    if (this->mIsOpen) {
+        VTFError_Set(error, "Reader already open.");
+        return false;
+    }
 
-	if(!pReadOpenProc(this->pUserData))
-	{
-		error.Set("Error opening file.");
-		return vlFalse;
-	}
+    if (!pReadOpenProc(this->mUserData)) {
+        VTFError_Set(error, "Error opening file.");
+        return false;
+    }
 
-	this->bOpened = vlTrue;
+    this->mIsOpen = true;
 
-	return vlTrue;
+    return true;
 }
 
-vlVoid CProcReader::Close()
-{
-	if(pReadCloseProc == nullptr)
-	{
-		return;
-	}
+void CProcReader::Close() {
+    if (pReadCloseProc == nullptr) {
+        return;
+    }
 
-	if(this->bOpened)
-	{
-		pReadCloseProc(this->pUserData);
-		this->bOpened = vlFalse;
-	}
+    if (this->mIsOpen) {
+        pReadCloseProc(this->mUserData);
+        this->mIsOpen = false;
+    }
 }
 
-vlUInt CProcReader::GetStreamSize(Diagnostics::CError& error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcReader::GetStreamSize(Diagnostics::CError &error) const {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Reader not open.");
+        return 0;
+    }
 
-	if(pReadSizeProc == nullptr)
-	{
-		error.Set("pReadSizeProc not set.");
-		return 0xffffffff;
-	}
+    if (pReadSizeProc == nullptr) {
+        VTFError_Set(error, "pReadSizeProc not set.");
+        return 0xffffffff;
+    }
 
-	return pReadSizeProc(this->pUserData);
+    return pReadSizeProc(this->mUserData);
 }
 
-vlUInt CProcReader::GetStreamPointer(Diagnostics::CError& error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcReader::GetStreamPointer(Diagnostics::CError &error) const {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Reader not open.");
+        return 0;
+    }
 
-	if(pReadTellProc == nullptr)
-	{
-		error.Set("pReadTellProc not set.");
-		return 0;
-	}
+    if (pReadTellProc == nullptr) {
+        VTFError_Set(error, "pReadTellProc not set.");
+        return 0;
+    }
 
-	return pReadTellProc(this->pUserData);
+    return pReadTellProc(this->mUserData);
 }
 
-vlUInt CProcReader::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcReader::Seek(const ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Reader not open.");
+        return 0;
+    }
 
-	if(pReadSeekProc == nullptr)
-	{
-		error.Set("pReadSeekProc not set.");
-		return 0;
-	}
+    if (pReadSeekProc == nullptr) {
+        VTFError_Set(error, "pReadSeekProc not set.");
+        return 0;
+    }
 
-	return pReadSeekProc(lOffset, (VLSeekMode)uiMode, this->pUserData);
+    return pReadSeekProc(offset, static_cast<VLSeekMode>(seekMode), this->mUserData);
 }
 
-vlBool CProcReader::Read(vlChar &cChar, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return vlFalse;
-	}
+bool CProcReader::Read(char &dstChr, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Reader not open.");
+        return false;
+    }
 
-	if(pReadReadProc == nullptr)
-	{
-		error.Set("pReadReadProc not set.");
-		return vlFalse;
-	}
+    if (pReadReadProc == nullptr) {
+        VTFError_Set(error, "pReadReadProc not set.");
+        return false;
+    }
 
-	vlUInt uiBytesRead = pReadReadProc(&cChar, 1, this->pUserData);
+    const uint32_t bytesRead = pReadReadProc(&dstChr, 1, this->mUserData);
 
-	if(uiBytesRead == 0)
-	{
-		error.Set("pReadReadProc() failed.");
-	}
+    if (bytesRead == 0) {
+        VTFError_Set(error, "pReadReadProc() failed.");
+    }
 
-	return uiBytesRead == 1;
+    return bytesRead == 1;
 }
 
-vlUInt CProcReader::Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcReader::Read(void *dst, const uint32_t size, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Reader not open.");
+        return 0;
+    }
 
-	if(pReadReadProc == nullptr)
-	{
-		error.Set("pReadReadProc not set.");
-		return 0;
-	}
+    if (pReadReadProc == nullptr) {
+        VTFError_Set(error, "pReadReadProc not set.");
+        return 0;
+    }
 
-	vlUInt uiBytesRead = pReadReadProc(vData, uiBytes, this->pUserData);
+    const uint32_t bytesRead = pReadReadProc(dst, size, this->mUserData);
 
-	if(uiBytesRead == 0)
-	{
-		error.Set("pReadReadProc() failed.");
-	}
+    if (bytesRead == 0) {
+        VTFError_Set(error, "pReadReadProc() failed.");
+    }
 
-	return uiBytesRead;
+    return bytesRead;
 }

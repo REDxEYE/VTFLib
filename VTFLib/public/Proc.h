@@ -9,15 +9,10 @@
  * version.
  */
 
-#ifndef PROC_H
-#define PROC_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Error.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef enum tagVLProc
 {
@@ -43,23 +38,20 @@ typedef enum tagVLSeekMode
 	SEEK_MODE_END
 } VLSeekMode;
 
-typedef vlVoid (*PReadCloseProc)(vlVoid *);
-typedef vlBool (*PReadOpenProc) (vlVoid *);
-typedef vlUInt (*PReadReadProc)  (vlVoid *, vlUInt, vlVoid *);
-typedef vlUInt (*PReadSeekProc) (vlLong, VLSeekMode, vlVoid *);
-typedef vlUInt (*PReadSizeProc) (vlVoid *);
-typedef vlUInt (*PReadTellProc) (vlVoid *);
+typedef void (*PReadCloseProc)(void *);
+typedef bool (*PReadOpenProc) (void *);
+typedef ssize_t (*PReadReadProc)  (void *, ssize_t, void *);
+typedef ssize_t (*PReadSeekProc) (ssize_t, VLSeekMode, void *);
+typedef ssize_t (*PReadSizeProc) (void *);
+typedef ssize_t (*PReadTellProc) (void *);
 
-typedef vlVoid (*PWriteCloseProc)(vlVoid *);
-typedef vlBool (*PWriteOpenProc) (vlVoid *);
-typedef vlUInt (*PWriteWriteProc)  (vlVoid *, vlUInt, vlVoid *);
-typedef vlUInt (*PWriteSeekProc) (vlLong, VLSeekMode, vlVoid *);
-typedef vlUInt (*PWriteSizeProc) (vlVoid *);
-typedef vlUInt (*PWriteTellProc) (vlVoid *);
+typedef void (*PWriteCloseProc)(void *);
+typedef bool (*PWriteOpenProc) (void *);
+typedef ssize_t (*PWriteWriteProc)  (const void *, ssize_t, void *);
+typedef ssize_t (*PWriteSeekProc) (ssize_t, VLSeekMode, void *);
+typedef ssize_t (*PWriteSizeProc) (void *);
+typedef ssize_t (*PWriteTellProc) (void *);
 
-#ifdef __cplusplus
-}
-#endif
 
 namespace VTFLib
 {
@@ -77,16 +69,3 @@ namespace VTFLib
 	extern PWriteSizeProc pWriteSizeProc;
 	extern PWriteTellProc pWriteTellProc;
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-VTFLIB_API vlVoid vlSetProc(VLProc Proc, vlVoid *pProc);
-VTFLIB_API vlVoid *vlGetProc(VLProc Proc);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif

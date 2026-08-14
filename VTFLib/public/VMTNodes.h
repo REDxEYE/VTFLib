@@ -9,8 +9,7 @@
  * version.
  */
 
-#ifndef VMTNODES_H
-#define VMTNODES_H
+#pragma once
 
 #include "VMTNode.h"
 #include "VMTGroupNode.h"
@@ -19,4 +18,3 @@
 #include "VMTIntegerNode.h"
 #include "VMTSingleNode.h"
 
-#endif

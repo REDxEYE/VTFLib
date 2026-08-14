@@ -9,10 +9,9 @@
  * version.
  */
 
-#ifndef VMTGROUPNODE_H
-#define VMTGROUPNODE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "VMTNode.h"
 
 #include "VMTStringNode.h"
@@ -21,47 +20,45 @@
 
 #include <list>
 
-namespace VTFLib
-{
-	class CVMTFile;
+namespace VTFLib {
+    class CVMTFile;
 
-	namespace Nodes
-	{
-		class VTFLIB_API CVMTGroupNode : public CVMTNode
-		{
-		//private:
-		//	friend class CVMTFile;	// For direct node addition.
+    namespace Nodes {
+        class VTFLIB_API CVMTGroupNode : public CVMTNode {
+        public:
+            explicit CVMTGroupNode(const char *name);
 
-		private:
-			typedef std::list<CVMTNode *> CVMTNodeList;
+            CVMTGroupNode(const CVMTGroupNode &other);
 
-		private:
-			CVMTNodeList *VMTNodeList;
+            ~CVMTGroupNode() override;
 
-		public:
-			CVMTGroupNode(const vlChar *cName);
-			CVMTGroupNode(const CVMTGroupNode &GroupNode);
-			virtual ~CVMTGroupNode();
+            [[nodiscard]] VMTNodeType GetType() const override;
 
-			virtual VMTNodeType GetType() const;
-			virtual CVMTNode *Clone() const;
+            [[nodiscard]] CVMTNode *Clone() const override;
 
-		public:
-			vlUInt GetNodeCount() const;
+            [[nodiscard]] size_t GetNodeCount() const;
 
-			CVMTNode *AddNode(CVMTNode *VMTNode);
-			CVMTGroupNode *AddGroupNode(const vlChar *cName);
-			CVMTStringNode *AddStringNode(const vlChar *cName, const vlChar *cValue);
-			CVMTIntegerNode *AddIntegerNode(const vlChar *cName, vlInt iValue);
-			CVMTSingleNode *AddSingleNode(const vlChar *cName, vlFloat fValue);
+            CVMTNode *AddNode(CVMTNode *node);
 
-			vlVoid RemoveNode(CVMTNode *VMTNode);
-			vlVoid RemoveAllNodes();
+            CVMTGroupNode *AddGroupNode(const char *name);
 
-			CVMTNode *GetNode(vlUInt uiIndex) const;
-			CVMTNode *GetNode(const vlChar *cName) const;		
-		};
-	}
+            CVMTStringNode *AddStringNode(const char *name, const char *value);
+
+            CVMTIntegerNode *AddIntegerNode(const char *name, int32_t value);
+
+            CVMTSingleNode *AddSingleNode(const char *name, float value);
+
+            void RemoveNode(const CVMTNode *node) const;
+
+            void RemoveAllNodes() const;
+
+            [[nodiscard]] CVMTNode *GetNode(size_t index) const;
+
+            CVMTNode *GetNode(const char *name) const;
+
+        private:
+            typedef std::list<CVMTNode *> CVMTNodeList;
+            CVMTNodeList *mVMTNodeList;
+        };
+    }
 }
-
-#endif

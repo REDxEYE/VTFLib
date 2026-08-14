@@ -1,7 +1,7 @@
 /*
  * VTFLib
  * Copyright (C) 2005-2010 Neil Jedrzejewski & Ryan Gregg
-
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -12,116 +12,149 @@
 #include "VTFLib.h"
 #include "FileWriter.h"
 
-using namespace VTFLib;
+#include <cstdio>
+
 using namespace VTFLib::IO::Writers;
 
-CFileWriter::CFileWriter(const vlChar *cFileName)
-{
-	this->hFile = NULL;
+CFileWriter::CFileWriter(const char *filePath) {
+    this->mHandle = nullptr;
 
-	this->cFileName = new vlChar[strlen(cFileName) + 1];
-	strcpy(this->cFileName, cFileName);
+    this->mFilePath = new char[strlen(filePath) + 1];
+    strcpy(this->mFilePath, filePath);
 }
 
-CFileWriter::~CFileWriter()
-{
-	this->Close();
+CFileWriter::~CFileWriter() {
+    this->CFileWriter::Close();
 
-	delete []this->cFileName;
+    delete[] this->mFilePath;
 }
 
-vlBool CFileWriter::Opened() const
-{
-	return this->hFile != NULL;
+bool CFileWriter::IsOpen() const {
+    return this->mHandle != nullptr;
 }
 
-vlBool CFileWriter::Open(Diagnostics::CError &error)
-{
-	this->Close();
+bool CFileWriter::Open(Diagnostics::CError &error) {
+    this->Close();
 
-	this->hFile = CreateFile(this->cFileName, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    this->mHandle = fopen(this->mFilePath, "wb");
 
-	if(this->hFile == INVALID_HANDLE_VALUE)
-	{
-		this->hFile = NULL;
+    if (this->mHandle == nullptr) {
+        VTFError_Set_SE(error, "Error opening file.");
+        return false;
+    }
 
-		error.Set("Error opening file.", vlTrue);
-
-		return vlFalse;
-	}
-
-	return vlTrue;
+    return true;
 }
 
-vlVoid CFileWriter::Close()
-{
-	if(this->hFile != NULL)
-	{
-		CloseHandle(this->hFile);
-		this->hFile = NULL;
-	}
+void CFileWriter::Close() {
+    if (this->mHandle != nullptr) {
+        fclose(this->mHandle);
+        this->mHandle = nullptr;
+    }
 }
 
-vlUInt CFileWriter::GetStreamSize(Diagnostics::CError &error) const
-{
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+ssize_t CFileWriter::GetStreamSize(Diagnostics::CError &error) const {
+    if (this->mHandle == nullptr) {
+        VTFError_Set(error, "File handle is null.");
+        return 0;
+    }
 
-	return GetFileSize(this->hFile, NULL);
+    const long lPosition = ftell(this->mHandle);
+
+    if (lPosition < 0) {
+        return 0;
+    }
+
+    if (fseek(this->mHandle, 0, SEEK_END) != 0) {
+        return 0;
+    }
+
+    const long lSize = ftell(this->mHandle);
+
+    fseek(this->mHandle, lPosition, SEEK_SET);
+
+    if (lSize < 0) {
+        return 0;
+    }
+
+    return static_cast<uint32_t>(lSize);
 }
 
-vlUInt CFileWriter::GetStreamPointer(Diagnostics::CError &error) const
-{
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+ssize_t CFileWriter::GetStreamPointer(Diagnostics::CError &error) const {
+    if (this->mHandle == nullptr) {
+        VTFError_Set(error, "File handle is null.");
+        return 0;
+    }
 
-	return (vlUInt)SetFilePointer(this->hFile, 0, NULL, FILE_CURRENT);
+    const long lPosition = ftell(this->mHandle);
+
+    if (lPosition < 0) {
+        return 0;
+    }
+
+    return static_cast<uint32_t>(lPosition);
 }
 
-vlUInt CFileWriter::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
-{
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+ssize_t CFileWriter::Seek(const ssize_t offset, const uint32_t seekMode, Diagnostics::CError &error) {
+    if (this->mHandle == nullptr) {
+        VTFError_Set(error, "File handle is null.");
+        return 0;
+    }
 
-	return (vlUInt)SetFilePointer(this->hFile, lOffset, NULL, uiMode);
+    int iOrigin;
+
+    switch (seekMode) {
+        case FILE_BEGIN:
+            iOrigin = SEEK_SET;
+            break;
+
+        case FILE_CURRENT:
+            iOrigin = SEEK_CUR;
+            break;
+
+        case FILE_END:
+            iOrigin = SEEK_END;
+            break;
+
+        default:
+            VTFError_Set(error, "Invalid seek mode.");
+            return 0;
+    }
+
+    if (fseek(this->mHandle, offset, iOrigin) != 0) {
+        VTFError_Set_SE(error, "fseek() failed.");
+        return 0;
+    }
+
+    return this->GetStreamPointer(error);
 }
 
-vlBool CFileWriter::Write(vlChar cChar, Diagnostics::CError &error)
-{
-	if(this->hFile == NULL)
-	{
-		return vlFalse;
-	}
+bool CFileWriter::Write(const char srcChr, Diagnostics::CError &error) {
+    if (this->mHandle == nullptr) {
+        VTFError_Set(error, "File handle is null.");
+        return false;
+    }
 
-	vlULong ulBytesWritten = 0;
+    const size_t bytesWritten = fwrite(&srcChr, 1, 1, this->mHandle);
 
-	if(!WriteFile(this->hFile, &cChar, 1, &ulBytesWritten, NULL))
-	{
-		error.Set("WriteFile() failed.", vlTrue);
-	}
+    if (bytesWritten != 1) {
+        VTFError_Set_SE(error, "fwrite() failed.");
+    }
 
-	return ulBytesWritten == 1;
+    return bytesWritten == 1;
 }
 
-vlUInt CFileWriter::Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
-{
-	if(this->hFile == NULL)
-	{
-		return 0;
-	}
+ssize_t CFileWriter::Write(const void *src, const ssize_t size, Diagnostics::CError &error) {
+    if (this->mHandle == nullptr) {
+        VTFError_Set(error, "File handle is null.");
+        return 0;
+    }
 
-	vlULong ulBytesWritten = 0;
+    const size_t bytesWritten = fwrite(src, 1, size, this->mHandle);
 
-	if(!WriteFile(this->hFile, vData, uiBytes, &ulBytesWritten, NULL))
-	{
-		error.Set("WriteFile() failed.", vlTrue);
-	}
+    if (bytesWritten != size && ferror(this->mHandle)) {
+        VTFError_Set_SE(error, "fwrite() failed.");
+    }
 
-	return (vlUInt)ulBytesWritten;
+    return static_cast<ssize_t>(bytesWritten);
 }

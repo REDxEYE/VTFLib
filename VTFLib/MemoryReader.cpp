@@ -12,155 +12,130 @@
 #include "VTFLib.h"
 #include "MemoryReader.h"
 
-using namespace VTFLib;
 using namespace VTFLib::IO::Readers;
 
-CMemoryReader::CMemoryReader(const vlVoid *vData, vlUInt uiBufferSize)
-{
-	this->bOpened = vlFalse;
-	this->uiPointer = 0;
+CMemoryReader::CMemoryReader(const void *buffer, const uint32_t bufferSize) {
+    mIsOpen = vlFalse;
+    mCursor = 0;
 
-	this->vData = vData;
-	this->uiBufferSize = uiBufferSize;
+    mBuffer = buffer;
+    mBufferSize = bufferSize;
 }
 
-CMemoryReader::~CMemoryReader()
-{
-
+bool CMemoryReader::IsOpen() const {
+    return mIsOpen;
 }
 
-vlBool CMemoryReader::Opened() const
-{
-	return this->bOpened;
+bool CMemoryReader::Open(Diagnostics::CError &error) {
+    if (mBuffer == nullptr) {
+        VTFError_Set(error, "Memory stream is null.");
+        return vlFalse;
+    }
+
+    mCursor = 0;
+    mIsOpen = vlTrue;
+
+    return vlTrue;
 }
 
-vlBool CMemoryReader::Open(VTFLib::Diagnostics::CError& error)
-{
-	if(vData == 0)
-	{
-		error.Set("Memory stream is null.");
-		return vlFalse;
-	}
-
-	this->uiPointer = 0;
-
-	this->bOpened = vlTrue;
-
-	return vlTrue;
+void CMemoryReader::Close() {
+    mIsOpen = vlFalse;
 }
 
-vlVoid CMemoryReader::Close()
-{
-	this->bOpened = vlFalse;
+ssize_t CMemoryReader::GetStreamSize(Diagnostics::CError &error) const {
+    if (!mIsOpen) {
+        VTFError_Set(error, "Memory stream is not open.");
+        return 0;
+    }
+
+    return mBufferSize;
 }
 
-vlUInt CMemoryReader::GetStreamSize(Diagnostics::CError &error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CMemoryReader::GetStreamPointer(Diagnostics::CError &error) const {
+    if (!mIsOpen) {
+        VTFError_Set(error, "Memory stream is not open.");
+        return 0;
+    }
 
-	return this->uiBufferSize;
+    return mCursor;
 }
 
-vlUInt CMemoryReader::GetStreamPointer(Diagnostics::CError &error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CMemoryReader::Seek(const ssize_t offset, const uint32_t seekMode, Diagnostics::CError &error) {
+    if (!mIsOpen) {
+        VTFError_Set(error, "Memory stream is not open.");
+        return 0;
+    }
 
-	return this->uiPointer;
+    switch (seekMode) {
+        case FILE_BEGIN:
+            mCursor = 0;
+            break;
+        case FILE_CURRENT:
+            break;
+        case FILE_END:
+            mCursor = mBufferSize;
+            break;
+        default: {
+            VTFError_Set(error, "Invalid seek mode.");
+            return 0;
+        }
+    }
+
+    int64_t new_offset = mCursor + offset;
+
+    if (new_offset < 0) {
+        new_offset = 0;
+    }
+
+    if (new_offset > mBufferSize) {
+        new_offset = mBufferSize;
+    }
+
+    mCursor = static_cast<uint32_t>(new_offset);
+
+    return mCursor;
 }
 
-vlUInt CMemoryReader::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+bool CMemoryReader::Read(char &dstChr, Diagnostics::CError &error) {
+    if (!mIsOpen) {
+        return vlFalse;
+    }
 
-	switch(uiMode)
-	{
-		case FILE_BEGIN:
-			this->uiPointer = 0;
-			break;
-		case FILE_CURRENT:
+    if (mCursor == mBufferSize) {
+        VTFError_Set(error, "End of memory stream.");
+        return vlFalse;
+    }
 
-			break;
-		case FILE_END:
-			this->uiPointer = this->uiBufferSize;
-			break;
-	}
+    dstChr = static_cast<const char *>(mBuffer)[mCursor++];
 
-	vlLong lPointer = (vlLong)this->uiPointer + lOffset;
-
-	if(lPointer < 0)
-	{
-		lPointer = 0;
-	}
-
-	if(lPointer > (vlLong)this->uiBufferSize)
-	{
-		lPointer = (vlLong)this->uiBufferSize;
-	}
-
-	this->uiPointer = (vlUInt)lPointer;
-
-	return this->uiPointer;
+    return vlTrue;
 }
 
-vlBool CMemoryReader::Read(vlChar &cChar, VTFLib::Diagnostics::CError& error)
-{
-	if(!this->bOpened)
-	{
-		return vlFalse;
-	}
+ssize_t CMemoryReader::Read(void *dst, uint32_t size, Diagnostics::CError &error) {
+    if (!mIsOpen) {
+        return 0;
+    }
 
-	if(this->uiPointer == this->uiBufferSize)
-	{
-		error.Set("End of memory stream.");
+    if (mCursor == mBufferSize) {
+        return 0;
+    }
+    const auto *src = static_cast<const uint8_t *>(mBuffer) + mCursor;
 
-		return vlFalse;
-	}
-	else
-	{
-		cChar = *((vlChar *)this->vData + this->uiPointer++);
+    if (mCursor + size > mBufferSize) // This right?
+    {
+        size = mBufferSize - mCursor;
 
-		return vlTrue;
-	}
-}
+        memcpy(dst, src, size);
 
-vlUInt CMemoryReader::Read(vlVoid *vData, vlUInt uiBytes, VTFLib::Diagnostics::CError& error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+        mCursor = mBufferSize;
 
-	if(this->uiPointer == this->uiBufferSize)
-	{
-		return 0;
-	}
-	else if(this->uiPointer + uiBytes > this->uiBufferSize) // This right?
-	{
-		uiBytes = this->uiBufferSize - this->uiPointer;
+        VTFError_Set(error, "End of memory stream.");
 
-		memcpy(vData, (vlByte *)this->vData + this->uiPointer, uiBytes);
+        return size;
+    }
+    memcpy(dst, src, size);
 
-		this->uiPointer = this->uiBufferSize;
+    mCursor += size;
 
-		error.Set("End of memory stream.");
-
-		return uiBytes;
-	}
-	else
-	{
-		memcpy(vData, (vlByte *)this->vData + this->uiPointer, uiBytes);
-
-		this->uiPointer += uiBytes;
-
-		return uiBytes;
-	}
+    return size;
 }

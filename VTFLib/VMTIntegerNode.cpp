@@ -13,53 +13,38 @@
 
 using namespace VTFLib::Nodes;
 
-CVMTIntegerNode::CVMTIntegerNode(const vlChar *cName) : CVMTValueNode(cName)
-{
-	this->iValue = 0;
+CVMTIntegerNode::CVMTIntegerNode(const char *name) : CVMTValueNode(name) {
+    mValue = 0;
 }
 
-#pragma warning( disable : 26495 )
-CVMTIntegerNode::CVMTIntegerNode(const vlChar *cName, const vlChar *cValue) : CVMTValueNode(cName)
-{
-	this->SetValue(cValue);
+CVMTIntegerNode::CVMTIntegerNode(const char *name, const char *value) : CVMTValueNode(name) {
+    CVMTIntegerNode::SetValue(value);
 }
 
-CVMTIntegerNode::CVMTIntegerNode(const vlChar *cName, vlInt iValue) : CVMTValueNode(cName)
-{
-	this->iValue = iValue;
+CVMTIntegerNode::CVMTIntegerNode(const char *name, int32_t value) : CVMTValueNode(name) {
+    mValue = value;
 }
 
-CVMTIntegerNode::CVMTIntegerNode(const CVMTIntegerNode &IntegerNode) : CVMTValueNode(IntegerNode.GetName())
-{
-	this->iValue = IntegerNode.iValue;
+CVMTIntegerNode::CVMTIntegerNode(const CVMTIntegerNode &other) : CVMTValueNode(other.GetName()) {
+    mValue = other.mValue;
 }
 
-CVMTIntegerNode::~CVMTIntegerNode()
-{
-
+void CVMTIntegerNode::SetValue(const char *value) {
+    mValue = static_cast<int32_t>(std::strtol(value, nullptr, 10));
 }
 
-vlVoid CVMTIntegerNode::SetValue(const vlChar *cValue)
-{
-	this->iValue = atoi(cValue);
+void CVMTIntegerNode::SetValue(const int32_t value) {
+    mValue = value;
 }
 
-vlVoid CVMTIntegerNode::SetValue(vlInt iValue)
-{
-	this->iValue = iValue;
+int32_t CVMTIntegerNode::GetValue() const {
+    return mValue;
 }
 
-const vlInt CVMTIntegerNode::GetValue() const
-{
-	return this->iValue;
+VMTNodeType CVMTIntegerNode::GetType() const {
+    return NODE_TYPE_INTEGER;
 }
 
-VMTNodeType CVMTIntegerNode::GetType() const
-{
-	return NODE_TYPE_INTEGER;
-}
-
-CVMTNode *CVMTIntegerNode::Clone() const
-{
-	return new CVMTIntegerNode(*this);
+CVMTNode *CVMTIntegerNode::Clone() const {
+    return new CVMTIntegerNode(*this);
 }

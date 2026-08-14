@@ -12,26 +12,18 @@ set(VTFLIB_SOURCES
         VMTNode.cpp
         VMTSingleNode.cpp
         VMTStringNode.cpp
-        VMTValueNode.cpp
         VMTWrapper.cpp
         VTFDistanceAlpha.cpp
         VTFFile.cpp
         VTFLib.cpp
         VTFMathlib.cpp
         VTFWrapper.cpp
+        FileReader.cpp
+        FileWriter.cpp
 )
 
 if (WIN32)
-    list(APPEND VTFLIB_SOURCES
-            FileReader.cpp
-            FileWriter.cpp
-            Resource.rc
-    )
-else ()
-    list(APPEND VTFLIB_SOURCES
-            FileReader_linux.cpp
-            FileWriter_linux.cpp
-    )
+    list(APPEND VTFLIB_SOURCES Resource.rc)
 endif ()
 
 add_library(vtflib_obj OBJECT ${VTFLIB_SOURCES})

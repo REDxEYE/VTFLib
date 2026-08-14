@@ -15,789 +15,629 @@
 using namespace VTFLib;
 using namespace VTFLib::Nodes;
 
-CVMTFile::CVMTFile()
-{
-	this->Root = nullptr;
-	this->ParseErrorLine = 0;
+CVMTFile::CVMTFile() {
+    this->mRoot = nullptr;
+    this->mParseErrorLine = 0;
 }
 
-CVMTFile::CVMTFile(const CVMTFile &VMTFile)
-{
-	this->ParseErrorLine = VMTFile.ParseErrorLine;
+CVMTFile::CVMTFile(const CVMTFile &other) {
+    this->mParseErrorLine = other.mParseErrorLine;
 
-	if(VMTFile.Root == nullptr)
-	{
-		this->Root = nullptr;
-	}
-	else
-	{
-		this->Root = new CVMTGroupNode(*VMTFile.Root);
-	}
+    if (other.mRoot == nullptr) {
+        this->mRoot = nullptr;
+    } else {
+        this->mRoot = new CVMTGroupNode(*other.mRoot);
+    }
 }
 
-CVMTFile::~CVMTFile()
-{
-	delete this->Root;
+CVMTFile::~CVMTFile() {
+    delete this->mRoot;
 }
 
-vlBool CVMTFile::Create(const vlChar *cRoot)
-{
-	delete this->Root;
-	this->Root = new CVMTGroupNode(cRoot);
+bool CVMTFile::Create(const char *cRoot) {
+    delete this->mRoot;
+    this->mRoot = new CVMTGroupNode(cRoot);
 
-	return vlTrue;
+    return true;
 }
 
-vlVoid CVMTFile::Destroy()
-{
-	delete this->Root;
-	this->Root = nullptr;
+void CVMTFile::Destroy() {
+    delete this->mRoot;
+    this->mRoot = nullptr;
 }
 
-vlBool CVMTFile::IsLoaded() const
-{
-	return this->Root != nullptr;
+bool CVMTFile::IsLoaded() const {
+    return this->mRoot != nullptr;
 }
 
-vlBool CVMTFile::Load(const vlChar *cFileName, VTFLib::Diagnostics::CError& error)
-{
-	IO::Readers::CFileReader reader(cFileName);
-	return this->Load(&reader, error);
+bool CVMTFile::Load(const char *filePath, Diagnostics::CError &error) {
+    IO::Readers::CFileReader reader(filePath);
+    return this->Load(&reader, error);
 }
 
-vlBool CVMTFile::Load(const vlVoid *lpData, vlUInt uiBufferSize, VTFLib::Diagnostics::CError& error)
-{
-	IO::Readers::CMemoryReader reader(lpData, uiBufferSize);
-	return this->Load(&reader, error);
+bool CVMTFile::Load(const void *buffer, const ssize_t bufferSize, Diagnostics::CError &error) {
+    IO::Readers::CMemoryReader reader(buffer, bufferSize);
+    return this->Load(&reader, error);
 }
 
-vlBool CVMTFile::Load(vlVoid *pUserData, VTFLib::Diagnostics::CError& error)
-{
-	IO::Readers::CProcReader reader(pUserData);
-	return this->Load(&reader, error);
+bool CVMTFile::Load(void *userData, Diagnostics::CError &error) {
+    IO::Readers::CProcReader reader(userData);
+    return this->Load(&reader, error);
 }
 
-vlBool CVMTFile::Save(const vlChar *cFileName, VTFLib::Diagnostics::CError& error) const
-{
-	IO::Writers::CFileWriter writer(cFileName);
-	return this->Save(&writer, error);
+bool CVMTFile::Save(const char *filePath, Diagnostics::CError &error) const {
+    IO::Writers::CFileWriter writer(filePath);
+    return this->Save(&writer, error);
 }
 
-vlBool CVMTFile::Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize, VTFLib::Diagnostics::CError& error) const
-{
-	uiSize = 0;
+bool CVMTFile::Save(void *buffer, const ssize_t bufferSize, ssize_t &realSize, Diagnostics::CError &error) const {
+    realSize = 0;
 
-	IO::Writers::CMemoryWriter MemoryWriter = IO::Writers::CMemoryWriter(lpData, uiBufferSize);
+    auto writer = IO::Writers::CMemoryWriter(buffer, bufferSize);
 
-	vlBool bResult = this->Save(&MemoryWriter, error);
+    const bool res = this->Save(&writer, error);
 
-	uiSize = MemoryWriter.GetStreamSize(error);
+    realSize = writer.GetStreamSize(error);
 
-	return bResult;
+    return res;
 }
 
-vlBool CVMTFile::Save(vlVoid *pUserData, VTFLib::Diagnostics::CError& error) const
-{
-	IO::Writers::CProcWriter writer(pUserData);
-	return this->Save(&writer, error);
+bool CVMTFile::Save(void *userData, Diagnostics::CError &error) const {
+    IO::Writers::CProcWriter writer(userData);
+    return this->Save(&writer, error);
 }
 
-enum EToken
-{
-	TOKEN_EOF = 0,			// No more tokens to read.
-	TOKEN_NEWLINE,			// Token is a newline (\n).
-	TOKEN_WHITESPACE,		// Token is any whitespace other than a newline.
-	TOKEN_FORWARD_SLASH,	// Token is a forward slash (/).
-	TOKEN_QUOTE,			// Token is a quote (").
-	TOKEN_OPEN_BRACE,		// Token is an open brace ({).
-	TOKEN_CLOSE_BRACE,		// Token is a close brace (}).
-	TOKEN_CHAR,				// Token is a char (any char).  Use GetChar().
-	TOKEN_STRING,			// Token is a string.  Use GetString().
-	TOKEN_QUOTED_STRING,
-	TOKEN_SPECIAL			// Token is a specified special char.
+enum EToken {
+    TOKEN_EOF = 0, // No more tokens to read.
+    TOKEN_NEWLINE, // Token is a newline (\n).
+    TOKEN_WHITESPACE, // Token is any whitespace other than a newline.
+    TOKEN_FORWARD_SLASH, // Token is a forward slash (/).
+    TOKEN_QUOTE, // Token is a quote (").
+    TOKEN_OPEN_BRACE, // Token is an open brace ({).
+    TOKEN_CLOSE_BRACE, // Token is a close brace (}).
+    TOKEN_CHAR, // Token is a char (any char).  Use GetChar().
+    TOKEN_STRING, // Token is a string.  Use GetString().
+    TOKEN_QUOTED_STRING,
+    TOKEN_SPECIAL // Token is a specified special char.
 };
 
 // Stores token information.
-class CToken
-{
+class CToken {
+public:
+    // Create a normal token.  cChar was the tokenized char.
+    explicit CToken(const EToken token, const char chr = '\0') : mToken(token), mChar(chr), mString(nullptr) {
+        assert(eToken != TOKEN_CHAR && eToken != TOKEN_STRING && eToken != TOKEN_QUOTED_STRING);
+    }
+
+    // Create a char token.
+    explicit CToken(const char chr) : mToken(TOKEN_CHAR), mChar(chr), mString(nullptr) {
+    }
+
+    // Create a string token.
+    CToken(const char *strTok, const bool quoted) : mToken(quoted ? TOKEN_QUOTED_STRING : TOKEN_STRING), mChar('\0'),
+                                                    mString(nullptr) {
+        this->mString = new char[strlen(strTok) + 1];
+        strcpy(this->mString, strTok);
+    }
+
+    // Copy a token.
+    CToken(const CToken &other) {
+        this->mToken = other.mToken;
+        this->mChar = other.mChar;
+        this->mString = nullptr;
+
+        if (other.mString != nullptr) {
+            this->mString = new char[strlen(other.mString) + 1];
+            strcpy(this->mString, other.mString);
+        }
+    }
+
+    ~CToken() {
+        delete[] this->mString;
+    }
+
+    // Convert the current token to a special token.
+    // We need to do this because the tokenizer reads ahead and doen't
+    // know if the requested token will be special until after the fact.
+    void ToSpecial(const char *lpSpecial) {
+        if (this->mToken == TOKEN_EOF) {
+            return;
+        }
+
+        for (const auto *pSpecial = const_cast<char *>(lpSpecial); *pSpecial != '\0'; pSpecial++) {
+            if (this->mChar == *pSpecial) {
+                this->mToken = TOKEN_SPECIAL;
+                return;
+            }
+        }
+
+        this->mToken = TOKEN_CHAR;
+    }
+
+    // Get the token that was read.
+    [[nodiscard]] EToken GetToken() const {
+        return this->mToken;
+    }
+
+    // Get the char that was tokenized.  Only works if
+    // token is a TOKEN_CHAR or was tokenized by the byte
+    // tokenizer.
+    [[nodiscard]] char GetChar() const {
+        return this->mChar;
+    }
+
+    // Get the string that was tokenized.  Only works if
+    // token is a TOKEN_STRING.
+    [[nodiscard]] const char *GetString() const {
+        return this->mString;
+    }
+
 private:
-	EToken eToken;
-	vlChar cChar;
-	vlChar *lpString;
-
-public:
-	// Create a normal token.  cChar was the tokenized char.
-	CToken(EToken eToken, vlChar cChar = '\0') : eToken(eToken), cChar(cChar), lpString(nullptr)
-	{
-		assert(eToken != TOKEN_CHAR && eToken != TOKEN_STRING && eToken != TOKEN_QUOTED_STRING);
-	}
-
-	// Create a char token.
-	CToken(vlChar cChar) : eToken(TOKEN_CHAR), cChar(cChar), lpString(nullptr)
-	{
-
-	}
-
-	// Create a string token.
-	CToken(vlChar *lpString, vlBool bQuoted) : eToken(bQuoted ? TOKEN_QUOTED_STRING : TOKEN_STRING), cChar('\0'), lpString(nullptr)
-	{
-		this->lpString = new vlChar[strlen(lpString) + 1];
-		strcpy(this->lpString, lpString);
-	}
-
-	// Copy a token.
-	CToken(const CToken &Token)
-	{
-		this->eToken = Token.eToken;
-		this->cChar = Token.cChar;
-		this->lpString = nullptr;
-
-		if(Token.lpString != nullptr)
-		{
-			this->lpString = new vlChar[strlen(Token.lpString) + 1];
-			strcpy(this->lpString, Token.lpString);
-		}
-	}
-
-	~CToken()
-	{
-		delete []this->lpString;
-	}
-
-public:
-	// Convert the current token to a special token.
-	// We need to do this because the tokenizer reads ahead and doen't
-	// know if the requested token will be special until after the fact.
-	vlVoid ToSpecial(const vlChar *lpSpecial)
-	{
-		if(this->eToken == TOKEN_EOF)
-		{
-			return;
-		}
-
-		for(const auto *pSpecial = const_cast<vlChar *>(lpSpecial); *pSpecial != '\0'; pSpecial++)
-		{
-			if(this->cChar == *pSpecial)
-			{
-				this->eToken = TOKEN_SPECIAL;
-				return;
-			}
-		}
-
-		this->eToken = TOKEN_CHAR;
-	}
-
-	// Get the token that was read.
-	EToken GetToken() const
-	{
-		return this->eToken;
-	}
-
-	// Get the char that was tokenized.  Only works if
-	// token is a TOKEN_CHAR or was tokenized by the byte
-	// tokenizer.
-	const vlChar GetChar() const
-	{
-		return this->cChar;
-	}
-
-	// Get the string that was tokenized.  Only works if
-	// token is a TOKEN_STRING.
-	const vlChar *GetString() const
-	{
-		return this->lpString;
-	}
+    EToken mToken;
+    char mChar;
+    char *mString;
 };
 
 // Tokenizes single byte tokens.
-class CByteTokenizer
-{
-private:
-	vlUInt uiLine;
-	vlUInt uiCurrentTokenLine;
-	vlUInt uiNextTokenLine;
-	IO::Readers::IReader *Reader;
-
-private:
-	CToken *CurrentToken;
-	CToken *NextToken;
-
+class CByteTokenizer {
 public:
-	CByteTokenizer(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError& error) : uiLine(1), uiCurrentTokenLine(1), uiNextTokenLine(1), Reader(Reader), CurrentToken(nullptr), NextToken(nullptr)
-	{
-		this->GetNextToken(error);
-	}
+    CByteTokenizer(IO::Readers::IReader *Reader, Diagnostics::CError &error) : mLine(1), mCurrentTokenLine(1),
+                                                                               mNextTokenLine(1), mReader(Reader),
+                                                                               mCurrentToken(nullptr),
+                                                                               mNextToken(nullptr) {
+        this->GetNextToken(error);
+    }
 
-	~CByteTokenizer()
-	{
-		delete this->CurrentToken;
-		delete this->NextToken;
-	}
+    ~CByteTokenizer() {
+        delete this->mCurrentToken;
+        delete this->mNextToken;
+    }
+
+    // Get the current token and return the next one.
+    CToken *Next(Diagnostics::CError &error, const char *lpSpecial = nullptr) {
+        delete this->mCurrentToken;
+        this->mCurrentToken = this->mNextToken;
+        this->mNextToken = nullptr;
+        this->mCurrentTokenLine = this->mNextTokenLine;
+
+        if (lpSpecial && this->mCurrentToken) {
+            this->mCurrentToken->ToSpecial(lpSpecial);
+        }
+
+        this->GetNextToken(error);
+
+        return this->mCurrentToken;
+    }
+
+    // Get the curret token.
+    CToken *Peek() const {
+        return this->mNextToken;
+    }
+
+    // Get the line the current token starts on.
+    uint32_t GetLine() const {
+        return this->mCurrentTokenLine;
+    }
 
 private:
-	vlVoid GetNextToken(VTFLib::Diagnostics::CError& error, const vlChar *lpSpecial = nullptr)
-	{
-		vlChar cChar;
+    void GetNextToken(Diagnostics::CError &error) {
+        char curChr;
 
-		this->uiNextTokenLine = this->uiLine;
+        this->mNextTokenLine = this->mLine;
 
-		if(!Reader->Read(cChar, error))
-		{
-			this->NextToken = new CToken(TOKEN_EOF);
-			return;
-		}
+        if (!mReader->Read(curChr, error)) {
+            this->mNextToken = new CToken(TOKEN_EOF);
+            return;
+        }
 
-		// Keep track of the line number.
-		if(cChar == '\n')
-		{
-			this->uiLine++;
-		}
+        // Keep track of the line number.
+        if (curChr == '\n') {
+            this->mLine++;
+        }
 
-		// If a special char was specified, only return TOKEN_CHAR tokens
-		// unless the special char was found in which case return a
-		// TOKEN_SPECIAL.
-		if(lpSpecial)
-		{
-			for(vlChar *pSpecial = const_cast<vlChar *>(lpSpecial); *pSpecial != '\0'; pSpecial++)
-			{
-				if(cChar == *pSpecial)
-				{
-					this->NextToken = new CToken(TOKEN_SPECIAL, cChar);
-					return;
-				}
-			}
+        if (curChr == '\r' || curChr == '\n') {
+            this->mNextToken = new CToken(TOKEN_NEWLINE, curChr);
+        } else if (isspace(curChr)) {
+            this->mNextToken = new CToken(TOKEN_WHITESPACE, curChr);
+        } else if (curChr == '/') {
+            this->mNextToken = new CToken(TOKEN_FORWARD_SLASH, curChr);
+        } else if (curChr == '\"') {
+            this->mNextToken = new CToken(TOKEN_QUOTE, curChr);
+        } else if (curChr == '{') {
+            this->mNextToken = new CToken(TOKEN_OPEN_BRACE, curChr);
+        } else if (curChr == '}') {
+            this->mNextToken = new CToken(TOKEN_CLOSE_BRACE, curChr);
+        } else {
+            this->mNextToken = new CToken(curChr);
+        }
+    }
 
-			this->NextToken = new CToken(cChar);
-			return;
-		}
+    uint32_t mLine;
+    uint32_t mCurrentTokenLine;
+    uint32_t mNextTokenLine;
+    IO::Readers::IReader *mReader;
 
-		if(cChar == '\r' || cChar == '\n')
-		{
-			this->NextToken = new CToken(TOKEN_NEWLINE, cChar);
-		}
-		else if(isspace(cChar))
-		{
-			this->NextToken = new CToken(TOKEN_WHITESPACE, cChar);
-		}
-		else if(cChar == '/')
-		{
-			this->NextToken = new CToken(TOKEN_FORWARD_SLASH, cChar);
-		}
-		else if(cChar == '\"')
-		{
-			this->NextToken = new CToken(TOKEN_QUOTE, cChar);
-		}
-		else if(cChar == '{')
-		{
-			this->NextToken = new CToken(TOKEN_OPEN_BRACE, cChar);
-		}
-		else if(cChar == '}')
-		{
-			this->NextToken = new CToken(TOKEN_CLOSE_BRACE, cChar);
-		}
-		else
-		{
-			this->NextToken = new CToken(cChar);
-		}
-	}
-
-public:
-	// Get the current token and return the next one.
-	CToken *Next(VTFLib::Diagnostics::CError& error, const vlChar *lpSpecial = nullptr)
-	{
-		delete this->CurrentToken;
-		this->CurrentToken = this->NextToken;
-		this->NextToken = nullptr;
-		this->uiCurrentTokenLine = this->uiNextTokenLine;
-
-		if(lpSpecial && this->CurrentToken)
-		{
-			this->CurrentToken->ToSpecial(lpSpecial);
-		}
-
-		this->GetNextToken(error);
-
-		return this->CurrentToken;
-	}
-
-	// Get the curret token.
-	CToken *Peek()
-	{
-		return this->NextToken;
-	}
-
-	// Get the line the current token starts on.
-	vlUInt GetLine()
-	{
-		return this->uiCurrentTokenLine;
-	}
+    CToken *mCurrentToken;
+    CToken *mNextToken;
 };
 
 // Tokenizes multi byte tokens.
-class CTokenizer
-{
-private:
-	CByteTokenizer *ByteTokenizer;
-
-private:
-	CToken *CurrentToken;
-	CToken *NextToken;
-	CToken *PendingToken;
-
-	vlUInt uiCurrentTokenLine;
-	vlUInt uiNextTokenLine;
-
+class CTokenizer {
 public:
-	CTokenizer(CByteTokenizer *ByteTokenizer) : ByteTokenizer(ByteTokenizer), CurrentToken(nullptr), NextToken(nullptr), PendingToken(nullptr), uiCurrentTokenLine(1), uiNextTokenLine(1)
-	{
+    CTokenizer(CByteTokenizer *ByteTokenizer) : mByteTokenizer(ByteTokenizer), mCurrentToken(nullptr),
+                                                mNextToken(nullptr),
+                                                mPendingToken(nullptr), mCurrentTokenLine(1), mNextTokenLine(1) {
+    }
 
-	}
+    // This can throw, so it is kept out of the constructor
+    void Prime(Diagnostics::CError &error) {
+        this->GetNextToken(error);
+    }
 
-	// This can throw, so it is kept out of the constructor
-	vlVoid Prime(VTFLib::Diagnostics::CError& error)
-	{
-		this->GetNextToken(error);
-	}
+    ~CTokenizer() {
+        delete this->mCurrentToken;
+        delete this->mNextToken;
+        delete this->mPendingToken;
+    }
 
-	~CTokenizer()
-	{
-		delete this->CurrentToken;
-		delete this->NextToken;
-		delete this->PendingToken;
-	}
+    void GetNextToken(Diagnostics::CError &error) {
+        try {
+            this->GetNextTokenInternal(error);
+        } catch (char *cErrorMessage) {
+            // The bad token is the one we were reading ahead for
+            // so blame it line rather than the line of the last token handed to the parser
+            this->mCurrentTokenLine = this->mNextTokenLine;
+            throw;
+        }
+    }
 
-public:
-	vlVoid GetNextToken(VTFLib::Diagnostics::CError& error)
-	{
-		try
-		{
-			this->GetNextTokenInternal(error);
-		}
-		catch(char *cErrorMessage)
-		{
-			// The bad token is the one we were reading ahead for
-			// so blame it line rather than the line of the last token handed to the parser
-			this->uiCurrentTokenLine = this->uiNextTokenLine;
-			throw cErrorMessage;
-		}
-	}
+    CToken *Next(Diagnostics::CError &error) {
+        delete this->mCurrentToken;
+        this->mCurrentToken = this->mNextToken;
+        this->mNextToken = nullptr;
+        this->mCurrentTokenLine = this->mNextTokenLine;
+
+        this->GetNextToken(error);
+
+        return this->mCurrentToken;
+    }
+
+    [[nodiscard]] CToken *Peek() const {
+        return this->mNextToken;
+    }
+
+    [[nodiscard]] uint32_t GetLine() const {
+        return this->mCurrentTokenLine;
+    }
 
 private:
-	// Consume the rest of a comment
-	CToken *ConsumeComment(VTFLib::Diagnostics::CError& error)
-	{
-		CToken *Token;
+    // Consume the rest of a comment
+    CToken *ConsumeComment(Diagnostics::CError &error) const {
+        CToken *Token;
 
-		do
-		{
-			Token = this->ByteTokenizer->Next(error, "\n");
-		} while(Token->GetToken() == TOKEN_CHAR);
+        do {
+            Token = this->mByteTokenizer->Next(error, "\n");
+        } while (Token->GetToken() == TOKEN_CHAR);
 
-		return new CToken(Token->GetToken() == TOKEN_EOF ? TOKEN_EOF : TOKEN_NEWLINE);
-	}
+        return new CToken(Token->GetToken() == TOKEN_EOF ? TOKEN_EOF : TOKEN_NEWLINE);
+    }
 
-	// Read the rest of an unquoted string
-	CToken *ReadUnquotedString(vlChar *cBuffer, vlUInt uiIndex, VTFLib::Diagnostics::CError& error)
-	{
-		while(true)
-		{
-			CToken *Peek = this->ByteTokenizer->Peek();
+    // Read the rest of an unquoted string
+    CToken *ReadUnquotedString(char *cBuffer, uint32_t uiIndex, Diagnostics::CError &error) {
+        while (true) {
+            const CToken *peek = this->mByteTokenizer->Peek();
 
-			if(Peek->GetToken() == TOKEN_CHAR)
-			{
-				cBuffer[uiIndex++] = this->ByteTokenizer->Next(error)->GetChar();
-			}
-			else if(Peek->GetToken() == TOKEN_FORWARD_SLASH)
-			{
-				this->ByteTokenizer->Next(error);
+            if (peek->GetToken() == TOKEN_CHAR) {
+                cBuffer[uiIndex++] = this->mByteTokenizer->Next(error)->GetChar();
+            } else if (peek->GetToken() == TOKEN_FORWARD_SLASH) {
+                this->mByteTokenizer->Next(error);
 
-				if(this->ByteTokenizer->Peek()->GetToken() == TOKEN_FORWARD_SLASH)
-				{
-					// followed by a comment
-					this->ByteTokenizer->Next(error);
-					this->PendingToken = this->ConsumeComment(error);
-					break;
-				}
+                if (this->mByteTokenizer->Peek()->GetToken() == TOKEN_FORWARD_SLASH) {
+                    // followed by a comment
+                    this->mByteTokenizer->Next(error);
+                    this->mPendingToken = this->ConsumeComment(error);
+                    break;
+                }
 
-				cBuffer[uiIndex++] = '/';
-			}
-			else
-			{
-				break;
-			}
-		}
+                cBuffer[uiIndex++] = '/';
+            } else {
+                break;
+            }
+        }
 
-		cBuffer[uiIndex++] = '\0';
+        cBuffer[uiIndex++] = '\0';
 
-		assert(uiIndex <= 4096);
+        assert(uiIndex <= 4096);
 
-		return new CToken(cBuffer, vlFalse);
-	}
+        return new CToken(cBuffer, false);
+    }
 
-	vlVoid GetNextTokenInternal(VTFLib::Diagnostics::CError& error)
-	{
-		CToken *Token;
+    void GetNextTokenInternal(Diagnostics::CError &error) {
+        if (this->mPendingToken) {
+            this->mNextTokenLine = this->mByteTokenizer->GetLine();
+            this->mNextToken = this->mPendingToken;
+            this->mPendingToken = nullptr;
+            return;
+        }
 
-		if(this->PendingToken)
-		{
-			this->uiNextTokenLine = this->ByteTokenizer->GetLine();
-			this->NextToken = this->PendingToken;
-			this->PendingToken = nullptr;
-			return;
-		}
+        const CToken *Token = this->mByteTokenizer->Next(error);
 
-		Token = this->ByteTokenizer->Next(error);
+        // Consume all whitespace.
+        while (Token->GetToken() == TOKEN_WHITESPACE) {
+            Token = this->mByteTokenizer->Next(error);
+        }
 
-		// Consume all whitespace.
-		while(Token->GetToken() == TOKEN_WHITESPACE)
-		{
-			Token = this->ByteTokenizer->Next(error);
-		}
+        this->mNextTokenLine = this->mByteTokenizer->GetLine();
 
-		this->uiNextTokenLine = this->ByteTokenizer->GetLine();
+        uint32_t uiIndex = 0;
+        char cBuffer[4096];
 
-		vlUInt uiIndex = 0;
-		vlChar cBuffer[4096];
+        switch (Token->GetToken()) {
+            // Comment (these are removed for the parser)
+            // or an unquoted string starting with a slash.
+            case TOKEN_FORWARD_SLASH:
+                if (this->mByteTokenizer->Peek()->GetToken() != TOKEN_FORWARD_SLASH) {
+                    cBuffer[uiIndex++] = Token->GetChar();
 
-		switch(Token->GetToken())
-		{
-		// Comment (these are removed for the parser)
-		// or an unquoted string starting with a slash.
-		case TOKEN_FORWARD_SLASH:
-			if(this->ByteTokenizer->Peek()->GetToken() != TOKEN_FORWARD_SLASH)
-			{
-				cBuffer[uiIndex++] = Token->GetChar();
+                    this->mNextToken = this->ReadUnquotedString(cBuffer, uiIndex, error);
+                    break;
+                }
 
-				this->NextToken = this->ReadUnquotedString(cBuffer, uiIndex, error);
-				break;
-			}
+                this->mByteTokenizer->Next(error);
 
-			this->ByteTokenizer->Next(error);
+                this->mNextToken = this->ConsumeComment(error);
+                break;
+            // Quoted string.
+            case TOKEN_QUOTE:
+                while (true) {
+                    Token = this->mByteTokenizer->Next(error, "\"");
 
-			this->NextToken = this->ConsumeComment(error);
-			break;
-		// Quoted string.
-		case TOKEN_QUOTE:
-			while(true)
-			{
-				Token = this->ByteTokenizer->Next(error, "\"");
+                    if (Token->GetToken() != TOKEN_CHAR) {
+                        break;
+                    }
 
-				if(Token->GetToken() != TOKEN_CHAR)
-				{
-					break;
-				}
+                    if (Token->GetChar() == '\r' || Token->GetChar() == '\n') {
+                        throw "newline in string";
+                    }
 
-				if(Token->GetChar() == '\r' || Token->GetChar() == '\n')
-				{
-					throw "newline in string";
-				}
+                    cBuffer[uiIndex++] = Token->GetChar();
+                }
+                cBuffer[uiIndex++] = '\0';
 
-				cBuffer[uiIndex++] = Token->GetChar();
-			}
-			cBuffer[uiIndex++] = '\0';
+                if (Token->GetToken() != TOKEN_SPECIAL) {
+                    throw "expected closing quote";
+                } else {
+                    this->mNextToken = new CToken(cBuffer, true);
+                }
+                break;
+            // Unquoted string.
+            case TOKEN_CHAR:
+                cBuffer[uiIndex++] = Token->GetChar();
 
-			if(Token->GetToken() != TOKEN_SPECIAL)
-			{
-				throw "expected closing quote";
-			}
-			else
-			{
-				this->NextToken = new CToken(cBuffer, vlTrue);
-			}
-			break;
-		// Unquoted string.
-		case TOKEN_CHAR:
-			cBuffer[uiIndex++] = Token->GetChar();
+                this->mNextToken = this->ReadUnquotedString(cBuffer, uiIndex, error);
+                break;
+            // Let these byte tokens "pass through".
+            case TOKEN_EOF:
+            case TOKEN_NEWLINE:
+            case TOKEN_OPEN_BRACE:
+            case TOKEN_CLOSE_BRACE:
+                this->mNextToken = new CToken(*Token);
+                break;
+            // The parser doesn't care about anything else.
+            default:
+                throw "unexpected token";
+                break;
+        }
+    }
 
-			this->NextToken = this->ReadUnquotedString(cBuffer, uiIndex, error);
-			break;
-		// Let these byte tokens "pass through".
-		case TOKEN_EOF:
-		case TOKEN_NEWLINE:
-		case TOKEN_OPEN_BRACE:
-		case TOKEN_CLOSE_BRACE:
-			this->NextToken = new CToken(*Token);
-			break;
-		// The parser doesn't care about anything else.
-		default:
-			throw "unexpected token";
-			break;
-		}
-	}
+    CByteTokenizer *mByteTokenizer;
+    CToken *mCurrentToken;
+    CToken *mNextToken;
+    CToken *mPendingToken;
 
-public:
-	CToken *Next(VTFLib::Diagnostics::CError& error)
-	{
-		delete this->CurrentToken;
-		this->CurrentToken = this->NextToken;
-		this->NextToken = nullptr;
-		this->uiCurrentTokenLine = this->uiNextTokenLine;
-
-		this->GetNextToken(error);
-
-		return this->CurrentToken;
-	}
-
-	CToken *Peek()
-	{
-		return this->NextToken;
-	}
-
-	vlUInt GetLine()
-	{
-		return this->uiCurrentTokenLine;
-	}
+    uint32_t mCurrentTokenLine;
+    uint32_t mNextTokenLine;
 };
 
 // Uses multi byte tokenizer to process the file.
-class CParser
-{
-private:
-	CTokenizer *Tokenizer;
-
-	// Line to blame for the last error (0 blames the token instead)
-	vlUInt uiErrorLine;
-
+class CParser {
 public:
-	CParser(CTokenizer *Tokenizer) : Tokenizer(Tokenizer), uiErrorLine(0)
-	{
+    CParser(CTokenizer *Tokenizer) : mTokenizer(Tokenizer), mErrorLine(0) {
+    }
 
-	}
+    [[nodiscard]] uint32_t GetErrorLine() const {
+        return this->mErrorLine;
+    }
 
-public:
-	vlUInt GetErrorLine() const
-	{
-		return this->uiErrorLine;
-	}
+    CVMTGroupNode *Parse(Diagnostics::CError &error) {
+        CVMTGroupNode *Group = nullptr;
 
-	CVMTGroupNode *Parse(VTFLib::Diagnostics::CError& error)
-	{
-		CToken *Token;
-		CVMTGroupNode *Group = nullptr;
+        // Consume all newlines.
+        const CToken *token = this->mTokenizer->Next(error);
 
-		// Consume all newlines.
-		Token = this->Tokenizer->Next(error);
-		while(Token->GetToken() == TOKEN_NEWLINE)
-		{
-			Token = this->Tokenizer->Next(error);
-		}
+        if (token==nullptr) {
+            VTFError_Set(error, "Unexpected end of file");
+            return nullptr;
+        }
 
-		if(Token->GetToken() == TOKEN_STRING || Token->GetToken() == TOKEN_QUOTED_STRING)
-		{
-			Group = new CVMTGroupNode(Token->GetString());
-		}
-		else
-		{
-			throw "expected shader name";
-		}
+        while (token->GetToken() == TOKEN_NEWLINE) {
+            token = this->mTokenizer->Next(error);
+        }
 
-		// We *may* have a group, parse it.
-		this->Parse(Group, error);
+        if (token->GetToken() == TOKEN_STRING || token->GetToken() == TOKEN_QUOTED_STRING) {
+            Group = new CVMTGroupNode(token->GetString());
+        } else {
+            throw "expected shader name";
+        }
 
-		if(uiVMTParseMode == PARSE_MODE_LOOSE)
-		{
-			while(vlTrue)
-			{
-				// Consume all newlines.
-				while(this->Tokenizer->Peek()->GetToken() == TOKEN_NEWLINE)
-				{
-					Token = this->Tokenizer->Next(error);
-				}
+        // We *may* have a group, parse it.
+        this->Parse(Group, error);
 
-				CToken *Peek = this->Tokenizer->Peek();
+        if (uiVMTParseMode == PARSE_MODE_LOOSE) {
+            while (true) {
+                // Consume all newlines.
+                while (this->mTokenizer->Peek()->GetToken() == TOKEN_NEWLINE) {
+                    token = this->mTokenizer->Next(error);
+                }
 
-				if(Peek->GetToken() == TOKEN_EOF)
-				{
-					break;
-				}
-				else if(Peek->GetToken() == TOKEN_OPEN_BRACE)
-				{
-					CVMTGroupNode *NextGroup = nullptr;
-					try
-					{
-						NextGroup = new CVMTGroupNode("");
-						this->Parse(NextGroup, error);
-					}
-					catch(char *cErrorMessage)
-					{
-						delete NextGroup;
-						throw cErrorMessage;
-					}
-					for(vlUInt i = 0; i < NextGroup->GetNodeCount(); i++)
-					{
-						Group->AddNode(NextGroup->GetNode(i)->Clone());
-					}
-					delete NextGroup;
-				}
-				else
-				{
-					throw "expected end of file";
-				}
-			}
-		}
-		else
-		{
-			// Consume all newlines.
-			Token = this->Tokenizer->Next(error);
-			while(Token->GetToken() == TOKEN_NEWLINE)
-			{
-				Token = this->Tokenizer->Next(error);
-			}
+                CToken *Peek = this->mTokenizer->Peek();
 
-			if(Token->GetToken() != TOKEN_EOF)
-			{
-				throw "expected end of file";
-			}
-		}
+                if (Peek->GetToken() == TOKEN_EOF) {
+                    break;
+                } else if (Peek->GetToken() == TOKEN_OPEN_BRACE) {
+                    CVMTGroupNode *NextGroup = nullptr;
+                    try {
+                        NextGroup = new CVMTGroupNode("");
+                        this->Parse(NextGroup, error);
+                    } catch (char *cErrorMessage) {
+                        delete NextGroup;
+                        throw;
+                    }
+                    for (uint32_t i = 0; i < NextGroup->GetNodeCount(); i++) {
+                        Group->AddNode(NextGroup->GetNode(i)->Clone());
+                    }
+                    delete NextGroup;
+                } else {
+                    throw "expected end of file";
+                }
+            }
+        } else {
+            // Consume all newlines.
+            token = this->mTokenizer->Next(error);
+            while (token->GetToken() == TOKEN_NEWLINE) {
+                token = this->mTokenizer->Next(error);
+            }
 
-		return Group;
-	}
+            if (token->GetToken() != TOKEN_EOF) {
+                throw "expected end of file";
+            }
+        }
+
+        return Group;
+    }
 
 private:
-	// Prase a group starting at the first brace and ending at the last.
-	vlVoid Parse(CVMTGroupNode *Group, VTFLib::Diagnostics::CError& error)
-	{
-		CToken *Token;
+    // Prase a group starting at the first brace and ending at the last.
+    void Parse(CVMTGroupNode *group, Diagnostics::CError &error) {
+        // Consume all newlines.
+        const CToken *token = this->mTokenizer->Next(error);
 
-		// Consume all newlines.
-		Token = this->Tokenizer->Next(error);
-		while(Token->GetToken() == TOKEN_NEWLINE)
-		{
-			Token = this->Tokenizer->Next(error);
-		}
+        if (token == nullptr) {
+            VTFError_Set(error, "Unexpected end of file");
+            return;
+        }
 
-		// The first token better be an open brace.
-		if(Token->GetToken() != TOKEN_OPEN_BRACE)
-		{
-			throw "expected open brace";
-		}
+        while (token->GetToken() == TOKEN_NEWLINE) {
+            token = this->mTokenizer->Next(error);
+        }
 
-		const vlUInt uiOpenBraceLine = this->Tokenizer->GetLine();
+        // The first token better be an open brace.
+        if (token->GetToken() != TOKEN_OPEN_BRACE) {
+            throw "expected open brace";
+        }
 
-		// Parse remaining tokens.
-		while(true)
-		{
-			// Consume all newlines.
-			Token = this->Tokenizer->Next(error);
-			while(Token->GetToken() == TOKEN_NEWLINE)
-			{
-				Token = this->Tokenizer->Next(error);
-			}
+        const uint32_t openBraceLine = this->mTokenizer->GetLine();
 
-			// If we have an end brace, we found the end of the group.
-			if(Token->GetToken() == TOKEN_CLOSE_BRACE)
-			{
-				return;
-			}
+        // Parse remaining tokens.
+        while (true) {
+            // Consume all newlines.
+            token = this->mTokenizer->Next(error);
+            while (token->GetToken() == TOKEN_NEWLINE) {
+                token = this->mTokenizer->Next(error);
+            }
 
-			// Running out of tokens means this group was never closed.
-			// Blame the open brace, not the end of the file.
-			if(Token->GetToken() == TOKEN_EOF)
-			{
-				this->uiErrorLine = uiOpenBraceLine;
-				throw "group is missing a close brace";
-			}
+            // If we have an end brace, we found the end of the group.
+            if (token->GetToken() == TOKEN_CLOSE_BRACE) {
+                return;
+            }
 
-			// If we have a string we could have a pair or nested group.
-			if(Token->GetToken() == TOKEN_STRING || Token->GetToken() == TOKEN_QUOTED_STRING)
-			{
-				CToken *Peek = this->Tokenizer->Peek();
-				if(Peek->GetToken() == TOKEN_STRING || Peek->GetToken() == TOKEN_QUOTED_STRING)
-				{
-					// We have a pair.
+            // Running out of tokens means this group was never closed.
+            // Blame the open brace, not the end of the file.
+            if (token->GetToken() == TOKEN_EOF) {
+                this->mErrorLine = openBraceLine;
+                throw "group is missing a close brace";
+            }
 
-					if (Peek->GetToken() == TOKEN_QUOTED_STRING)
-					{
-						Group->AddStringNode(Token->GetString(), Peek->GetString());
+            // If we have a string we could have a pair or nested group.
+            if (token->GetToken() == TOKEN_STRING || token->GetToken() == TOKEN_QUOTED_STRING) {
+                const CToken *peek = this->mTokenizer->Peek();
+                if (peek->GetToken() == TOKEN_STRING || peek->GetToken() == TOKEN_QUOTED_STRING) {
+                    // We have a pair.
 
-						Token = this->Tokenizer->Next(error);
-					}
-					else
-					{
-						vlChar *cName = new vlChar[strlen(Token->GetString()) + 1];
-						strcpy(cName, Token->GetString());
+                    if (peek->GetToken() == TOKEN_QUOTED_STRING) {
+                        group->AddStringNode(token->GetString(), peek->GetString());
 
-						// Some materials contain properties such as '"$envmaptint" .1 .1 .1', we need to read
-						// the .1's as strings and concat them (way to be consistent Valve).
-						vlChar cBuffer[4096] = "";
-						while(this->Tokenizer->Peek()->GetToken() == TOKEN_STRING)
-						{
-							Token = this->Tokenizer->Next(error);
+                        token = this->mTokenizer->Next(error);
+                    } else {
+                        auto name = new char[strlen(token->GetString()) + 1];
+                        strcpy(name, token->GetString());
 
-							if(*cBuffer)
-							{
-								strcat(cBuffer, " ");
-							}
-							strcat(cBuffer, Token->GetString());
-						}
+                        // Some materials contain properties such as '"$envmaptint" .1 .1 .1', we need to read
+                        // the .1's as strings and concat them (way to be consistent Valve).
+                        char cBuffer[4096] = "";
+                        while (this->mTokenizer->Peek()->GetToken() == TOKEN_STRING) {
+                            token = this->mTokenizer->Next(error);
 
-						// match engine behavior
-						if(strpbrk(cBuffer, "[]") != nullptr)
-						{
-							delete []cName;
-							throw "vector and matrix values must be quoted";
-						}
+                            if (*cBuffer) {
+                                strcat(cBuffer, " ");
+                            }
+                            strcat(cBuffer, token->GetString());
+                        }
 
-						vlInt iTest;
-						vlSingle sTest;
-						vlChar cTest[4096];
+                        // match engine behavior
+                        if (strpbrk(cBuffer, "[]") != nullptr) {
+                            delete[] name;
+                            throw "vector and matrix values must be quoted";
+                        }
 
-						if(sscanf(cBuffer, "%d%s", &iTest, cTest) == 1)
-						{
-							// We can interpet the string as an integer, assume it is one.
-							Group->AddIntegerNode(cName, iTest);
-						}
-						else if(sscanf(cBuffer, "%f%s", &sTest, cTest) == 1)
-						{
-							// We can interpet the string as an single, assume it is one.
-							Group->AddSingleNode(cName, sTest);
-						}
-						else
-						{
-							// The string must be a string...
-							Group->AddStringNode(cName, cBuffer);
-						}
+                        int32_t intTest;
+                        float floatTest;
+                        char stringTest[4096];
 
-						delete []cName;
-					}
+                        if (sscanf(cBuffer, "%d%s", &intTest, stringTest) == 1) {
+                            // We can interpet the string as an integer, assume it is one.
+                            group->AddIntegerNode(name, intTest);
+                        } else if (sscanf(cBuffer, "%f%s", &floatTest, stringTest) == 1) {
+                            // We can interpet the string as an single, assume it is one.
+                            group->AddSingleNode(name, floatTest);
+                        } else {
+                            // The string must be a string...
+                            group->AddStringNode(name, cBuffer);
+                        }
 
-					vlBool bNeedNewline = Token->GetToken() != TOKEN_QUOTED_STRING;
-					if(bNeedNewline)
-					{
-						EToken Next = this->Tokenizer->Peek()->GetToken();
-						if(Next == TOKEN_NEWLINE)
-						{
-							this->Tokenizer->Next(error);
-						}
-						else if(Next != TOKEN_CLOSE_BRACE && Next != TOKEN_EOF)
-						{
-							throw "expected newline";
-						}
-					}
-				}
-				else if(Peek->GetToken() == TOKEN_NEWLINE || Peek->GetToken() == TOKEN_OPEN_BRACE)
-				{
-					// match engine behavior
-					const vlChar cFirst = *Token->GetString();
-					if(Peek->GetToken() == TOKEN_OPEN_BRACE && (cFirst == '$' || cFirst == '%'))
-					{
-						throw "vector and matrix values must be quoted";
-					}
+                        delete[] name;
+                    }
 
-					// We have a nested group, parse it.
-					this->Parse(Group->AddGroupNode(Token->GetString()), error);
-				}
-				else
-				{
-					throw "expected open brace or attribute value";
-				}
-			}
-			else
-			{
-				throw "expected close brace or group name or attribute name";
-			}
-		}
-	}
+                    bool bNeedNewline = token->GetToken() != TOKEN_QUOTED_STRING;
+                    if (bNeedNewline) {
+                        EToken Next = this->mTokenizer->Peek()->GetToken();
+                        if (Next == TOKEN_NEWLINE) {
+                            this->mTokenizer->Next(error);
+                        } else if (Next != TOKEN_CLOSE_BRACE && Next != TOKEN_EOF) {
+                            throw "expected newline";
+                        }
+                    }
+                } else if (peek->GetToken() == TOKEN_NEWLINE || peek->GetToken() == TOKEN_OPEN_BRACE) {
+                    // match engine behavior
+                    const char cFirst = *token->GetString();
+                    if (peek->GetToken() == TOKEN_OPEN_BRACE && (cFirst == '$' || cFirst == '%')) {
+                        throw "vector and matrix values must be quoted";
+                    }
+
+                    // We have a nested group, parse it.
+                    this->Parse(group->AddGroupNode(token->GetString()), error);
+                } else {
+                    throw "expected open brace or attribute value";
+                }
+            } else {
+                throw "expected close brace or group name or attribute name";
+            }
+        }
+    }
+
+    CTokenizer *mTokenizer;
+    // Line to blame for the last error (0 blames the token instead)
+    uint32_t mErrorLine;
 };
 
 //
@@ -805,53 +645,48 @@ private:
 // Parses a .vmt file.  Note, the parser is very loose.  .vmt files vary
 // so much in the official resources that it is hard to know what is legal.
 //
-vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError& error)
-{
-	delete this->Root;
-	this->Root = nullptr;
+bool CVMTFile::Load(IO::Readers::IReader *reader, Diagnostics::CError &error) {
+    delete this->mRoot;
+    this->mRoot = nullptr;
 
-	if(!Reader->Open(error))
-		return vlFalse;
+    if (!reader->Open(error))
+        return false;
 
-	CByteTokenizer ByteTokenizer = CByteTokenizer(Reader, error);
-	CTokenizer Tokenizer = CTokenizer(&ByteTokenizer);
-	CParser Parser = CParser(&Tokenizer);
+    auto byteTokenizer = CByteTokenizer(reader, error);
+    auto tokenizer = CTokenizer(&byteTokenizer);
+    auto parser = CParser(&tokenizer);
 
-	this->ParseErrorLine = 0;
+    this->mParseErrorLine = 0;
 
-	try
-	{
-		Tokenizer.Prime(error);
-		this->Root = Parser.Parse(error);
-	}
-	catch(char *cErrorMessage)
-	{
-		vlUInt uiLine = Parser.GetErrorLine();
-		if(uiLine == 0)
-		{
-			uiLine = Tokenizer.GetLine();
-		}
+    try {
+        tokenizer.Prime(error);
+        this->mRoot = parser.Parse(error);
+    } catch (char *errorMessage) {
+        uint32_t line = parser.GetErrorLine();
+        if (line == 0) {
+            line = tokenizer.GetLine();
+        }
 
-		this->ParseErrorLine = uiLine;
-		error.SetFormatted("Error parsing material on line %u (%s).", uiLine, cErrorMessage);
-	}
+        this->mParseErrorLine = line;
+        VTFError_Set_Formatted(error, "Error parsing material on line %u (%s).", line, errorMessage);
+    }
 
-	Reader->Close();
+    reader->Close();
 
-	return this->Root != nullptr;
+    return this->mRoot != nullptr;
 }
 
-/*vlBool CVMTFile::Load(IO::Readers::IReader *Reader)
+/*bool CVMTFile::Load(IO::Readers::IReader *Reader)
 {
 	delete this->Root;
 	this->Root = 0;
 
 	if(!Reader->Open())
-		return vlFalse;
+		return false;
 
 	try
 	{
-		CVMTNode *Node = this->Load(Reader, vlFalse);
+		CVMTNode *Node = this->Load(Reader, false);
 
 		// Make sure we loaded a group.
 		if(Node->GetType() == NODE_TYPE_GROUP)
@@ -884,14 +719,14 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 // null (if there is nothing to parse).  Throws an exception if
 // there is an error parsing the file.
 //
-/*CVMTNode *CVMTFile::Load(IO::Readers::IReader *Reader, vlBool bInGroup)
+/*CVMTNode *CVMTFile::Load(IO::Readers::IReader *Reader, bool bInGroup)
 {
-	vlChar cChar;
+	char cChar;
 
-	vlUInt uiNameLength, uiValueLength;
-	vlChar cNameBuffer[1024], cValueBuffer[1024];
+	uint32_t uiNameLength, uiValueLength;
+	char cNameBuffer[1024], cValueBuffer[1024];
 
-	while(vlTrue)
+	while(true)
 	{
 		if(!Reader->Read(cChar))
 		{
@@ -908,7 +743,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 		{
 			// Read the string.
 			uiNameLength = 0;
-			while(vlTrue)
+			while(true)
 			{
 				if(!Reader->Read(cChar))
 					throw 0;
@@ -921,7 +756,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 			cNameBuffer[uiNameLength++] = '\0';
 
 			// Find out if we have a group or value.
-			while(vlTrue)
+			while(true)
 			{
 				if(!Reader->Read(cChar))
 					throw 0;
@@ -935,9 +770,9 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 
 					try	// Cleanup resources reverse-recursively on error.
 					{
-						while(vlTrue)
+						while(true)
 						{
-							CVMTNode *Node = this->Load(Reader, vlTrue);
+							CVMTNode *Node = this->Load(Reader, true);
 
 							if(Node == 0)
 								break;
@@ -958,7 +793,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 				{
 					// Read the value (string).
 					uiValueLength = 0;
-					while(vlTrue)
+					while(true)
 					{
 						if(!Reader->Read(cChar))
 							throw 0;
@@ -974,12 +809,12 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 				}
 				else if((cChar >= '0' && cChar <= '9') || cChar == '.' || cChar == '+' || cChar == '-')	// We have a numeric value.
 				{
-					vlBool bInteger = cChar != '.';
+					bool bInteger = cChar != '.';
 
 					// Read the value (numeric).
 					uiValueLength = 0;
 					cValueBuffer[uiValueLength++] = cChar;
-					while(vlTrue)
+					while(true)
 					{
 						if(!Reader->Read(cChar))
 							throw 0;
@@ -990,7 +825,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 						if(cChar == '.')
 						{
 							if(bInteger)
-								bInteger = vlFalse;
+								bInteger = false;
 							else
 								throw 0;
 						}
@@ -1019,7 +854,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 					if(cChar != '/')
 						throw 0;
 
-					while(vlTrue)
+					while(true)
 					{
 						if(!Reader->Read(cChar))
 							throw 0;
@@ -1042,7 +877,7 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 			if(cChar != '/')
 				throw 0;
 
-			while(vlTrue)
+			while(true)
 			{
 				if(!Reader->Read(cChar))
 					throw 0;
@@ -1062,97 +897,83 @@ vlBool CVMTFile::Load(IO::Readers::IReader *Reader, VTFLib::Diagnostics::CError&
 	}
 }*/
 
-vlBool CVMTFile::Save(IO::Writers::IWriter *Writer, VTFLib::Diagnostics::CError& error) const
-{
-	if(this->Root == nullptr)
-	{
-		error.Set("No material loaded.");
-		return vlFalse;
-	}
+bool CVMTFile::Save(IO::Writers::IWriter *writer, Diagnostics::CError &error) const {
+    if (this->mRoot == nullptr) {
+        VTFError_Set(error, "No material loaded.");
+        return false;
+    }
 
-	if(!Writer->Open(error))
-		return vlFalse;
+    if (!writer->Open(error))
+        return false;
 
-	this->Save(Writer, this->Root, error);
+    this->Save(writer, this->mRoot, error);
 
-	Writer->Close();
+    writer->Close();
 
-	return vlTrue;
+    return true;
 }
 
 //
 // Indent()
 // Indents a line uiLevel tab sapces.
 //
-vlVoid CVMTFile::Indent(IO::Writers::IWriter *Writer, vlUInt uiLevel, VTFLib::Diagnostics::CError& error) const
-{
-	for(vlUInt i = 0; i < uiLevel; i++)
-	{
-		Writer->Write('\t', error);
-	}
+void CVMTFile::Indent(IO::Writers::IWriter *writer, const uint32_t level, Diagnostics::CError &error) const {
+    for (uint32_t i = 0; i < level; i++) {
+        writer->Write('\t', error);
+    }
 }
 
 //
 // Save()
 // Saves a node to a file.
 //
-vlVoid CVMTFile::Save(IO::Writers::IWriter *Writer, CVMTNode *Node, VTFLib::Diagnostics::CError& error, vlUInt uiLevel) const
-{
-	vlChar cBuffer[2048];
+void CVMTFile::Save(IO::Writers::IWriter *writer, CVMTNode *node, Diagnostics::CError &error,
+                    const uint32_t level) const {
+    char cBuffer[2048];
 
-	if(Node->GetType() == NODE_TYPE_GROUP)
-	{
-		CVMTGroupNode *Group = static_cast<CVMTGroupNode *>(Node);
+    if (node->GetType() == NODE_TYPE_GROUP) {
+        CVMTGroupNode *Group = static_cast<CVMTGroupNode *>(node);
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "\"%s\"\r\n", Group->GetName());
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "\"%s\"\r\n", Group->GetName());
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "{\r\n");
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "{\r\n");
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
 
-		for(vlUInt i = 0; i < Group->GetNodeCount(); i++)
-		{
-			this->Save(Writer, Group->GetNode(i), error, uiLevel + 1);
-		}
+        for (uint32_t i = 0; i < Group->GetNodeCount(); i++) {
+            this->Save(writer, Group->GetNode(i), error, level + 1);
+        }
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "}\r\n");
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
-	}
-	else if(Node->GetType() == NODE_TYPE_STRING)
-	{
-		CVMTStringNode *String = static_cast<CVMTStringNode *>(Node);
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "}\r\n");
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
+    } else if (node->GetType() == NODE_TYPE_STRING) {
+        CVMTStringNode *String = static_cast<CVMTStringNode *>(node);
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "\"%s\" \"%s\"\r\n", String->GetName(), String->GetValue());
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
-	}
-	else if(Node->GetType() == NODE_TYPE_INTEGER)
-	{
-		CVMTIntegerNode *Integer = static_cast<CVMTIntegerNode *>(Node);
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "\"%s\" \"%s\"\r\n", String->GetName(), String->GetValue());
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
+    } else if (node->GetType() == NODE_TYPE_INTEGER) {
+        CVMTIntegerNode *Integer = static_cast<CVMTIntegerNode *>(node);
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "\"%s\" %d\r\n", Integer->GetName(), Integer->GetValue());
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
-	}
-	else if(Node->GetType() == NODE_TYPE_SINGLE)
-	{
-		CVMTSingleNode *Single = static_cast<CVMTSingleNode *>(Node);
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "\"%s\" %d\r\n", Integer->GetName(), Integer->GetValue());
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
+    } else if (node->GetType() == NODE_TYPE_SINGLE) {
+        CVMTSingleNode *Single = static_cast<CVMTSingleNode *>(node);
 
-		this->Indent(Writer, uiLevel, error);
-		sprintf(cBuffer, "\"%s\" %f\r\n", Single->GetName(), Single->GetValue());
-		Writer->Write(cBuffer, (vlUInt)strlen(cBuffer), error);
-	}
+        this->Indent(writer, level, error);
+        sprintf(cBuffer, "\"%s\" %f\r\n", Single->GetName(), Single->GetValue());
+        writer->Write(cBuffer, (uint32_t) strlen(cBuffer), error);
+    }
 }
 
-CVMTGroupNode *CVMTFile::GetRoot() const
-{
-	return this->Root;
+CVMTGroupNode *CVMTFile::GetRoot() const {
+    return this->mRoot;
 }
 
-vlUInt CVMTFile::GetParseErrorLine() const
-{
-	return this->ParseErrorLine;
+uint32_t CVMTFile::GetParseErrorLine() const {
+    return this->mParseErrorLine;
 }

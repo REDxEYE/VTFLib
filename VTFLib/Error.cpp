@@ -15,103 +15,101 @@ using namespace VTFLib::Diagnostics;
 
 CError::CError()
 {
-	this->cErrorMessage = nullptr;
+	this->mErrorMessage = nullptr;
 }
 
 CError::~CError()
 {
-	delete []this->cErrorMessage;
+	delete[] this->mErrorMessage;
 }
 
-vlVoid CError::Clear()
+void CError::Clear()
 {
-	delete []this->cErrorMessage;
-	this->cErrorMessage = nullptr;
+	delete[] this->mErrorMessage;
+	this->mErrorMessage = nullptr;
 }
 
-const vlChar *CError::Get() const
+const char *CError::Get() const
 {
-	return this->cErrorMessage != nullptr ? this->cErrorMessage : "";
+	return this->mErrorMessage != nullptr ? this->mErrorMessage : "";
 }
 
-vlVoid CError::SetFormatted(const vlChar *cFormat, ...)
+void CError::SetFormatted(const char *format, ...)
 {
-	vlChar cBuffer[2048];
+	char cBuffer[2048];
 
 	va_list ArgumentList;
-	va_start(ArgumentList, cFormat);
-	vsprintf(cBuffer, cFormat, ArgumentList);
+	va_start(ArgumentList, format);
+	vsprintf(cBuffer, format, ArgumentList);
 	va_end(ArgumentList);
 
 	this->Set(cBuffer, vlFalse);
 }
 
-vlVoid CError::Set(const vlChar *cErrorMessage, vlBool bSystemError)
+void CError::Set(const char *errorMessage, const bool systemError)
 {
-	vlChar cBuffer[2048];
+	char buffer[2048];
 
-	if(bSystemError)
+	if(systemError)
 	{
 #ifdef _WIN32
-		LPSTR lpMessage = NULL;
-		vlUInt uiLastError = GetLastError();
+		const char* message = NULL;
+		uint32_t lastError = GetLastError();
 
 		if(FormatMessageA(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
 			NULL,
-			uiLastError,
+			lastError,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			reinterpret_cast<LPSTR>(&lpMessage),
+			reinterpret_cast<LPSTR>(&message),
 			0,
 			NULL))
 		{
 			snprintf(
-				cBuffer,
-				sizeof(cBuffer),
+				buffer,
+				sizeof(buffer),
 				"%s\n\nSystem Error: 0x%.8x:\n%s",
-				cErrorMessage,
-				uiLastError,
-				lpMessage
+				errorMessage,
+				lastError,
+				message
 			);
 
-			LocalFree(lpMessage);
+			LocalFree(message);
 		}
 		else
 		{
 			snprintf(
-				cBuffer,
-				sizeof(cBuffer),
+				buffer,
+				sizeof(buffer),
 				"%s\n\nSystem Error: 0x%.8x.",
-				cErrorMessage,
-				uiLastError
+				errorMessage,
+				lastError
 			);
 		}
 #else
-		const int iError = errno;
+		const int errorId = errno;
 
 		snprintf(
-			cBuffer,
-			sizeof(cBuffer),
+			buffer,
+			sizeof(buffer),
 			"%s\n\nSystem Error: %d:\n%s",
-			cErrorMessage,
-			iError,
-			strerror(iError)
+			errorMessage,
+			errorId,
+			strerror(errorId)
 		);
 #endif
 	}
 	else
 	{
-		snprintf(cBuffer, sizeof(cBuffer), "%s", cErrorMessage);
+		snprintf(buffer, sizeof(buffer), "%s", errorMessage);
 	}
 
+	delete[] this->mErrorMessage;
 
-
-	delete[] this->cErrorMessage;
-
-	this->cErrorMessage = new vlChar[strlen(cBuffer) + 1];
-	strcpy(this->cErrorMessage, cBuffer);
+	this->mErrorMessage = new char[strlen(buffer) + 1];
+	strcpy(this->mErrorMessage, buffer);
 }
 
-vlBool CError::isSet() const {
-	return this->cErrorMessage != nullptr;
+bool CError::isSet() const {
+	return this->mErrorMessage != nullptr;
 }

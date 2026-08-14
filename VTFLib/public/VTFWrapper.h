@@ -9,10 +9,9 @@
  * version.
  */
 
-#ifndef VTFWRAPPER_H
-#define VTFWRAPPER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Error.h"
 
 //
@@ -20,75 +19,75 @@
 //
 
 VTFLIB_API vlBool vlImageIsBound(VTFLib::Diagnostics::CError& erro);
-VTFLIB_API vlBool vlBindImage(vlUInt uiImage, VTFLib::Diagnostics::CError& erro);
+VTFLIB_API vlBool vlBindImage(uint32_t uiImage, VTFLib::Diagnostics::CError& erro);
 
-VTFLIB_API vlBool vlCreateImage(vlUInt *uiImage, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlVoid vlDeleteImage(vlUInt uiImage);
+VTFLIB_API vlBool vlCreateImage(uint32_t *uiImage, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void vlDeleteImage(uint32_t uiImage);
 
 //
 // Library routines.  (Basically class wrappers.)
 //
 
-VTFLIB_API vlVoid vlImageCreateDefaultCreateStructure(SVTFCreateOptions *VTFCreateOptions);
+VTFLIB_API void vlImageCreateDefaultCreateStructure(SVTFCreateOptions *VTFCreateOptions);
 
-VTFLIB_API vlBool vlImageCreate(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt uiFaces, vlUInt uiSlices, VTFImageFormat ImageFormat, vlBool bThumbnail, vlBool bMipmaps, vlBool bNullImageData, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageCreateSingle(vlUInt uiWidth, vlUInt uiHeight, vlByte *lpImageDataRGBA8888, SVTFCreateOptions *VTFCreateOptions, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageCreateMultiple(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt uiFaces, vlUInt uiSlices, vlByte **lpImageDataRGBA8888, SVTFCreateOptions *VTFCreateOptions, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlVoid vlImageDestroy();
+VTFLIB_API vlBool vlImageCreate(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiFrames, uint32_t uiFaces, uint32_t uiSlices, VTFImageFormat ImageFormat, vlBool bThumbnail, vlBool bMipmaps, vlBool bNullImageData, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageCreateSingle(uint32_t uiWidth, uint32_t uiHeight, uint8_t *lpImageDataRGBA8888, SVTFCreateOptions *VTFCreateOptions, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageCreateMultiple(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiFrames, uint32_t uiFaces, uint32_t uiSlices, uint8_t **lpImageDataRGBA8888, SVTFCreateOptions *VTFCreateOptions, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void vlImageDestroy();
 
 VTFLIB_API vlBool vlImageIsLoaded(VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageLoad(const vlChar *cFileName, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageLoadLump(const vlVoid *lpData, vlUInt uiBufferSize, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageLoadProc(vlVoid *pUserData, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageLoad(const char *cFileName, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageLoadLump(const void *lpData, uint32_t uiBufferSize, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageLoadProc(void *pUserData, vlBool bHeaderOnly, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageSave(const vlChar *cFileName, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageSaveLump(vlVoid *lpData, vlUInt uiBufferSize, vlUInt *uiSize, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageSaveProc(vlVoid *pUserData, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageSave(const char *cFileName, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageSaveLump(void *lpData, uint32_t uiBufferSize, uint32_t *uiSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageSaveProc(void *pUserData, VTFLib::Diagnostics::CError& error);
 
 //
 // Image routines.
 //
 
-VTFLIB_API vlUInt vlImageGetHasImage();
+VTFLIB_API uint32_t vlImageGetHasImage();
 
-VTFLIB_API vlUInt vlImageGetMajorVersion();
-VTFLIB_API vlUInt vlImageGetMinorVersion();
-VTFLIB_API vlUInt vlImageGetSize(VTFLib::Diagnostics::CError& error);
+VTFLIB_API uint32_t vlImageGetMajorVersion();
+VTFLIB_API uint32_t vlImageGetMinorVersion();
+VTFLIB_API uint32_t vlImageGetSize(VTFLib::Diagnostics::CError& error);
 
 VTFLIB_API vlBool vlImageGetSupportsAuxCompression();
-VTFLIB_API vlShort vlImageGetAuxCompressionLevel();
-VTFLIB_API vlBool vlImageSetAuxCompressionLevel(vlShort sLevel, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlShort vlImageGetAuxCompressionMethod();
-VTFLIB_API vlBool vlImageSetAuxCompressionMethod(vlShort sMethod);
+VTFLIB_API int16_t vlImageGetAuxCompressionLevel();
+VTFLIB_API vlBool vlImageSetAuxCompressionLevel(int16_t sLevel, VTFLib::Diagnostics::CError& error);
+VTFLIB_API int16_t vlImageGetAuxCompressionMethod();
+VTFLIB_API vlBool vlImageSetAuxCompressionMethod(int16_t sMethod);
 
-VTFLIB_API vlUInt vlImageGetWidth();
-VTFLIB_API vlUInt vlImageGetHeight();
-VTFLIB_API vlUInt vlImageGetDepth();
+VTFLIB_API uint32_t vlImageGetWidth();
+VTFLIB_API uint32_t vlImageGetHeight();
+VTFLIB_API uint32_t vlImageGetDepth();
 
-VTFLIB_API vlUInt vlImageGetFrameCount();
-VTFLIB_API vlUInt vlImageGetFaceCount();
-VTFLIB_API vlUInt vlImageGetMipmapCount();
+VTFLIB_API uint32_t vlImageGetFrameCount();
+VTFLIB_API uint32_t vlImageGetFaceCount();
+VTFLIB_API uint32_t vlImageGetMipmapCount();
 
-VTFLIB_API vlUInt vlImageGetStartFrame();
-VTFLIB_API vlVoid vlImageSetStartFrame(vlUInt uiStartFrame);
+VTFLIB_API uint32_t vlImageGetStartFrame();
+VTFLIB_API void vlImageSetStartFrame(uint32_t uiStartFrame);
 
-VTFLIB_API vlUInt vlImageGetFlags();
-VTFLIB_API vlVoid vlImageSetFlags(vlUInt uiFlags);
+VTFLIB_API uint32_t vlImageGetFlags();
+VTFLIB_API void vlImageSetFlags(uint32_t uiFlags);
 
 VTFLIB_API vlBool vlImageGetFlag(VTFImageFlag ImageFlag);
-VTFLIB_API vlVoid vlImageSetFlag(VTFImageFlag ImageFlag, vlBool bState);
+VTFLIB_API void vlImageSetFlag(VTFImageFlag ImageFlag, vlBool bState);
 
-VTFLIB_API vlSingle vlImageGetBumpmapScale();
-VTFLIB_API vlVoid vlImageSetBumpmapScale(vlSingle sBumpmapScale);
+VTFLIB_API float vlImageGetBumpmapScale();
+VTFLIB_API void vlImageSetBumpmapScale(float sBumpmapScale);
 
-VTFLIB_API vlVoid vlImageGetReflectivity(vlSingle *sX, vlSingle *sY, vlSingle *sZ);
-VTFLIB_API vlVoid vlImageSetReflectivity(vlSingle sX, vlSingle sY, vlSingle sZ);
+VTFLIB_API void vlImageGetReflectivity(float *sX, float *sY, float *sZ);
+VTFLIB_API void vlImageSetReflectivity(float sX, float sY, float sZ);
 
 VTFLIB_API VTFImageFormat vlImageGetFormat();
 
-VTFLIB_API vlByte *vlImageGetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel);
-VTFLIB_API vlVoid vlImageSetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, vlUInt uiMipmapLevel, vlByte *lpData);
+VTFLIB_API uint8_t *vlImageGetData(uint32_t uiFrame, uint32_t uiFace, uint32_t uiSlice, uint32_t uiMipmapLevel);
+VTFLIB_API void vlImageSetData(uint32_t uiFrame, uint32_t uiFace, uint32_t uiSlice, uint32_t uiMipmapLevel, uint8_t *lpData);
 
 //
 // Thumbnail routines.
@@ -96,13 +95,13 @@ VTFLIB_API vlVoid vlImageSetData(vlUInt uiFrame, vlUInt uiFace, vlUInt uiSlice, 
 
 VTFLIB_API vlBool vlImageGetHasThumbnail();
 
-VTFLIB_API vlUInt vlImageGetThumbnailWidth();
-VTFLIB_API vlUInt vlImageGetThumbnailHeight();
+VTFLIB_API uint32_t vlImageGetThumbnailWidth();
+VTFLIB_API uint32_t vlImageGetThumbnailHeight();
 
 VTFLIB_API VTFImageFormat vlImageGetThumbnailFormat();
 
-VTFLIB_API vlByte *vlImageGetThumbnailData();
-VTFLIB_API vlVoid vlImageSetThumbnailData(vlByte *lpData);
+VTFLIB_API uint8_t *vlImageGetThumbnailData();
+VTFLIB_API void vlImageSetThumbnailData(uint8_t *lpData);
 
 //
 // Resource routines.
@@ -110,23 +109,23 @@ VTFLIB_API vlVoid vlImageSetThumbnailData(vlByte *lpData);
 
 VTFLIB_API vlBool vlImageGetSupportsResources();
 
-VTFLIB_API vlUInt vlImageGetResourceCount();
-VTFLIB_API vlUInt vlImageGetResourceType(vlUInt uiIndex);
-VTFLIB_API vlBool vlImageGetHasResource(vlUInt uiType);
+VTFLIB_API uint32_t vlImageGetResourceCount();
+VTFLIB_API uint32_t vlImageGetResourceType(uint32_t uiIndex);
+VTFLIB_API vlBool vlImageGetHasResource(uint32_t uiType);
 
-VTFLIB_API vlVoid *vlImageGetResourceData(vlUInt uiType, vlUInt *uiSize, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlVoid *vlImageSetResourceData(vlUInt uiType, vlUInt uiSize, vlVoid *lpData, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void *vlImageGetResourceData(uint32_t uiType, uint32_t *uiSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void *vlImageSetResourceData(uint32_t uiType, uint32_t uiSize, void *lpData, VTFLib::Diagnostics::CError& error);
 
 //
 // Helper routines.
 //
 
-VTFLIB_API vlBool vlImageGenerateMipmaps(vlUInt uiFace, vlUInt uiFrame, VTFMipmapFilter MipmapFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageGenerateMipmaps(uint32_t uiFace, uint32_t uiFrame, VTFMipmapFilter MipmapFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 VTFLIB_API vlBool vlImageGenerateAllMipmaps(VTFMipmapFilter MipmapFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 
 VTFLIB_API vlBool vlImageGenerateThumbnail(vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageGenerateNormalMap(vlUInt uiFrame, VTFKernelFilter KernelFilter, VTFHeightConversionMethod HeightConversionMethod, VTFNormalAlphaResult NormalAlphaResult, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageGenerateNormalMap(uint32_t uiFrame, VTFKernelFilter KernelFilter, VTFHeightConversionMethod HeightConversionMethod, VTFNormalAlphaResult NormalAlphaResult, VTFLib::Diagnostics::CError& error);
 VTFLIB_API vlBool vlImageGenerateAllNormalMaps(VTFKernelFilter KernelFilter, VTFHeightConversionMethod HeightConversionMethod, VTFNormalAlphaResult NormalAlphaResult, VTFLib::Diagnostics::CError& error);
 
 VTFLIB_API vlBool vlImageGenerateSphereMap(VTFLib::Diagnostics::CError& error);
@@ -140,25 +139,24 @@ VTFLIB_API vlBool vlImageComputeReflectivity(VTFLib::Diagnostics::CError& error)
 VTFLIB_API SVTFImageFormatInfo const *vlImageGetImageFormatInfo(VTFImageFormat ImageFormat);
 VTFLIB_API vlBool vlImageGetImageFormatInfoEx(VTFImageFormat ImageFormat, SVTFImageFormatInfo *VTFImageFormatInfo);
 
-VTFLIB_API vlUInt vlImageComputeImageSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDepth, vlUInt uiMipmaps, VTFImageFormat ImageFormat);
+VTFLIB_API uint32_t vlImageComputeImageSize(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiDepth, uint32_t uiMipmaps, VTFImageFormat ImageFormat);
 
-VTFLIB_API vlUInt vlImageComputeMipmapCount(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDepth);
-VTFLIB_API vlVoid vlImageComputeMipmapDimensions(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDepth, vlUInt uiMipmapLevel, vlUInt *uiMipmapWidth, vlUInt *uiMipmapHeight, vlUInt *uiMipmapDepth);
-VTFLIB_API vlUInt vlImageComputeMipmapSize(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiDepth, vlUInt uiMipmapLevel, VTFImageFormat ImageFormat);
+VTFLIB_API uint32_t vlImageComputeMipmapCount(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiDepth);
+VTFLIB_API void vlImageComputeMipmapDimensions(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiDepth, uint32_t uiMipmapLevel, uint32_t *uiMipmapWidth, uint32_t *uiMipmapHeight, uint32_t *uiMipmapDepth);
+VTFLIB_API uint32_t vlImageComputeMipmapSize(uint32_t uiWidth, uint32_t uiHeight, uint32_t uiDepth, uint32_t uiMipmapLevel, VTFImageFormat ImageFormat);
 
-VTFLIB_API vlBool vlImageConvertToRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlImageConvertFromRGBA8888(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageConvertToRGBA8888(uint8_t *lpSource, uint8_t *lpDest, uint32_t uiWidth, uint32_t uiHeight, VTFImageFormat SourceFormat, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageConvertFromRGBA8888(uint8_t *lpSource, uint8_t *lpDest, uint32_t uiWidth, uint32_t uiHeight, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageConvert(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt uiHeight, VTFImageFormat SourceFormat, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageConvert(uint8_t *lpSource, uint8_t *lpDest, uint32_t uiWidth, uint32_t uiHeight, VTFImageFormat SourceFormat, VTFImageFormat DestFormat, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageResize(vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageResize(uint8_t *lpSourceRGBA8888, uint8_t *lpDestRGBA8888, uint32_t uiSourceWidth, uint32_t uiSourceHeight, uint32_t uiDestWidth, uint32_t uiDestHeight, VTFMipmapFilter ResizeFilter, vlBool bSRGB, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlImageConvertToDistanceField(const vlByte *lpSourceRGBA8888, vlByte *lpDestRGBA8888, vlUInt uiSourceWidth, vlUInt uiSourceHeight, vlUInt uiDestWidth, vlUInt uiDestHeight, vlSingle sSpread, vlByte bThreshold, vlBool *pbClipped, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlImageConvertToDistanceField(const uint8_t *lpSourceRGBA8888, uint8_t *lpDestRGBA8888, uint32_t uiSourceWidth, uint32_t uiSourceHeight, uint32_t uiDestWidth, uint32_t uiDestHeight, float sSpread, uint8_t bThreshold, vlBool *pbClipped, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlVoid vlImageCorrectImageGamma(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle sGammaCorrection);
-VTFLIB_API vlVoid vlImageComputeImageReflectivity(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight, vlSingle *sX, vlSingle *sY, vlSingle *sZ);
+VTFLIB_API void vlImageCorrectImageGamma(uint8_t *lpImageDataRGBA8888, uint32_t uiWidth, uint32_t uiHeight, float sGammaCorrection);
+VTFLIB_API void vlImageComputeImageReflectivity(uint8_t *lpImageDataRGBA8888, uint32_t uiWidth, uint32_t uiHeight, float *sX, float *sY, float *sZ);
 
-VTFLIB_API vlVoid vlImageFlipImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);
-VTFLIB_API vlVoid vlImageMirrorImage(vlByte *lpImageDataRGBA8888, vlUInt uiWidth, vlUInt uiHeight);
+VTFLIB_API void vlImageFlipImage(uint8_t *lpImageDataRGBA8888, uint32_t uiWidth, uint32_t uiHeight);
+VTFLIB_API void vlImageMirrorImage(uint8_t *lpImageDataRGBA8888, uint32_t uiWidth, uint32_t uiHeight);
 
-#endif

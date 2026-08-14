@@ -13,156 +13,131 @@
 #include "Proc.h"
 #include "ProcWriter.h"
 
-using namespace VTFLib;
 using namespace VTFLib::IO::Writers;
 
-CProcWriter::CProcWriter(vlVoid *pUserData)
-{
-	this->bOpened = vlFalse;
-	this->pUserData = pUserData;
+CProcWriter::CProcWriter(void *userData) {
+    this->mIsOpen = false;
+    this->mUserData = userData;
 }
 
-CProcWriter::~CProcWriter()
-{
-	this->Close();
+CProcWriter::~CProcWriter() {
+    this->CProcWriter::Close();
 }
 
-vlBool CProcWriter::Opened() const
-{
-	return this->bOpened;
+bool CProcWriter::IsOpen() const {
+    return this->mIsOpen;
 }
 
-vlBool CProcWriter::Open(Diagnostics::CError &error)
-{
-	this->Close();
+bool CProcWriter::Open(Diagnostics::CError &error) {
+    this->Close();
 
-	if(pWriteOpenProc == nullptr)
-	{
-		error.Set("pWriteOpenProc not set.");
-		return vlFalse;
-	}
+    if (pWriteOpenProc == nullptr) {
+        VTFError_Set(error, "pWriteOpenProc not set.");
+        return false;
+    }
 
-	if(this->bOpened)
-	{
-		error.Set("Writer already open.");
-		return vlFalse;
-	}
+    if (this->mIsOpen) {
+        VTFError_Set(error, "Writer already open.");
+        return false;
+    }
 
-	if(!pWriteOpenProc(this->pUserData))
-	{
-		error.Set("Error opening file.");
-		return vlFalse;
-	}
+    if (!pWriteOpenProc(this->mUserData)) {
+        VTFError_Set(error, "Error opening file.");
+        return false;
+    }
 
-	this->bOpened = vlTrue;
+    this->mIsOpen = true;
 
-	return vlTrue;
+    return true;
 }
 
-vlVoid CProcWriter::Close()
-{
-	if(pWriteCloseProc == nullptr)
-	{
-		return;
-	}
+void CProcWriter::Close() {
+    if (pWriteCloseProc == nullptr) {
+        return;
+    }
 
-	if(this->bOpened)
-	{
-		pWriteCloseProc(this->pUserData);
-		this->bOpened = vlFalse;
-	}
+    if (this->mIsOpen) {
+        pWriteCloseProc(this->mUserData);
+        this->mIsOpen = false;
+    }
 }
 
-vlUInt CProcWriter::GetStreamSize(VTFLib::Diagnostics::CError& error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcWriter::GetStreamSize(Diagnostics::CError &error) const {
+    if (!this->mIsOpen) {
+        return 0;
+    }
 
-	if(pWriteSizeProc == nullptr)
-	{
-		error.Set("pWriteTellProc not set.");
-		return 0xffffffff;
-	}
+    if (pWriteSizeProc == nullptr) {
+        VTFError_Set(error, "pWriteSizeProc not set.");
+        return -1;
+    }
 
-	return pWriteSizeProc(this->pUserData);
+    return pWriteSizeProc(this->mUserData);
 }
 
-vlUInt CProcWriter::GetStreamPointer(VTFLib::Diagnostics::CError& error) const
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcWriter::GetStreamPointer(Diagnostics::CError &error) const {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Writer is not open.");
+        return 0;
+    }
 
-	if(pWriteTellProc == nullptr)
-	{
-		error.Set("pWriteTellProc not set.");
-		return 0;
-	}
+    if (pWriteTellProc == nullptr) {
+        VTFError_Set(error, "pWriteTellProc not set.");
+        return 0;
+    }
 
-	return pWriteTellProc(this->pUserData);
+    return pWriteTellProc(this->mUserData);
 }
 
-vlUInt CProcWriter::Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcWriter::Seek(const ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        return 0;
+    }
 
-	if(pWriteSeekProc == nullptr)
-	{
-		error.Set("pWriteSeekProc not set.");
-		return 0;
-	}
+    if (pWriteSeekProc == nullptr) {
+        VTFError_Set(error, "pWriteSeekProc not set.");
+        return 0;
+    }
 
-	return pWriteSeekProc(lOffset, (VLSeekMode)uiMode, this->pUserData);
+    return pWriteSeekProc(offset, static_cast<VLSeekMode>(seekMode), this->mUserData);
 }
 
-vlBool CProcWriter::Write(vlChar cChar, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return vlFalse;
-	}
+bool CProcWriter::Write(const char srcChr, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Writer is not open.");
+        return false;
+    }
 
-	if(pWriteWriteProc == nullptr)
-	{
-		error.Set("pWriteWriteProc not set.");
-		return vlFalse;
-	}
+    if (pWriteWriteProc == nullptr) {
+        VTFError_Set(error, "pWriteWriteProc not set.");
+        return false;
+    }
 
-	vlUInt uiBytesWritten = pWriteWriteProc(&cChar, 1, this->pUserData);
+    const ssize_t bytesWritten = pWriteWriteProc(&srcChr, 1, this->mUserData);
 
-	if(uiBytesWritten == 0)
-	{
-		error.Set("pWriteWriteProc() failed.");
-	}
+    if (bytesWritten == 0) {
+        VTFError_Set(error, "pWriteWriteProc() failed.");
+    }
 
-	return uiBytesWritten == 1;
+    return bytesWritten == 1;
 }
 
-vlUInt CProcWriter::Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error)
-{
-	if(!this->bOpened)
-	{
-		return 0;
-	}
+ssize_t CProcWriter::Write(const void *src, const ssize_t size, Diagnostics::CError &error) {
+    if (!this->mIsOpen) {
+        VTFError_Set(error, "Writer is not open.");
+        return 0;
+    }
 
-	if(pWriteWriteProc == nullptr)
-	{
-		error.Set("pWriteWriteProc not set.");
-		return 0;
-	}
+    if (pWriteWriteProc == nullptr) {
+        VTFError_Set(error, "pWriteWriteProc not set.");
+        return 0;
+    }
 
-	vlUInt uiBytesWritten = pWriteWriteProc(vData, uiBytes, this->pUserData);
+    const ssize_t bytesWritten = pWriteWriteProc(src, size, this->mUserData);
 
-	if(uiBytesWritten == 0)
-	{
-		error.Set("pWriteWriteProc() failed.");
-	}
+    if (bytesWritten == 0) {
+        VTFError_Set(error, "pWriteWriteProc() failed.");
+    }
 
-	return uiBytesWritten;
+    return bytesWritten;
 }

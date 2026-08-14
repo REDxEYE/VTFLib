@@ -9,49 +9,42 @@
  * version.
  */
 
-#ifndef MEMORYWRITER_H
-#define MEMORYWRITER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Writer.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Writers
-		{
-			class CMemoryWriter : public IWriter
-			{
-			private:
-				vlBool bOpened;
 
-				vlVoid *vData;
-				vlUInt uiBufferSize;
+namespace VTFLib::IO::Writers {
+    class CMemoryWriter : public IWriter {
+    public:
+        CMemoryWriter(void *buffer, uint32_t uiBufferSize);
 
-				vlUInt uiPointer;
-				vlUInt uiLength;
+        ~CMemoryWriter() override = default;
 
-			public:
-				CMemoryWriter(vlVoid *vData, vlUInt uiBufferSize);
-				~CMemoryWriter();
+        [[nodiscard]] bool IsOpen() const override;
 
-			public:
-				virtual vlBool Opened() const;
+        bool Open(Diagnostics::CError &error) override;
 
-				virtual vlBool Open(Diagnostics::CError &error);
-				virtual vlVoid Close();
+        void Close() override;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
+        ssize_t GetStreamSize(Diagnostics::CError &error) const override;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
+        ssize_t GetStreamPointer(Diagnostics::CError &error) const override;
 
-				virtual vlBool Write(vlChar cChar, Diagnostics::CError &error);
-				virtual vlUInt Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
-			};
-		}
-	}
+        ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) override;
+
+        bool Write(char srcChr, Diagnostics::CError &error) override;
+
+        ssize_t Write(const void *src, ssize_t size, Diagnostics::CError &error) override;
+
+    private:
+        bool mIsOpen;
+
+        void *mBuffer;
+        uint32_t mBufferSize;
+
+        uint32_t mOffset;
+        uint32_t mWritten;
+    };
 }
-
-#endif

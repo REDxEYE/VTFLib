@@ -45,7 +45,7 @@ if (NOT TARGET IL)
     )
 
     set(OPTION_BUILD_INTERNAL_CMP_TEST OFF CACHE BOOL "" FORCE)
-    set(IL_STATIC_DEPS ON CACHE BOOL "" FORCE)
+#    set(IL_STATIC_DEPS ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(devil)
 
     target_include_directories(IL PUBLIC

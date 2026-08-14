@@ -13,53 +13,38 @@
 
 using namespace VTFLib::Nodes;
 
-CVMTSingleNode::CVMTSingleNode(const vlChar *cName) : CVMTValueNode(cName)
-{
-	this->fValue = (vlFloat)0.0;
+CVMTSingleNode::CVMTSingleNode(const char *name) : CVMTValueNode(name) {
+    mValue = 0.0f;
 }
 
-#pragma warning( disable : 26495 )
-CVMTSingleNode::CVMTSingleNode(const vlChar *cName, const vlChar *cValue) : CVMTValueNode(cName)
-{
-	this->SetValue(cValue);
+CVMTSingleNode::CVMTSingleNode(const char *name, const char *value) : CVMTValueNode(name) {
+    CVMTSingleNode::SetValue(value);
 }
 
-CVMTSingleNode::CVMTSingleNode(const vlChar *cName, vlFloat fValue) : CVMTValueNode(cName)
-{
-	this->fValue = fValue;
+CVMTSingleNode::CVMTSingleNode(const char *name, const float value) : CVMTValueNode(name) {
+    mValue = value;
 }
 
-CVMTSingleNode::CVMTSingleNode(const CVMTSingleNode &SingleNode) : CVMTValueNode(SingleNode.GetName())
-{
-	this->fValue = SingleNode.fValue;
+CVMTSingleNode::CVMTSingleNode(const CVMTSingleNode &other) : CVMTValueNode(other.GetName()) {
+    mValue = other.mValue;
 }
 
-CVMTSingleNode::~CVMTSingleNode()
-{
-
+void CVMTSingleNode::SetValue(const char *value) {
+    mValue = std::strtof(value, nullptr);
 }
 
-vlVoid CVMTSingleNode::SetValue(const vlChar *cValue)
-{
-	this->fValue = (vlFloat)atof(cValue);
+void CVMTSingleNode::SetValue(float value) {
+    mValue = value;
 }
 
-vlVoid CVMTSingleNode::SetValue(vlFloat fValue)
-{
-	this->fValue = fValue;
+float CVMTSingleNode::GetValue() const {
+    return mValue;
 }
 
-const vlFloat CVMTSingleNode::GetValue() const
-{
-	return this->fValue;
+VMTNodeType CVMTSingleNode::GetType() const {
+    return NODE_TYPE_SINGLE;
 }
 
-VMTNodeType CVMTSingleNode::GetType() const
-{
-	return NODE_TYPE_SINGLE;
-}
-
-CVMTNode *CVMTSingleNode::Clone() const
-{
-	return new CVMTSingleNode(*this);
+CVMTNode *CVMTSingleNode::Clone() const {
+    return new CVMTSingleNode(*this);
 }

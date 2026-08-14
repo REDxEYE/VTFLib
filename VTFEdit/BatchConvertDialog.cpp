@@ -297,12 +297,12 @@ namespace VTFEdit
 					bool bError = false;
 
 					const ILuint uiImage = static_cast<ILuint>(ilGetInteger(IL_CUR_IMAGE));
-					const vlUInt uiImages = static_cast<vlUInt>(ilGetInteger(IL_NUM_IMAGES)) + 1;
-					vlUInt uiWidth = 0, uiHeight = 0;
+					const uint32_t uiImages = static_cast<uint32_t>(ilGetInteger(IL_NUM_IMAGES)) + 1;
+					uint32_t uiWidth = 0, uiHeight = 0;
 
-					std::vector<vlByte *> vImageData;
+					std::vector<uint8_t *> vImageData;
 
-					for(vlUInt k = 0; k < uiImages; k++)
+					for(uint32_t k = 0; k < uiImages; k++)
 					{
 						ilBindImage(uiImage);
 						ilActiveImage(static_cast<ILuint>(k));
@@ -316,18 +316,18 @@ namespace VTFEdit
 
 						if(vImageData.empty())
 						{
-							uiWidth = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH));
-							uiHeight = static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT));
+							uiWidth = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH));
+							uiHeight = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT));
 						}
-						else if(uiWidth != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_WIDTH))
-							|| uiHeight != static_cast<vlUInt>(ilGetInteger(IL_IMAGE_HEIGHT)))
+						else if(uiWidth != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH))
+							|| uiHeight != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT)))
 						{
 							log(tr("Error converting %1. All frames must be the same size.").arg(sName), LogRed);
 							bError = true;
 							break;
 						}
 
-						vlByte *lpFrameData = new vlByte[uiWidth * uiHeight * 4];
+						uint8_t *lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
 						memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
 						vImageData.push_back(lpFrameData);
 
@@ -346,9 +346,9 @@ namespace VTFEdit
 
 					if(!bError && !vImageData.empty())
 					{
-						VTFCreateOptions.ImageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;
+						VTFCreateOptions.imageFormat = bHasAlpha ? m_pOptions->AlphaFormat : m_pOptions->NormalFormat;
 
-						const bool bCreated = VTFFile.Create(uiWidth, uiHeight, static_cast<vlUInt>(vImageData.size()),
+						const bool bCreated = VTFFile.Create(uiWidth, uiHeight, static_cast<uint32_t>(vImageData.size()),
 							1, 1, &vImageData[0], VTFCreateOptions, m_Error) != vlFalse;
 						if(bCreated)
 						{
@@ -383,7 +383,7 @@ namespace VTFEdit
 						}
 					}
 
-					for(vlByte *lpFrameData : vImageData)
+					for(uint8_t *lpFrameData : vImageData)
 					{
 						delete[] lpFrameData;
 					}
@@ -399,23 +399,23 @@ namespace VTFEdit
 			{
 				if(VTFFile.Load(Path.constData(), m_Error))
 				{
-					const vlUInt uiWidth = VTFFile.GetWidth();
-					const vlUInt uiHeight = VTFFile.GetHeight();
+					const uint32_t uiWidth = VTFFile.GetWidth();
+					const uint32_t uiHeight = VTFFile.GetHeight();
 
-					std::vector<vlByte> ImageData(
+					std::vector<uint8_t> ImageData(
 						VTFFile.ComputeImageSize(uiWidth, uiHeight, 1, IMAGE_FORMAT_RGBA8888));
 
-					const vlUInt uiFrameCount = VTFFile.GetFrameCount();
-					const vlUInt uiFaceCount = VTFFile.GetFaceCount();
-					const vlUInt uiSliceCount = VTFFile.GetDepth();
+					const uint32_t uiFrameCount = VTFFile.GetFrameCount();
+					const uint32_t uiFaceCount = VTFFile.GetFaceCount();
+					const uint32_t uiSliceCount = VTFFile.GetDepth();
 
 					const bool bSingleImage = uiFrameCount <= 1 && uiFaceCount <= 1 && uiSliceCount <= 1;
 
-					for(vlUInt uiFrame = 0; uiFrame < uiFrameCount; uiFrame++)
+					for(uint32_t uiFrame = 0; uiFrame < uiFrameCount; uiFrame++)
 					{
-						for(vlUInt uiFace = 0; uiFace < uiFaceCount; uiFace++)
+						for(uint32_t uiFace = 0; uiFace < uiFaceCount; uiFace++)
 						{
-							for(vlUInt uiSlice = 0; uiSlice < uiSliceCount; uiSlice++)
+							for(uint32_t uiSlice = 0; uiSlice < uiSliceCount; uiSlice++)
 							{
 								const QString sSuffix = bSingleImage ? QString()
 									: QStringLiteral("_%1_%2_%3")

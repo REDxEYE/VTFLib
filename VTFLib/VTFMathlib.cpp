@@ -28,14 +28,14 @@ void VecSub(Vector *a, Vector *b, Vector *diff)
 	diff->z = a->z - b->z;
 }
 
-void VecScale(Vector *v, vlSingle scale)
+void VecScale(Vector *v, float scale)
 {
 	v->x *= scale;
 	v->y *= scale;
 	v->z *= scale;
 }
 
-vlSingle VecDot(Vector *u, Vector *v)
+float VecDot(Vector *u, Vector *v)
 {
 	return (u->x*v->x + u->y*v->y + u->z*v->z);
 }
@@ -47,10 +47,10 @@ void VecReflect(Vector *axis, Vector *v, Vector *r)
 	VecSub(&t, v, r);
 }
 
-vlInt Intersect(Vector *v)
+int32_t Intersect(Vector *v)
 {
-	vlInt f;
-	vlDouble x, y, z;
+	int32_t f;
+	double x, y, z;
   
 	x = fabs(v->x); y = fabs(v->y); z = fabs(v->z);
 	

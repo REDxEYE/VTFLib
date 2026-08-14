@@ -22,11 +22,11 @@
 
 #include "VTFLib.h"
 
-VTFImageFormat StringToImageFormat(const vlChar *cString);
-VTFImageFlag StringToImageFlag(const vlChar *cString);
+VTFImageFormat StringToImageFormat(const char *cString);
+VTFImageFlag StringToImageFlag(const char *cString);
 
-VTFMipmapFilter StringToMipmapFilter(const vlChar *cString);
+VTFMipmapFilter StringToMipmapFilter(const char *cString);
 
-VTFResizeMethod StringToResizeMethod(const vlChar *cString);
+VTFResizeMethod StringToResizeMethod(const char *cString);
 
 #endif

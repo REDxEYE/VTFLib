@@ -206,7 +206,7 @@ namespace VTFEdit
 		bool saveDocument(int iIndex);
 		bool saveDocumentAs(int iIndex);
 		void import(const QStringList &sFileNames);
-		void createFromImages(const std::vector<vlByte *> &vImageData, vlUInt uiWidth, vlUInt uiHeight,
+		void createFromImages(const std::vector<uint8_t *> &vImageData, uint32_t uiWidth, uint32_t uiHeight,
 			bool bHasAlpha, const QString &sSourceFileName);
 		void exportImage(const QString &sFileName);
 		void exportAllImages(const QString &sFileName);

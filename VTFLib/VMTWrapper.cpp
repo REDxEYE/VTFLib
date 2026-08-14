@@ -18,7 +18,7 @@
 using namespace VTFLib;
 
 namespace VTFLib {
-    std::deque<vlInt> CurrentIndex;
+    std::deque<int32_t> CurrentIndex;
     Nodes::CVMTGroupNode *CurrentNode = nullptr;
 }
 
@@ -26,9 +26,9 @@ namespace VTFLib {
 // vlMaterialBound()
 // Returns true if an material is bound, false otherwise.
 //
-VTFLIB_API vlBool vlMaterialIsBound(VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialIsBound(Diagnostics::CError &error) {
     if (!bInitialized) {
-        error.Set("VTFLib not initialized.");
+        VTFError_Set(error, "VTFLib not initialized.");
         return vlFalse;
     }
 
@@ -40,14 +40,14 @@ VTFLIB_API vlBool vlMaterialIsBound(VTFLib::Diagnostics::CError &error) {
 // Bind a material to operate on.
 // All library routines will use this material.
 //
-VTFLIB_API vlBool vlBindMaterial(vlUInt uiMaterial, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlBindMaterial(uint32_t uiMaterial, Diagnostics::CError &error) {
     if (!bInitialized) {
-        error.Set("VTFLib not initialized.");
+        VTFError_Set(error, "VTFLib not initialized.");
         return vlFalse;
     }
 
     if (uiMaterial >= MaterialVector->size() || (*MaterialVector)[uiMaterial] == nullptr) {
-        error.Set("Invalid material.");
+        VTFError_Set(error, "Invalid material.");
         return vlFalse;
     }
 
@@ -66,14 +66,14 @@ VTFLIB_API vlBool vlBindMaterial(vlUInt uiMaterial, VTFLib::Diagnostics::CError 
 // vlCreateMaterial()
 // Create an material to work on.
 //
-VTFLIB_API vlBool vlCreateMaterial(vlUInt *uiMaterial, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlCreateMaterial(uint32_t *uiMaterial, Diagnostics::CError &error) {
     if (!bInitialized) {
-        error.Set("VTFLib not initialized.");
+        VTFError_Set(error, "VTFLib not initialized.");
         return vlFalse;
     }
 
     MaterialVector->push_back(new CVMTFile());
-    *uiMaterial = (vlUInt) MaterialVector->size() - 1;
+    *uiMaterial = (uint32_t) MaterialVector->size() - 1;
 
     return vlTrue;
 }
@@ -83,7 +83,7 @@ VTFLIB_API vlBool vlCreateMaterial(vlUInt *uiMaterial, VTFLib::Diagnostics::CErr
 // Delete a material and all resources associated with it.
 //
 
-VTFLIB_API vlVoid vlDeleteMaterial(vlUInt uiMaterial) {
+VTFLIB_API void vlDeleteMaterial(uint32_t uiMaterial) {
     if (!bInitialized)
         return;
 
@@ -104,9 +104,9 @@ VTFLIB_API vlVoid vlDeleteMaterial(vlUInt uiMaterial) {
     (*MaterialVector)[uiMaterial] = nullptr;
 }
 
-VTFLIB_API vlBool vlMaterialCreate(const vlChar *cRoot, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialCreate(const char *cRoot, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
@@ -116,7 +116,7 @@ VTFLIB_API vlBool vlMaterialCreate(const vlChar *cRoot, VTFLib::Diagnostics::CEr
     return Material->Create(cRoot);
 }
 
-VTFLIB_API vlVoid vlMaterialDestroy() {
+VTFLIB_API void vlMaterialDestroy() {
     if (Material == nullptr) {
         return;
     }
@@ -127,18 +127,18 @@ VTFLIB_API vlVoid vlMaterialDestroy() {
     Material->Destroy();
 }
 
-VTFLIB_API vlBool vlMaterialIsLoaded(VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialIsLoaded(Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
     return Material->IsLoaded();
 }
 
-VTFLIB_API vlBool vlMaterialLoad(const vlChar *cFileName, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialLoad(const char *cFileName, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
@@ -148,9 +148,9 @@ VTFLIB_API vlBool vlMaterialLoad(const vlChar *cFileName, VTFLib::Diagnostics::C
     return Material->Load(cFileName, error);
 }
 
-VTFLIB_API vlBool vlMaterialLoadLump(const vlVoid *lpData, vlUInt uiBufferSize, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialLoadLump(const void *lpData, uint32_t uiBufferSize, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
@@ -160,9 +160,9 @@ VTFLIB_API vlBool vlMaterialLoadLump(const vlVoid *lpData, vlUInt uiBufferSize, 
     return Material->Load(lpData, uiBufferSize, error);
 }
 
-VTFLIB_API vlBool vlMaterialLoadProc(vlVoid *pUserData, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialLoadProc(void *pUserData, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
@@ -172,28 +172,28 @@ VTFLIB_API vlBool vlMaterialLoadProc(vlVoid *pUserData, VTFLib::Diagnostics::CEr
     return Material->Load(pUserData, error);
 }
 
-VTFLIB_API vlBool vlMaterialSave(const vlChar *cFileName, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialSave(const char *cFileName, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
     return Material->Save(cFileName, error);
 }
 
-VTFLIB_API vlBool vlMaterialSaveLump(vlVoid *lpData, vlUInt uiBufferSize, vlUInt *uiSize,
-                                     VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialSaveLump(void *lpData, ssize_t uiBufferSize, ssize_t *uiSize,
+                                     Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
     return Material->Save(lpData, uiBufferSize, *uiSize, error);
 }
 
-VTFLIB_API vlBool vlMaterialSaveProc(vlVoid *pUserData, VTFLib::Diagnostics::CError &error) {
+VTFLIB_API vlBool vlMaterialSaveProc(void *pUserData, Diagnostics::CError &error) {
     if (Material == nullptr) {
-        error.Set("No material bound.");
+        VTFError_Set(error, "No material bound.");
         return vlFalse;
     }
 
@@ -208,13 +208,13 @@ Nodes::CVMTNode *vlMaterialGetCurretNode() {
     if (Material == nullptr || CurrentNode == nullptr)
         return nullptr;
 
-    vlInt iIndex = CurrentIndex.back();
+    int32_t iIndex = CurrentIndex.back();
 
-    if (iIndex == -1 || iIndex == (vlInt) CurrentNode->GetNodeCount()) {
+    if (iIndex == -1 || iIndex == (int32_t) CurrentNode->GetNodeCount()) {
         return CurrentNode;
     }
 
-    return CurrentNode->GetNode((vlUInt) iIndex);
+    return CurrentNode->GetNode((uint32_t) iIndex);
 }
 
 //
@@ -225,17 +225,17 @@ VMTNodeType vlMaterialGetCurretNodeType() {
     if (Material == nullptr || CurrentNode == nullptr)
         return NODE_TYPE_COUNT;
 
-    vlInt iIndex = CurrentIndex.back();
+    int32_t iIndex = CurrentIndex.back();
 
     if (iIndex == -1) {
         return NODE_TYPE_GROUP;
     }
 
-    if (iIndex == (vlInt) CurrentNode->GetNodeCount()) {
+    if (iIndex == (int32_t) CurrentNode->GetNodeCount()) {
         return NODE_TYPE_GROUP_END;
     }
 
-    return CurrentNode->GetNode((vlUInt) iIndex)->GetType();
+    return CurrentNode->GetNode((uint32_t) iIndex)->GetType();
 }
 
 //
@@ -275,7 +275,7 @@ VTFLIB_API vlBool vlMaterialGetNextNode() {
         return vlFalse;
 
     // If we are at the end of the current node, go up a level.
-    if (CurrentIndex.back() == (vlInt) CurrentNode->GetNodeCount()) {
+    if (CurrentIndex.back() == (int32_t) CurrentNode->GetNodeCount()) {
         if (CurrentNode->GetParent() != nullptr) {
             CurrentNode = CurrentNode->GetParent();
             CurrentIndex.pop_back();
@@ -290,11 +290,11 @@ VTFLIB_API vlBool vlMaterialGetNextNode() {
     CurrentIndex.back()++;
 
     // Check if we are at the end.
-    if (CurrentIndex.back() == (vlInt) CurrentNode->GetNodeCount()) {
+    if (CurrentIndex.back() == (int32_t) CurrentNode->GetNodeCount()) {
         return vlTrue;
     }
 
-    Nodes::CVMTNode *VMTNode = CurrentNode->GetNode((vlUInt) CurrentIndex.back());
+    Nodes::CVMTNode *VMTNode = CurrentNode->GetNode((uint32_t) CurrentIndex.back());
 
     // If the current node is a group, enter it at the start.
     if (VMTNode->GetType() == NODE_TYPE_GROUP) {
@@ -334,7 +334,7 @@ VTFLIB_API vlBool vlMaterialGetPreviousNode() {
         return vlTrue;
     }
 
-    Nodes::CVMTNode *VMTNode = CurrentNode->GetNode((vlUInt) CurrentIndex.back());
+    Nodes::CVMTNode *VMTNode = CurrentNode->GetNode((uint32_t) CurrentIndex.back());
 
     // If the current node is a group, enter it at the end.
     if (VMTNode->GetType() == NODE_TYPE_GROUP) {
@@ -368,7 +368,7 @@ VTFLIB_API vlBool vlMaterialGetParentNode() {
 // vlMaterialGetParentNode()
 // Moves the current node to the specified child node of the current node.
 //
-VTFLIB_API vlBool vlMaterialGetChildNode(const vlChar *cName) {
+VTFLIB_API vlBool vlMaterialGetChildNode(const char *cName) {
     if (Material == nullptr || CurrentNode == nullptr)
         return vlFalse;
 
@@ -381,7 +381,7 @@ VTFLIB_API vlBool vlMaterialGetChildNode(const vlChar *cName) {
     Nodes::CVMTGroupNode *VMTGroupNode = static_cast<Nodes::CVMTGroupNode *>(VMTNode);
 
     // Search for the specified child.
-    for (vlUInt i = 0; i < VMTGroupNode->GetNodeCount(); i++) {
+    for (uint32_t i = 0; i < VMTGroupNode->GetNodeCount(); i++) {
         VMTNode = VMTGroupNode->GetNode(i);
         if (_stricmp(VMTNode->GetName(), cName) == 0) {
             // If the child is a group, enter it at the start.
@@ -389,7 +389,7 @@ VTFLIB_API vlBool vlMaterialGetChildNode(const vlChar *cName) {
                 CurrentNode = static_cast<Nodes::CVMTGroupNode *>(VMTNode);
                 CurrentIndex.push_back(-1);
             } else {
-                CurrentIndex.back() = (vlInt) i;
+                CurrentIndex.back() = (int32_t) i;
             }
 
             return vlTrue;
@@ -403,7 +403,7 @@ VTFLIB_API vlBool vlMaterialGetChildNode(const vlChar *cName) {
 // vlMaterialGetNodeName()
 // Gets the current node's name.
 //
-VTFLIB_API const vlChar *vlMaterialGetNodeName() {
+VTFLIB_API const char *vlMaterialGetNodeName() {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode == nullptr)
@@ -416,7 +416,7 @@ VTFLIB_API const vlChar *vlMaterialGetNodeName() {
 // vlMaterialSetNodeName()
 // Sets the current node's name.
 //
-VTFLIB_API vlVoid vlMaterialSetNodeName(const vlChar *cName) {
+VTFLIB_API void vlMaterialSetNodeName(const char *cName) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode == nullptr)
@@ -451,7 +451,7 @@ VTFLIB_API VMTNodeType vlMaterialGetNodeType() {
 // vlMaterialGetNodeString()
 // If the current node is a string node, this gets its value.
 //
-VTFLIB_API const vlChar *vlMaterialGetNodeString() {
+VTFLIB_API const char *vlMaterialGetNodeString() {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_STRING)
@@ -464,7 +464,7 @@ VTFLIB_API const vlChar *vlMaterialGetNodeString() {
 // vlMaterialSetNodeString()
 // If the current node is a string node, this sets its value.
 //
-VTFLIB_API vlVoid vlMaterialSetNodeString(const vlChar *cValue) {
+VTFLIB_API void vlMaterialSetNodeString(const char *cValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_STRING)
@@ -477,7 +477,7 @@ VTFLIB_API vlVoid vlMaterialSetNodeString(const vlChar *cValue) {
 // vlMaterialGetNodeInteger()
 // If the current node is a integer node, this gets its value.
 //
-VTFLIB_API vlUInt vlMaterialGetNodeInteger() {
+VTFLIB_API uint32_t vlMaterialGetNodeInteger() {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_INTEGER)
@@ -490,7 +490,7 @@ VTFLIB_API vlUInt vlMaterialGetNodeInteger() {
 // vlMaterialSetNodeInteger()
 // If the current node is a integer node, this sets its value.
 //
-VTFLIB_API vlVoid vlMaterialSetNodeInteger(vlUInt iValue) {
+VTFLIB_API void vlMaterialSetNodeInteger(uint32_t iValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_INTEGER)
@@ -503,7 +503,7 @@ VTFLIB_API vlVoid vlMaterialSetNodeInteger(vlUInt iValue) {
 // vlMaterialGetNodeSingle()
 // If the current node is a single node, this gets its value.
 //
-VTFLIB_API vlFloat vlMaterialGetNodeSingle() {
+VTFLIB_API float vlMaterialGetNodeSingle() {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_SINGLE)
@@ -516,7 +516,7 @@ VTFLIB_API vlFloat vlMaterialGetNodeSingle() {
 // vlMaterialSetNodeSingle()
 // If the current node is a single node, this sets its value.
 //
-VTFLIB_API vlVoid vlMaterialSetNodeSingle(vlFloat sValue) {
+VTFLIB_API void vlMaterialSetNodeSingle(float sValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_SINGLE)
@@ -529,7 +529,7 @@ VTFLIB_API vlVoid vlMaterialSetNodeSingle(vlFloat sValue) {
 // vlMaterialAddNodeGroup()
 // If the current node is a group node, this adds a group node to the current node.
 //
-VTFLIB_API vlVoid vlMaterialAddNodeGroup(const vlChar *cName) {
+VTFLIB_API void vlMaterialAddNodeGroup(const char *cName) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_GROUP)
@@ -542,7 +542,7 @@ VTFLIB_API vlVoid vlMaterialAddNodeGroup(const vlChar *cName) {
 // vlMaterialAddNodeString()
 // If the current node is a group node, this adds a string node to the current node.
 //
-VTFLIB_API vlVoid vlMaterialAddNodeString(const vlChar *cName, const vlChar *cValue) {
+VTFLIB_API void vlMaterialAddNodeString(const char *cName, const char *cValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_GROUP)
@@ -555,7 +555,7 @@ VTFLIB_API vlVoid vlMaterialAddNodeString(const vlChar *cName, const vlChar *cVa
 // vlMaterialAddNodeInteger()
 // If the current node is a group node, this adds a integer node to the current node.
 //
-VTFLIB_API vlVoid vlMaterialAddNodeInteger(const vlChar *cName, vlUInt iValue) {
+VTFLIB_API void vlMaterialAddNodeInteger(const char *cName, uint32_t iValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_GROUP)
@@ -568,7 +568,7 @@ VTFLIB_API vlVoid vlMaterialAddNodeInteger(const vlChar *cName, vlUInt iValue) {
 // vlMaterialAddNodeSingle()
 // If the current node is a group node, this adds a single node to the current node.
 //
-VTFLIB_API vlVoid vlMaterialAddNodeSingle(const vlChar *cName, vlFloat sValue) {
+VTFLIB_API void vlMaterialAddNodeSingle(const char *cName, float sValue) {
     Nodes::CVMTNode *VMTNode = vlMaterialGetCurretNode();
 
     if (VMTNode->GetType() != NODE_TYPE_GROUP)

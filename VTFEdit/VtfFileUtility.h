@@ -28,10 +28,10 @@ namespace VTFEdit
 	namespace VtfFileUtility
 	{
 		// Returns true if any pixel of an RGBA8888 image is not fully opaque
-		bool HasAlphaData(const vlByte *lpImageData, vlUInt uiWidth, vlUInt uiHeight);
+		bool HasAlphaData(const uint8_t *lpImageData, uint32_t uiWidth, uint32_t uiHeight);
 
 		// Replaces the alpha channel of every RGBA8888 frame with a signed distance field
-		bool ApplyDistanceAlpha(std::vector<vlByte *> &vImageData, vlUInt &uiWidth, vlUInt &uiHeight, const VtfOptions &Options);
+		bool ApplyDistanceAlpha(std::vector<uint8_t *> &vImageData, uint32_t &uiWidth, uint32_t &uiHeight, const VtfOptions &Options);
 
 		SVTFCreateOptions GetCreateOptions(const VtfOptions &Options);
 

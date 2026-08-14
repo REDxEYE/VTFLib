@@ -5,6 +5,7 @@
  * version 2.1 of the License, or (at your option) any later
  * version.
  */
+#pragma once
 
 #include "Writer.h"
 #include "FileWriter.h"

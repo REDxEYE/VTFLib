@@ -9,57 +9,41 @@
  * version.
  */
 
-#ifndef VMTNODE_H
-#define VMTNODE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef enum tagVMTNodeType
-{
-	NODE_TYPE_GROUP = 0,
-	NODE_TYPE_GROUP_END,
-	NODE_TYPE_STRING,
-	NODE_TYPE_INTEGER,
-	NODE_TYPE_SINGLE,
-	NODE_TYPE_COUNT
+typedef enum tagVMTNodeType {
+    NODE_TYPE_GROUP = 0,
+    NODE_TYPE_GROUP_END,
+    NODE_TYPE_STRING,
+    NODE_TYPE_INTEGER,
+    NODE_TYPE_SINGLE,
+    NODE_TYPE_COUNT
 } VMTNodeType;
 
-#ifdef __cplusplus
+namespace VTFLib::Nodes {
+    class CVMTGroupNode;
+
+    class VTFLIB_API CVMTNode {
+    public:
+        explicit CVMTNode(const char *name);
+
+        virtual ~CVMTNode();
+
+        [[nodiscard]] const char *GetName() const;
+
+        void SetName(const char *name);
+
+        [[nodiscard]] CVMTGroupNode *GetParent() const;
+
+        [[nodiscard]] virtual VMTNodeType GetType() const = 0;
+
+        [[nodiscard]] virtual CVMTNode *Clone() const = 0;
+
+    private:
+        friend class CVMTGroupNode; // For direct parent setting.
+        char *mName;
+        CVMTGroupNode *mParent;
+    };
 }
-#endif
-
-namespace VTFLib
-{
-	namespace Nodes
-	{
-		class CVMTGroupNode;
-
-		class VTFLIB_API CVMTNode
-		{
-		private:
-			friend class CVMTGroupNode;	// For direct parent setting.
-
-		private:
-			vlChar *cName;
-			CVMTGroupNode *Parent;
-
-		public:
-			CVMTNode(const vlChar *cName);
-			virtual ~CVMTNode();
-
-			const vlChar *GetName() const;
-			vlVoid SetName(const vlChar *cName);
-
-			CVMTGroupNode *GetParent();
-
-			virtual VMTNodeType GetType() const = 0;
-			virtual CVMTNode *Clone() const = 0;
-		};
-	}
-}
-
-#endif

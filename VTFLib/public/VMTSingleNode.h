@@ -9,37 +9,36 @@
  * version.
  */
 
-#ifndef VMTSINGLENODE_H
-#define VMTSINGLENODE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "VMTValueNode.h"
 
-namespace VTFLib
-{
-	namespace Nodes
-	{
-		class VTFLIB_API CVMTSingleNode : public CVMTValueNode
-		{
-		private:
-			vlFloat fValue;
 
-		public:
-			CVMTSingleNode(const vlChar *cName);
-			CVMTSingleNode(const vlChar *cName, const vlChar *cValue);
-			CVMTSingleNode(const vlChar *cName, vlFloat fValue);
-			CVMTSingleNode(const CVMTSingleNode &SingleNode);
-			virtual ~CVMTSingleNode();
+namespace VTFLib::Nodes {
+    class VTFLIB_API CVMTSingleNode : public CVMTValueNode {
+    public:
+        CVMTSingleNode(const char *name);
 
-			virtual vlVoid SetValue(const vlChar *cValue);
+        CVMTSingleNode(const char *name, const char *value);
 
-			vlVoid SetValue(vlFloat fValue);
-			const vlFloat GetValue() const;
+        CVMTSingleNode(const char *name, float value);
 
-			virtual VMTNodeType GetType() const;
-			virtual CVMTNode *Clone() const;
-		};
-	}
+        CVMTSingleNode(const CVMTSingleNode &other);
+
+        ~CVMTSingleNode() override = default;
+
+        void SetValue(const char *value) override;
+
+        void SetValue(float value);
+
+        [[nodiscard]] float GetValue() const;
+
+        [[nodiscard]] VMTNodeType GetType() const override;
+
+        [[nodiscard]] CVMTNode *Clone() const override;
+
+    private:
+        float mValue{};
+    };
 }
-
-#endif

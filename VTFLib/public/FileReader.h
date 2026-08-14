@@ -9,44 +9,39 @@
  * version.
  */
 
-#ifndef FILEREADER_H
-#define FILEREADER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Reader.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Readers
-		{
-			class CFileReader : public IReader
-			{
-			private:
-				HANDLE hFile;
-				vlChar *cFileName;
 
-			public:
-				CFileReader(const vlChar *cFileName);
-				~CFileReader();
+namespace VTFLib::IO::Readers {
+    class CFileReader : public IReader {
+    public:
+        explicit CFileReader(const char *filePath);
 
-			public:
-				virtual vlBool Opened() const;
+        ~CFileReader() override;
 
-				virtual vlBool Open(Diagnostics::CError &error);
-				virtual vlVoid Close();
+        [[nodiscard]] bool IsOpen() const override;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
+        bool Open(Diagnostics::CError &error) override;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
+        void Close() override;
 
-				virtual vlBool Read(vlChar &cChar, Diagnostics::CError &error);
-				virtual vlUInt Read(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
-			};
-		}
-	}
+        ssize_t GetStreamSize(Diagnostics::CError &error) const override;
+
+        ssize_t GetStreamPointer(Diagnostics::CError &error) const override;
+
+        ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) override;
+
+        bool Read(char &dstChr, Diagnostics::CError &error) override;
+
+        ssize_t Read(void *dst, uint32_t size, Diagnostics::CError &error) override;
+
+    private:
+        FILE* mHandle;
+        char *mFilePath;
+    };
 }
 
-#endif
+

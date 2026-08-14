@@ -9,37 +9,36 @@
  * version.
  */
 
-#ifndef VMTINTEGERNODE_H
-#define VMTINTEGERNODE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "VMTValueNode.h"
 
-namespace VTFLib
-{
-	namespace Nodes
-	{
-		class VTFLIB_API CVMTIntegerNode : public CVMTValueNode
-		{
-		private:
-			vlInt iValue;
 
-		public:
-			CVMTIntegerNode(const vlChar *cName);
-			CVMTIntegerNode(const vlChar *cName, const vlChar *cValue);
-			CVMTIntegerNode(const vlChar *cName, vlInt iValue);
-			CVMTIntegerNode(const CVMTIntegerNode &IntegerNode);
-			virtual ~CVMTIntegerNode();
+namespace VTFLib::Nodes {
+    class VTFLIB_API CVMTIntegerNode : public CVMTValueNode {
+    public:
+        explicit CVMTIntegerNode(const char *name);
 
-			virtual vlVoid SetValue(const vlChar *cValue);
+        CVMTIntegerNode(const char *name, const char *value);
 
-			vlVoid SetValue(vlInt iValue);
-			const vlInt GetValue() const;
+        CVMTIntegerNode(const char *name, int32_t value);
 
-			virtual VMTNodeType GetType() const;
-			virtual CVMTNode *Clone() const;
-		};
-	}
+        CVMTIntegerNode(const CVMTIntegerNode &other);
+
+        ~CVMTIntegerNode() override = default;
+
+        void SetValue(const char *value) override;
+
+        void SetValue(int32_t value);
+
+        [[nodiscard]] int32_t GetValue() const;
+
+        [[nodiscard]] VMTNodeType GetType() const override;
+
+        [[nodiscard]] CVMTNode *Clone() const override;
+
+    private:
+        int32_t mValue{};
+    };
 }
-
-#endif

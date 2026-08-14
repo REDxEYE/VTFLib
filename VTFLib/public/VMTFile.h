@@ -9,72 +9,66 @@
  * version.
  */
 
-#ifndef VMTFILE_H
-#define VMTFILE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Readers.h"
 #include "Writers.h"
 #include "VMTNodes.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 //! VMT parsing mode.
-typedef enum tagVMTParseMode
-{
-	PARSE_MODE_STRICT = 0,
-	PARSE_MODE_LOOSE,
-	PARSE_MODE_COUNT
+typedef enum tagVMTParseMode {
+    PARSE_MODE_STRICT = 0,
+    PARSE_MODE_LOOSE,
+    PARSE_MODE_COUNT
 } VMTParseMode;
 
-#ifdef __cplusplus
+
+namespace VTFLib {
+    class VTFLIB_API CVMTFile {
+    public:
+        CVMTFile();
+
+        CVMTFile(const CVMTFile &other);
+
+        ~CVMTFile();
+
+        bool Create(const char *cRoot);
+
+        void Destroy();
+
+        [[nodiscard]] bool IsLoaded() const;
+
+        bool Load(const char *filePath, Diagnostics::CError &error);
+
+        bool Load(const void *buffer, ssize_t bufferSize, Diagnostics::CError &error);
+
+        bool Load(void *userData, Diagnostics::CError &error);
+
+        bool Save(const char *filePath, Diagnostics::CError &error) const;
+
+        bool Save(void *buffer, ssize_t bufferSize, ssize_t &realSize, Diagnostics::CError &error) const;
+
+        bool Save(void *userData, Diagnostics::CError &error) const;
+
+        [[nodiscard]] Nodes::CVMTGroupNode *GetRoot() const;
+
+        [[nodiscard]] uint32_t GetParseErrorLine() const;
+
+    private:
+        Nodes::CVMTGroupNode *mRoot;
+
+        uint32_t mParseErrorLine;
+
+        bool Load(IO::Readers::IReader *reader, Diagnostics::CError &error);
+
+        bool Save(IO::Writers::IWriter *writer, Diagnostics::CError &error) const;
+
+        //Nodes::CVMTNode *Load(IO::Readers::IReader *Reader, bool bInGroup);
+
+        void Indent(IO::Writers::IWriter *writer, uint32_t level, Diagnostics::CError &error) const;
+
+        void Save(IO::Writers::IWriter *writer, Nodes::CVMTNode *node, Diagnostics::CError &error,
+                  uint32_t level = 0) const;
+    };
 }
-#endif
-
-namespace VTFLib
-{
-	class VTFLIB_API CVMTFile
-	{
-	private:
-		Nodes::CVMTGroupNode *Root;
-
-		vlUInt ParseErrorLine;
-
-	public:
-		CVMTFile();
-		CVMTFile(const CVMTFile &VMTFile);
-		~CVMTFile();
-
-	public:
-		vlBool Create(const vlChar *cRoot);
-		vlVoid Destroy();
-
-		vlBool IsLoaded() const;
-
-		vlBool Load(const vlChar *cFileName, Diagnostics::CError &error);
-		vlBool Load(const vlVoid *lpData, vlUInt uiBufferSize, Diagnostics::CError& error);
-		vlBool Load(vlVoid *pUserData, Diagnostics::CError& error);
-
-		vlBool Save(const vlChar *cFileName, Diagnostics::CError& error) const;
-		vlBool Save(vlVoid *lpData, vlUInt uiBufferSize, vlUInt &uiSize, Diagnostics::CError& error) const;
-		vlBool Save(vlVoid *pUserData, Diagnostics::CError& error) const;
-
-	private:
-		vlBool Load(IO::Readers::IReader *Reader, Diagnostics::CError &error);
-		vlBool Save(IO::Writers::IWriter *Writer, Diagnostics::CError &error) const;
-
-		//Nodes::CVMTNode *Load(IO::Readers::IReader *Reader, vlBool bInGroup);
-
-		vlVoid Indent(IO::Writers::IWriter *Writer, vlUInt uiLevel, VTFLib::Diagnostics::CError& error) const;
-		vlVoid Save(IO::Writers::IWriter *Writer, Nodes::CVMTNode *Node, VTFLib::Diagnostics::CError& error, vlUInt uiLevel = 0) const;
-
-	public:
-		Nodes::CVMTGroupNode *GetRoot() const;
-
-		vlUInt GetParseErrorLine() const;
-	};
-}
-
-#endif

@@ -9,25 +9,20 @@
  * version.
  */
 
-#ifndef VMTVALUENODE_H
-#define VMTVALUENODE_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "VMTNode.h"
 
-namespace VTFLib
-{
-	namespace Nodes
-	{
-		class VTFLIB_API CVMTValueNode : public CVMTNode
-		{
-		public:
-			CVMTValueNode(const vlChar *cName);
-			virtual ~CVMTValueNode();
 
-			virtual vlVoid SetValue(const vlChar *cValue) = 0;
-		};
-	}
+namespace VTFLib::Nodes {
+    class VTFLIB_API CVMTValueNode : public CVMTNode {
+    public:
+        explicit CVMTValueNode(const char *name) : CVMTNode(name) {
+        }
+
+        ~CVMTValueNode() override = default;
+
+        virtual void SetValue(const char *value) = 0;
+    };
 }
-
-#endif

@@ -9,10 +9,9 @@
  * version.
  */
 
-#ifndef VMTWRAPPER_H
-#define VMTWRAPPER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,27 +22,27 @@ extern "C" {
 //
 
 VTFLIB_API vlBool vlMaterialIsBound(VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlBindMaterial(vlUInt uiMaterial, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlBindMaterial(uint32_t uiMaterial, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlCreateMaterial(vlUInt *uiMaterial, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlVoid vlDeleteMaterial(vlUInt uiMaterial);
+VTFLIB_API vlBool vlCreateMaterial(uint32_t *uiMaterial, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void vlDeleteMaterial(uint32_t uiMaterial);
 
 //
 // Library routines.  (Basically class wrappers.)
 //
 
-VTFLIB_API vlBool vlMaterialCreate(const vlChar *cRoot, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlVoid vlMaterialDestroy();
+VTFLIB_API vlBool vlMaterialCreate(const char *cRoot, VTFLib::Diagnostics::CError& error);
+VTFLIB_API void vlMaterialDestroy();
 
 VTFLIB_API vlBool vlMaterialIsLoaded(VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlMaterialLoad(const vlChar *cFileName, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlMaterialLoadLump(const vlVoid *lpData, vlUInt uiBufferSize, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlMaterialLoadProc(vlVoid *pUserData, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialLoad(const char *cFileName, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialLoadLump(const void *lpData, uint32_t uiBufferSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialLoadProc(void *pUserData, VTFLib::Diagnostics::CError& error);
 
-VTFLIB_API vlBool vlMaterialSave(const vlChar *cFileName, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlMaterialSaveLump(vlVoid *lpData, vlUInt uiBufferSize, vlUInt *uiSize, VTFLib::Diagnostics::CError& error);
-VTFLIB_API vlBool vlMaterialSaveProc(vlVoid *pUserData, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialSave(const char *cFileName, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialSaveLump(void *lpData, ssize_t uiBufferSize, ssize_t *uiSize, VTFLib::Diagnostics::CError& error);
+VTFLIB_API vlBool vlMaterialSaveProc(void *pUserData, VTFLib::Diagnostics::CError& error);
 
 //
 // Node routines.
@@ -55,29 +54,28 @@ VTFLIB_API vlBool vlMaterialGetNextNode();
 VTFLIB_API vlBool vlMaterialGetPreviousNode();
 
 VTFLIB_API vlBool vlMaterialGetParentNode();
-VTFLIB_API vlBool vlMaterialGetChildNode(const vlChar *cName);
+VTFLIB_API vlBool vlMaterialGetChildNode(const char *cName);
 
-VTFLIB_API const vlChar *vlMaterialGetNodeName();
-VTFLIB_API vlVoid vlMaterialSetNodeName(const vlChar *cName);
+VTFLIB_API const char *vlMaterialGetNodeName();
+VTFLIB_API void vlMaterialSetNodeName(const char *cName);
 
 VTFLIB_API VMTNodeType vlMaterialGetNodeType();
 
-VTFLIB_API const vlChar *vlMaterialGetNodeString();
-VTFLIB_API vlVoid vlMaterialSetNodeString(const vlChar *cValue);
+VTFLIB_API const char *vlMaterialGetNodeString();
+VTFLIB_API void vlMaterialSetNodeString(const char *cValue);
 
-VTFLIB_API vlUInt vlMaterialGetNodeInteger();
-VTFLIB_API vlVoid vlMaterialSetNodeInteger(vlUInt iValue);
+VTFLIB_API uint32_t vlMaterialGetNodeInteger();
+VTFLIB_API void vlMaterialSetNodeInteger(uint32_t iValue);
 
-VTFLIB_API vlFloat vlMaterialGetNodeSingle();
-VTFLIB_API vlVoid vlMaterialSetNodeSingle(vlFloat sValue);
+VTFLIB_API float vlMaterialGetNodeSingle();
+VTFLIB_API void vlMaterialSetNodeSingle(float sValue);
 
-VTFLIB_API vlVoid vlMaterialAddNodeGroup(const vlChar *cName);
-VTFLIB_API vlVoid vlMaterialAddNodeString(const vlChar *cName, const vlChar *cValue);
-VTFLIB_API vlVoid vlMaterialAddNodeInteger(const vlChar *cName, vlUInt iValue);
-VTFLIB_API vlVoid vlMaterialAddNodeSingle(const vlChar *cName, vlFloat sValue);
+VTFLIB_API void vlMaterialAddNodeGroup(const char *cName);
+VTFLIB_API void vlMaterialAddNodeString(const char *cName, const char *cValue);
+VTFLIB_API void vlMaterialAddNodeInteger(const char *cName, uint32_t iValue);
+VTFLIB_API void vlMaterialAddNodeSingle(const char *cName, float sValue);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif

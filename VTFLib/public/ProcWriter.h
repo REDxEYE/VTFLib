@@ -9,44 +9,39 @@
  * version.
  */
 
-#ifndef PROCWRITER_H
-#define PROCWRITER_H
+#pragma once
 
-#include "vtflib_shared.h"
+#include "VTFLibShared.h"
 #include "Writer.h"
 
-namespace VTFLib
-{
-	namespace IO
-	{
-		namespace Writers
-		{
-			class CProcWriter : public IWriter
-			{
-			private:
-				vlBool bOpened;
-				vlVoid *pUserData;
 
-			public:
-				CProcWriter(vlVoid *pUserData);
-				~CProcWriter();
+namespace VTFLib::IO::Writers {
+    class CProcWriter : public IWriter {
+    public:
+        explicit CProcWriter(void *userData);
 
-			public:
-				virtual vlBool Opened() const;
+        ~CProcWriter() override;
 
-				virtual vlBool Open(Diagnostics::CError &error);
-				virtual vlVoid Close();
+        [[nodiscard]] bool IsOpen() const override;
 
-				virtual vlUInt GetStreamSize(Diagnostics::CError &error) const;
-				virtual vlUInt GetStreamPointer(Diagnostics::CError &error) const;
+        bool Open(Diagnostics::CError &error) override;
 
-				virtual vlUInt Seek(vlLong lOffset, vlUInt uiMode, Diagnostics::CError &error);
+        void Close() override;
 
-				virtual vlBool Write(vlChar cChar, Diagnostics::CError &error);
-				virtual vlUInt Write(vlVoid *vData, vlUInt uiBytes, Diagnostics::CError &error);
-			};
-		}
-	}
+        ssize_t GetStreamSize(Diagnostics::CError &error) const override;
+
+        ssize_t GetStreamPointer(Diagnostics::CError &error) const override;
+
+        ssize_t Seek(ssize_t offset, uint32_t seekMode, Diagnostics::CError &error) override;
+
+        bool Write(char srcChr, Diagnostics::CError &error) override;
+
+        ssize_t Write(const void *src, ssize_t size, Diagnostics::CError &error) override;
+
+    private:
+        bool mIsOpen;
+        void *mUserData;
+    };
 }
 
-#endif
+
