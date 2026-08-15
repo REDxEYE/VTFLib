@@ -106,7 +106,7 @@ class CToken {
 public:
     // Create a normal token.  cChar was the tokenized char.
     explicit CToken(const EToken token, const char chr = '\0') : mToken(token), mChar(chr), mString(nullptr) {
-        assert(eToken != TOKEN_CHAR && eToken != TOKEN_STRING && eToken != TOKEN_QUOTED_STRING);
+        assert(token != TOKEN_CHAR && token != TOKEN_STRING && token != TOKEN_QUOTED_STRING);
     }
 
     // Create a char token.

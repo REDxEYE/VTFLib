@@ -80,6 +80,9 @@
 #include <algorithm>
 #include <vector>
 
+#include "compressonator.h"
+#include "VTFEditHelpers.hpp"
+
 #include "VTFWrapper.h"
 
 namespace VTFEdit
@@ -1967,8 +1970,8 @@ namespace VTFEdit
 			}
 
 			const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
-
-			if(!ilLoadImage(Path.constData()))
+			CMP_MipSet image{};
+			if(CMP_LoadTexture(Path.constData(), &image) != CMP_OK)
 			{
 				bError = true;
 
@@ -1976,17 +1979,17 @@ namespace VTFEdit
 				break;
 			}
 
-			const ILuint uiImage = static_cast<ILuint>(ilGetInteger(IL_CUR_IMAGE));
-			const uint32_t uiImages = static_cast<uint32_t>(ilGetInteger(IL_NUM_IMAGES)) + 1;
+			const uint32_t uiImages = 1;
 
 			// Copy every animation frame the file contains.
 			for(uint32_t j = 0; j < uiImages; j++)
 			{
-				ilBindImage(uiImage);
-				ilActiveImage(static_cast<ILuint>(j));
 
-				if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
-				{
+				CMP_MipSet rgba_mipset{};
+				CMP_CompressOptions options{0};
+				options.DestFormat = CMP_FORMAT_RGBA_8888;
+				options.dwnumThreads = 4;
+				if (CMP_ConvertMipTexture(&image, &rgba_mipset, &options, nullptr) != CMP_OK) {
 					bError = true;
 
 					QMessageBox::critical(this, QApplication::applicationName(), tr("Error converting image."));
@@ -1995,11 +1998,11 @@ namespace VTFEdit
 
 				if(vImageData.empty())
 				{
-					uiWidth = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH));
-					uiHeight = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT));
+					uiWidth = rgba_mipset.m_nWidth;
+					uiHeight = rgba_mipset.m_nHeight;
 				}
-				else if(uiWidth != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH))
-					|| uiHeight != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT)))
+				else if(uiWidth != rgba_mipset.m_nWidth
+					|| uiHeight != rgba_mipset.m_nHeight)
 				{
 					bError = true;
 
@@ -2008,16 +2011,18 @@ namespace VTFEdit
 					break;
 				}
 
-				uint8_t *lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
-				memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
+				auto *lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
+
+				CMP_MipLevel *mip = nullptr;
+				CMP_GetMipLevel(&mip, &image, 0, 0);
+
+				memcpy(lpFrameData, mip->m_pbData, uiWidth * uiHeight * 4);
 				vImageData.push_back(lpFrameData);
 
 				bHasAlpha = bHasAlpha || (!m_Options.StripAlpha
 					&& VtfFileUtility::HasAlphaData(lpFrameData, uiWidth, uiHeight));
 			}
 
-			// Leave the base image bound for the next file.
-			ilBindImage(uiImage);
 		}
 
 		if(!bError && m_Options.DistanceAlpha && !vImageData.empty())
@@ -2110,8 +2115,13 @@ namespace VTFEdit
 
 		const QByteArray Path = QDir::toNativeSeparators(sFileName).toLocal8Bit();
 
-		if(!(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, ImageData.data())
-			&& ilSaveImage(Path.constData())))
+		CMP_MipSet image{};
+		CMP_CompressOptions options{};
+		options.DestFormat = CMP_FORMAT_RGBA_8888;
+		options.dwnumThreads = 4;
+
+		if(CreateMipSet(image, ImageData.data(), uiWidth, uiHeight, CMP_FORMAT_RGBA_8888) != CMP_OK
+		   || CMP_SaveTexture(Path.constData(), &image) != CMP_OK)
 		{
 			QMessageBox::critical(this, QApplication::applicationName(), tr("Error saving image."));
 		}
@@ -2157,8 +2167,13 @@ namespace VTFEdit
 
 					const QByteArray Path = QDir::toNativeSeparators(sFramePath).toLocal8Bit();
 
-					if(!(ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, ImageData.data())
-						&& ilSaveImage(Path.constData())))
+					CMP_MipSet image{};
+					CMP_CompressOptions options{0};
+					options.DestFormat = CMP_FORMAT_RGBA_8888;
+					options.dwnumThreads = 4;
+
+					if(CreateMipSet(image, ImageData.data(), uiWidth, uiHeight, CMP_FORMAT_RGBA_8888) != CMP_OK
+					   || CMP_SaveTexture(Path.constData(), &image) != CMP_OK)
 					{
 						QMessageBox::critical(this, QApplication::applicationName(), tr("Error saving image."));
 					}

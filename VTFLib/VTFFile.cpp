@@ -3217,7 +3217,7 @@ uint32_t CVTFFile::ComputeDataOffset(uint32_t uiFrame, uint32_t uiFace, uint32_t
     uiOffset += uiTemp1 * uiFace * uiSliceCount;
     uiOffset += uiTemp2 * uiSlice;
 
-    assert(uiOffset < uiImageBufferSize);
+    assert(uiOffset < mImageBufferSize);
 
     return uiOffset;
 }
@@ -4080,7 +4080,7 @@ vlBool CVTFFile::Resize(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888,
                         const uint32_t sourceWidth, const uint32_t sourceHeight,
                         const uint32_t destWidth, const uint32_t destHeight,
                         const VTFMipmapFilter resizeFilter, const vlBool sRGB, Diagnostics::CError &error) {
-    assert(ResizeFilter >= 0 && ResizeFilter < MIPMAP_FILTER_COUNT);
+    assert(resizeFilter >= 0 && resizeFilter < MIPMAP_FILTER_COUNT);
 
     // prevent too large of a kernel
     constexpr uint32_t maxNiceRatio = 64;

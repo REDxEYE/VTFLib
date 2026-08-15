@@ -13,48 +13,16 @@ if (NOT TARGET CMP_Core)
 
     set(OPTION_ENABLE_ALL_APPS OFF CACHE BOOL "" FORCE)
     set(OPTION_BUILD_CMP_SDK ON CACHE BOOL "" FORCE)
-
-    set(OPTION_BUILD_APPS_CMP_CLI OFF CACHE BOOL "" FORCE)
-    set(OPTION_BUILD_APPS_CMP_GUI OFF CACHE BOOL "" FORCE)
-    set(OPTION_BUILD_APPS_CMP_UNITTESTS OFF CACHE BOOL "" FORCE)
-    set(OPTION_BUILD_APPS_CMP_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(LIB_BUILD_FRAMEWORK_SDK ON CACHE BOOL "" FORCE)
 
     set(OPTION_CMP_QT OFF CACHE BOOL "" FORCE)
     set(OPTION_CMP_OPENGL OFF CACHE BOOL "" FORCE)
     set(OPTION_CMP_OPENCV OFF CACHE BOOL "" FORCE)
     set(OPTION_CMP_VULKAN OFF CACHE BOOL "" FORCE)
 
-    set(OPTION_BUILD_KTX2 OFF CACHE BOOL "" FORCE)
-    set(OPTION_BUILD_EXR OFF CACHE BOOL "" FORCE)
-    set(OPTION_BUILD_BROTLIG OFF CACHE BOOL "" FORCE)
     set(OPTION_BUILD_INTERNAL_CMP_TEST OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(compressonator)
 
-endif ()
-
-if (NOT TARGET IL)
-
-    FetchContent_Declare(
-            DevIL
-            QUIET
-            GIT_REPOSITORY https://github.com/REDxEYE/DevIL.git
-            GIT_TAG master
-            SOURCE_SUBDIR DevIL/src-IL
-            GIT_SHALLOW TRUE
-
-    )
-
-    set(OPTION_BUILD_INTERNAL_CMP_TEST OFF CACHE BOOL "" FORCE)
-#    set(IL_STATIC_DEPS ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(devil)
-
-    target_include_directories(IL PUBLIC
-            "${devil_SOURCE_DIR}/DevIL/include"
-    )
-
-    if (WIN32)
-        target_compile_definitions(IL PUBLIC IL_STATIC_LIB)
-    endif ()
 endif ()
 
 if (NOT TARGET miniz)

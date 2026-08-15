@@ -25,9 +25,11 @@
 #include <QMessageBox>
 #include <QStyleFactory>
 
+#include "compressonator.h"
+
 int main(int argc, char *argv[])
 {
-	QApplication::setStyle(QStyleFactory::create("Fusion"));
+	// QApplication::setStyle(QStyleFactory::create("Fusion"));
 	QApplication Application(argc, argv);
 
 	QApplication::setOrganizationName(QStringLiteral("Breadworks"));
@@ -41,18 +43,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// Initialize DevIL.
-	ILuint uiImage = 0;
-
-	ilInit();
-
-	ilEnable(IL_FILE_OVERWRITE);
-
-	ilEnable(IL_ORIGIN_SET);
-	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
-
-	ilGenImages(1, &uiImage);
-	ilBindImage(uiImage);
+	// Initialize CMP.
+	CMP_InitializeBCLibrary();
+	CMP_InitFramework();
 
 	int iResult = 0;
 	{
@@ -68,9 +61,7 @@ int main(int argc, char *argv[])
 		iResult = QApplication::exec();
 	}
 
-	// Shutdown DevIL.
-	ilDeleteImages(1, &uiImage);
-	ilShutDown();
+	CMP_ShutdownBCLibrary();
 
 	return iResult;
 }

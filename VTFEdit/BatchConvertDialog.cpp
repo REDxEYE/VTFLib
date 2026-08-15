@@ -41,6 +41,10 @@
 
 #include <vector>
 
+#include <compressonator.h>
+
+#include "VTFEditHelpers.hpp"
+
 namespace VTFEdit
 {
 	namespace
@@ -291,23 +295,26 @@ namespace VTFEdit
 				const QString sVMTFile = QDir::toNativeSeparators(
 					QDir(sOutputFolder).filePath(File.completeBaseName() + QStringLiteral(".vmt")));
 
-				if(ilLoadImage(Path.constData()))
+				CMP_MipSet image{};
+
+				if(CMP_LoadTexture(Path.constData(), &image) != CMP_OK)
 				{
 					bool bHasAlpha = false;
 					bool bError = false;
 
-					const ILuint uiImage = static_cast<ILuint>(ilGetInteger(IL_CUR_IMAGE));
-					const uint32_t uiImages = static_cast<uint32_t>(ilGetInteger(IL_NUM_IMAGES)) + 1;
+					const uint32_t uiImages = 1;
 					uint32_t uiWidth = 0, uiHeight = 0;
 
 					std::vector<uint8_t *> vImageData;
 
 					for(uint32_t k = 0; k < uiImages; k++)
 					{
-						ilBindImage(uiImage);
-						ilActiveImage(static_cast<ILuint>(k));
 
-						if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
+						CMP_MipSet rgba_mipset{};
+						CMP_CompressOptions options{0};
+						options.DestFormat = CMP_FORMAT_RGBA_8888;
+						options.dwnumThreads = 4;
+						if(CMP_ConvertMipTexture(&image, &rgba_mipset, &options, nullptr) != CMP_OK)
 						{
 							log(tr("Error converting %1.").arg(sName), LogRed);
 							bError = true;
@@ -316,27 +323,27 @@ namespace VTFEdit
 
 						if(vImageData.empty())
 						{
-							uiWidth = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH));
-							uiHeight = static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT));
+							uiWidth = rgba_mipset.m_nWidth;
+							uiHeight = rgba_mipset.m_nHeight;
 						}
-						else if(uiWidth != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_WIDTH))
-							|| uiHeight != static_cast<uint32_t>(ilGetInteger(IL_IMAGE_HEIGHT)))
+						else if(uiWidth != rgba_mipset.m_nWidth
+							|| uiHeight != rgba_mipset.m_nHeight)
 						{
 							log(tr("Error converting %1. All frames must be the same size.").arg(sName), LogRed);
 							bError = true;
 							break;
 						}
 
-						uint8_t *lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
-						memcpy(lpFrameData, ilGetData(), uiWidth * uiHeight * 4);
+						auto lpFrameData = new uint8_t[uiWidth * uiHeight * 4];
+
+						CMP_MipLevel *mip = nullptr;
+						CMP_GetMipLevel(&mip, &image, 0, 0);
+						memcpy(lpFrameData, mip->m_pbData, uiWidth * uiHeight * 4);
 						vImageData.push_back(lpFrameData);
 
 						bHasAlpha = bHasAlpha || (!m_pOptions->StripAlpha
 							&& VtfFileUtility::HasAlphaData(lpFrameData, uiWidth, uiHeight));
 					}
-
-					// Leave the base image bound for the next file.
-					ilBindImage(uiImage);
 
 					if(!bError && !vImageData.empty() && m_pOptions->DistanceAlpha)
 					{
@@ -438,15 +445,19 @@ namespace VTFEdit
 								// DevIL likes image data upside down...
 								VTFFile.FlipImage(ImageData.data(), uiWidth, uiHeight);
 
-								if(!ilTexImage(uiWidth, uiHeight, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, ImageData.data()))
+								CMP_MipSet image{};
+								CMP_CompressOptions options{};
+								options.DestFormat = CMP_FORMAT_RGBA_8888;
+								options.dwnumThreads = 4;
+
+								if(CreateMipSet(image, ImageData.data(), uiWidth, uiHeight, CMP_FORMAT_RGBA_8888) != CMP_OK)
 								{
 									log(tr("Error creating %1.").arg(sName), LogRed);
 									continue;
 								}
 
 								QDir().mkpath(sOutputFolder);
-
-								if(ilSaveImage(sOtherFile.toLocal8Bit().constData()))
+								if(CMP_SaveTexture(sOtherFile.toLocal8Bit().constData(), &image) != CMP_OK)
 								{
 									log(tr("Wrote %1.").arg(sOtherFile), LogGreen);
 								}

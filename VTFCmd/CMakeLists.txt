@@ -34,4 +34,4 @@ target_include_directories(vtfcmd
 		"${devil_SOURCE_DIR}/DevIL/include"
 )
 
-target_link_libraries(vtfcmd PRIVATE vtflib_static IL)
+target_link_libraries(vtfcmd PRIVATE vtflib_static CMP_Compressonator CMP_Framework CMP_Core)

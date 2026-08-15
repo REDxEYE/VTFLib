@@ -21,1258 +21,1150 @@
 #include "enumerations.h"
 #include "VMTWrapper.h"
 #include "VTFWrapper.h"
-#include "IL/il.h"
+// #include "IL/il.h"
+
+#include "compressonator.h"
 
 #include "win32_findfile_polyfill.hpp"
 
 #define MAX_ITEMS	1024
 
 uint32_t uiFileCount = 0;
-char *lpFiles[MAX_ITEMS];							// Files to convert.
+char *lpFiles[MAX_ITEMS]; // Files to convert.
 uint32_t uiFolderCount = 0;
-char *lpFolders[MAX_ITEMS];						// Folders to convert.
-vlBool bRecursive = vlFalse;						// Recursively search folders.
+char *lpFolders[MAX_ITEMS]; // Folders to convert.
+vlBool bRecursive = vlFalse; // Recursively search folders.
 
-uint32_t uiProcessed = 0;								// Files processed.
-uint32_t uiCompleted = 0;								// Files processed without error.
+uint32_t uiProcessed = 0; // Files processed.
+uint32_t uiCompleted = 0; // Files processed without error.
 
-char *lpPrefix = "";								// String to add to start of output file name.
-char *lpPostfix = "";								// String to add to end of output file name.
-char *lpOutput = 0;								// Output folder.
+char *lpPrefix = ""; // String to add to start of output file name.
+char *lpPostfix = ""; // String to add to end of output file name.
+char *lpOutput = nullptr; // Output folder.
 
-vlBool bSilent = vlFalse;							// Don't display output.
-vlBool bPause = vlFalse;							// Don't pause the console.
-vlBool bHelp = vlFalse;								// Display help.
+vlBool bSilent = vlFalse; // Don't display output.
+vlBool bPause = vlFalse; // Don't pause the console.
+vlBool bHelp = vlFalse; // Display help.
 
-uint32_t uiVTFImage;									// VTF image handle.
-uint32_t uiVMTMaterial;								// VMT material handle.
-ILuint uiDevILImage;								// DevIL image handle.
+uint32_t uiVTFImage; // VTF image handle.
+uint32_t uiVMTMaterial; // VMT material handle.
 
-VTFImageFormat AlphaFormat = IMAGE_FORMAT_DXT5;		// VTF image format for alpha textures.
-VTFImageFormat NormalFormat = IMAGE_FORMAT_DXT1;	// VTF image format for non-alpha textures.
-SVTFCreateOptions CreateOptions;					// VTF creation options.
-char *lpShader = 0;								// VMT shader to use.
+VTFImageFormat AlphaFormat = IMAGE_FORMAT_DXT5; // VTF image format for alpha textures.
+VTFImageFormat NormalFormat = IMAGE_FORMAT_DXT1; // VTF image format for non-alpha textures.
+SVTFCreateOptions CreateOptions; // VTF creation options.
+char *lpShader = nullptr; // VMT shader to use.
 uint32_t uiParameterCount = 0;
-char *lpParameters[MAX_ITEMS][2];					// VMT parameters.
-char *lpExportFormat = "tga";						// Format extension for exporting VTF images.
+char *lpParameters[MAX_ITEMS][2]; // VMT parameters.
+char *lpExportFormat = "tga"; // Format extension for exporting VTF images.
 
-vlBool bDistanceAlpha = vlFalse;					// Encode the alpha channel as a distance field.
-float sDistanceAlphaSpread = 1.0f;				// Width of the distance field gradient in output pixels.
-uint32_t uiDistanceAlphaReduce = 1;					// Amount to shrink the image by after computing the field.
-uint8_t bDistanceAlphaThreshold = 10;				// Source alpha above which a pixel is inside the shape.
+vlBool bDistanceAlpha = vlFalse; // Encode the alpha channel as a distance field.
+float sDistanceAlphaSpread = 1.0f; // Width of the distance field gradient in output pixels.
+uint32_t uiDistanceAlphaReduce = 1; // Amount to shrink the image by after computing the field.
+uint8_t bDistanceAlphaThreshold = 10; // Source alpha above which a pixel is inside the shape.
 
 void Pause();
+
 void Print(const char *lpFormat, ...);
+
 void PrintUsage(const char *lpError, ...);
 
 void ProcessFile(char *lpInputFile);
+
 void ProcessFolder(char *lpInputFolder, char *lpWildcard);
 
 //
 // stristr()
 // Case insensitive version of strstr().
 //
-char *stristr(const char *string, const char *strSearch)
-{
-	const char *ptr = string;
-	const char *ptr2;
+char *stristr(const char *string, const char *strSearch) {
+    const char *ptr = string;
+    const char *ptr2;
 
-    while(1)
-	{
-		ptr = strchr(string, toupper(*strSearch));
-		ptr2 = strchr(string, tolower(*strSearch));
+    while (1) {
+        ptr = strchr(string, toupper(*strSearch));
+        ptr2 = strchr(string, tolower(*strSearch));
 
-		if(ptr == 0)
-		{
-			ptr = ptr2;
-		}
-		if(ptr == 0)
-		{
-			break;
-		}
-		if(ptr2 && (ptr2 < ptr))
-		{
-			ptr = ptr2;
-		}
-		if(!strnicmp(ptr, strSearch, strlen(strSearch)))
-		{
-			return (char *)ptr;
-		}
+        if (ptr == nullptr) {
+            ptr = ptr2;
+        }
+        if (ptr == nullptr) {
+            break;
+        }
+        if (ptr2 && (ptr2 < ptr)) {
+            ptr = ptr2;
+        }
+        if (!strnicmp(ptr, strSearch, strlen(strSearch))) {
+            return (char *) ptr;
+        }
 
-		string = ptr + 1;
+        string = ptr + 1;
     }
 
-    return 0;
+    return nullptr;
 }
 
 //
 // strrpl()
 // Replace a char in a string with another.
 //
-void strrpl(char *string, char chr, char rplChr)
-{
-	while(*string != 0)
-	{
-		if(*string == chr)
-			*string = rplChr;
-		string++;
-	}
+void strrpl(char *string, char chr, char rplChr) {
+    while (*string != 0) {
+        if (*string == chr)
+            *string = rplChr;
+        string++;
+    }
 }
 
-int main(int argc, char* argv[])
-{
-	int i;
-	char *lpWildcard;					// Holds wildcard string for folder searches.
+int main(int argc, char *argv[]) {
+    CMP_InitFramework();
 
-	VTFImageFormat ImageFormat;			// Temp variable for string to VTFImageFormat test.
-	VTFImageFlag ImageFlag;				// Temp variable for string to VTFImageFlag test.
+    int i;
+    char *lpWildcard; // Holds wildcard string for folder searches.
 
-	uint32_t uiTemp0, uiTemp1;			// Temp variables for string to integer test.
-	int32_t iTemp0;						// Temp variable for signed string to integer test.
-	float sTemp;						// Temp variable for string to single test.
+    VTFImageFormat ImageFormat; // Temp variable for string to VTFImageFormat test.
+    VTFImageFlag ImageFlag; // Temp variable for string to VTFImageFlag test.
 
-	VTFResizeMethod ResizeMethod;		// Temp variable for string to VTFResizeMethod test.
+    uint32_t uiTemp0, uiTemp1; // Temp variables for string to integer test.
+    int32_t iTemp0; // Temp variable for signed string to integer test.
+    float sTemp; // Temp variable for string to single test.
 
-	VTFMipmapFilter MipmapFilter;		// Temp variable for string to VTFMipmapFilter test.
+    VTFResizeMethod ResizeMethod; // Temp variable for string to VTFResizeMethod test.
 
-	winfind::WIN32_FIND_DATA FindData;
-	winfind::HANDLE Handle;
+    VTFMipmapFilter MipmapFilter; // Temp variable for string to VTFMipmapFilter test.
 
-	// Check we have the right DLL version.
-	if(vlGetVersion() != VL_VERSION)
-	{
-		Print("Wrong VTFLib version.\n");
-		return 1;
-	}
+    winfind::WIN32_FIND_DATA FindData;
+    winfind::HANDLE Handle;
 
-	// Fill in our CreateOptions struct with VTFLib defaults.
-	vlImageCreateDefaultCreateStructure(&CreateOptions);
+    // Check we have the right DLL version.
+    if (vlGetVersion() != VL_VERSION) {
+        Print("Wrong VTFLib version.\n");
+        return 1;
+    }
 
-	// Grab command arguments.
-	switch(argc)
-	{
-	case 1:
-		// If no arguments assume double click.
-		bPause = vlTrue;
-		break;
-	case 2:
-		// If only one argument assume drag and drop.
-		Handle = FindFirstFile(argv[1], &FindData);
+    // Fill in our CreateOptions struct with VTFLib defaults.
+    vlImageCreateDefaultCreateStructure(&CreateOptions);
 
-		if(Handle != INVALID_HANDLE_VALUE)
-		{
-			if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			{
-				lpFolders[uiFolderCount++] = argv[1];
-				CreateOptions.resize = vlTrue;
-				bPause = vlTrue;
-			}
-			else
-			{
-				lpFiles[uiFileCount++] = argv[1];
-				CreateOptions.resize = vlTrue;
-				bPause = vlTrue;
-			}
+    // Grab command arguments.
+    switch (argc) {
+        case 1:
+            // If no arguments assume double click.
+            bPause = vlTrue;
+            break;
+        case 2:
+            // If only one argument assume drag and drop.
+            Handle = FindFirstFile(argv[1], &FindData);
 
-			winfind::FindClose(Handle);
-			break;
-		}
-		// Fall through.
-	default:
-		for(i = 1; i < argc; i++)
-		{
-			if(stricmp(argv[i], "-file") == 0)
-			{
-				if(i + 1 < argc && uiFileCount < MAX_ITEMS)
-				{
-					lpFiles[uiFileCount++] = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-file expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-folder") == 0)
-			{
-				if(i + 1 < argc && uiFolderCount < MAX_ITEMS)
-				{
-					lpFolders[uiFolderCount++] = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-folder expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-output") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					lpOutput = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-output expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-prefix") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					lpPrefix = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-prefix expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-postfix") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					lpPostfix = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-postfix expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-version") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u.%u", &uiTemp0, &uiTemp1) == 2)
-				{
-					CreateOptions.version[0] = uiTemp0;
-					CreateOptions.version[1] = uiTemp1;
-				}
-				else
-				{
-					PrintUsage("-version expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-compress") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%d", &iTemp0) == 1
-					&& iTemp0 >= VTF_AUX_COMPRESSION_LEVEL_DEFAULT && iTemp0 <= VTF_AUX_COMPRESSION_LEVEL_MAX)
-				{
-					CreateOptions.auxCompressionLevel = (int16_t)iTemp0;
-				}
-				else
-				{
-					PrintUsage("-compress expects an integer argument between %d and %d.", 
-						VTF_AUX_COMPRESSION_LEVEL_DEFAULT, VTF_AUX_COMPRESSION_LEVEL_MAX);
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-cmethod") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					i++;
-					if(stricmp(argv[i], "deflate") == 0)
-					{
-						CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
-					}
-					else if(stricmp(argv[i], "zstd") == 0)
-					{
-						CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
-					}
-					else
-					{
-						PrintUsage("Unknown compression method: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-cmethod expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-format") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					ImageFormat = StringToImageFormat(argv[++i]);
-					if(ImageFormat != IMAGE_FORMAT_COUNT)
-					{
-						NormalFormat = ImageFormat;
-					}
-					else
-					{
-						PrintUsage("Unknown format: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-format expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-srgb") == 0)
-			{
-				CreateOptions.sRGB = vlTrue;
-				CreateOptions.flags |= TEXTUREFLAGS_SRGB;
-			}
-			else if(stricmp(argv[i], "-alphaformat") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					ImageFormat = StringToImageFormat(argv[++i]);
-					if(ImageFormat != IMAGE_FORMAT_COUNT)
-					{
-						AlphaFormat = ImageFormat;
-					}
-					else
-					{
-						PrintUsage("Unknown format: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-format expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-exportformat") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					lpExportFormat = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-exportformat expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-flag") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					ImageFlag = StringToImageFlag(argv[++i]);
-					if(ImageFlag != TEXTUREFLAGS_COUNT)
-					{
-						CreateOptions.flags |= ImageFlag;
-					}
-					else
-					{
-						PrintUsage("Unknown flag: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-flag expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-resize") == 0)
-			{
-				CreateOptions.resize = vlTrue;
-			}
-			else if(stricmp(argv[i], "-rmethod") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					ResizeMethod = StringToResizeMethod(argv[++i]);
-					if(ResizeMethod != RESIZE_COUNT)
-					{
-						CreateOptions.resizeMethod = ResizeMethod;
-					}
-					else
-					{
-						PrintUsage("Unknown rmethod: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-rmethod expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-rfilter") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					MipmapFilter = StringToMipmapFilter(argv[++i]);
-					if(MipmapFilter != MIPMAP_FILTER_COUNT)
-					{
-						CreateOptions.resizeFilter = MipmapFilter;
-					}
-					else
-					{
-						PrintUsage("Unknown rfilter: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-rfilter expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-rwidth") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
-				{
-					CreateOptions.resizeWidth = uiTemp0;
-					if(CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0)
-					{
-						CreateOptions.resizeMethod = RESIZE_SET;
-					}
-				}
-				else
-				{
-					PrintUsage("-rwidth expects unsigned integer argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-rheight") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
-				{
-					CreateOptions.resizeHeight = uiTemp0;
-					if(CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0)
-					{
-						CreateOptions.resizeMethod = RESIZE_SET;
-					}
-				}
-				else
-				{
-					PrintUsage("-rheight expects unsigned integer argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-rclampwidth") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
-				{
-					CreateOptions.resizeClampWidth = uiTemp0;
-				}
-				else
-				{
-					PrintUsage("-rclampwidth expects unsigned integer argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-rclampheight") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1)
-				{
-					CreateOptions.resizeClampHeight = uiTemp0;
-				}
-				else
-				{
-					PrintUsage("-rclampheight expects unsigned integer argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-gamma") == 0)
-			{
-				CreateOptions.gammaCorrection = vlTrue;
-			}
-			else if(stricmp(argv[i], "-gcorrection") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1)
-				{
-					CreateOptions.gammaCorrectionValue = sTemp;
-				}
-				else
-				{
-					PrintUsage("-gcorrection expects single argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-distancealpha") == 0)
-			{
-				bDistanceAlpha = vlTrue;
-			}
-			else if(stricmp(argv[i], "-dspread") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1 && sTemp > 0.0f)
-				{
-					sDistanceAlphaSpread = sTemp;
-				}
-				else
-				{
-					PrintUsage("-dspread expects a positive single argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-dreduce") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 >= 1)
-				{
-					uiDistanceAlphaReduce = uiTemp0;
-				}
-				else
-				{
-					PrintUsage("-dreduce expects an unsigned integer argument of 1 or more.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-dthreshold") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 <= 255)
-				{
-					bDistanceAlphaThreshold = (uint8_t)uiTemp0;
-				}
-				else
-				{
-					PrintUsage("-dthreshold expects an unsigned integer argument between 0 and 255.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-nomipmaps") == 0)
-			{
-				CreateOptions.mipmaps = vlFalse;
-			}
-			else if(stricmp(argv[i], "-mfilter") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					MipmapFilter = StringToMipmapFilter(argv[++i]);
-					if(MipmapFilter != MIPMAP_FILTER_COUNT)
-					{
-						CreateOptions.mipmapFilter = MipmapFilter;
-					}
-					else
-					{
-						PrintUsage("Unknown mfilter: %s.", argv[i]);
-						return 2;
-					}
-				}
-				else
-				{
-					PrintUsage("-mfilter expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-bumpscale") == 0)
-			{
-				if(i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1)
-				{
-					CreateOptions.bumpScale = sTemp;
-				}
-				else
-				{
-					PrintUsage("-bumpscale expects single argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-nothumbnail") == 0)
-			{
-				CreateOptions.thumbnail = vlFalse;
-			}
-			else if(stricmp(argv[i], "-noreflectivity") == 0)
-			{
-				CreateOptions.reflectivity = vlFalse;
-			}
-			else if(stricmp(argv[i], "-shader") == 0)
-			{
-				if(i + 1 < argc)
-				{
-					lpShader = argv[++i];
-				}
-				else
-				{
-					PrintUsage("-shader expects string argument.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-param") == 0)
-			{
-				if(i + 2 < argc)
-				{
-					lpParameters[uiParameterCount][0] = argv[++i];
-					lpParameters[uiParameterCount][1] = argv[++i];
+            if (Handle != INVALID_HANDLE_VALUE) {
+                if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    lpFolders[uiFolderCount++] = argv[1];
+                    CreateOptions.resize = vlTrue;
+                    bPause = vlTrue;
+                } else {
+                    lpFiles[uiFileCount++] = argv[1];
+                    CreateOptions.resize = vlTrue;
+                    bPause = vlTrue;
+                }
 
-					uiParameterCount++;
-				}
-				else
-				{
-					PrintUsage("-shader expects two string arguments.");
-					return 2;
-				}
-			}
-			else if(stricmp(argv[i], "-recurse") == 0)
-			{
-				bRecursive = vlTrue;
-			}
-			else if(stricmp(argv[i], "-silent") == 0)
-			{
-				bSilent = vlTrue;
-			}
-			else if(stricmp(argv[i], "-pause") == 0)
-			{
-				bPause = vlTrue;
-			}
-			else if(stricmp(argv[i], "-help") == 0)
-			{
-				bHelp = vlTrue;
-			}
-			else
-			{
-				PrintUsage("Unknown argument: %s.", argv[i]);
-				return 2;
-			}
-		}
-		break;
-	}
+                winfind::FindClose(Handle);
+                break;
+            }
+        // Fall through.
+        default:
+            for (i = 1; i < argc; i++) {
+                if (stricmp(argv[i], "-file") == 0) {
+                    if (i + 1 < argc && uiFileCount < MAX_ITEMS) {
+                        lpFiles[uiFileCount++] = argv[++i];
+                    } else {
+                        PrintUsage("-file expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-folder") == 0) {
+                    if (i + 1 < argc && uiFolderCount < MAX_ITEMS) {
+                        lpFolders[uiFolderCount++] = argv[++i];
+                    } else {
+                        PrintUsage("-folder expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-output") == 0) {
+                    if (i + 1 < argc) {
+                        lpOutput = argv[++i];
+                    } else {
+                        PrintUsage("-output expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-prefix") == 0) {
+                    if (i + 1 < argc) {
+                        lpPrefix = argv[++i];
+                    } else {
+                        PrintUsage("-prefix expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-postfix") == 0) {
+                    if (i + 1 < argc) {
+                        lpPostfix = argv[++i];
+                    } else {
+                        PrintUsage("-postfix expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-version") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u.%u", &uiTemp0, &uiTemp1) == 2) {
+                        CreateOptions.version[0] = uiTemp0;
+                        CreateOptions.version[1] = uiTemp1;
+                    } else {
+                        PrintUsage("-version expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-compress") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%d", &iTemp0) == 1
+                        && iTemp0 >= VTF_AUX_COMPRESSION_LEVEL_DEFAULT && iTemp0 <= VTF_AUX_COMPRESSION_LEVEL_MAX) {
+                        CreateOptions.auxCompressionLevel = (int16_t) iTemp0;
+                    } else {
+                        PrintUsage("-compress expects an integer argument between %d and %d.",
+                                   VTF_AUX_COMPRESSION_LEVEL_DEFAULT, VTF_AUX_COMPRESSION_LEVEL_MAX);
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-cmethod") == 0) {
+                    if (i + 1 < argc) {
+                        i++;
+                        if (stricmp(argv[i], "deflate") == 0) {
+                            CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
+                        } else if (stricmp(argv[i], "zstd") == 0) {
+                            CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
+                        } else {
+                            PrintUsage("Unknown compression method: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-cmethod expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-format") == 0) {
+                    if (i + 1 < argc) {
+                        ImageFormat = StringToImageFormat(argv[++i]);
+                        if (ImageFormat != IMAGE_FORMAT_COUNT) {
+                            NormalFormat = ImageFormat;
+                        } else {
+                            PrintUsage("Unknown format: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-format expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-srgb") == 0) {
+                    CreateOptions.sRGB = vlTrue;
+                    CreateOptions.flags |= TEXTUREFLAGS_SRGB;
+                } else if (stricmp(argv[i], "-alphaformat") == 0) {
+                    if (i + 1 < argc) {
+                        ImageFormat = StringToImageFormat(argv[++i]);
+                        if (ImageFormat != IMAGE_FORMAT_COUNT) {
+                            AlphaFormat = ImageFormat;
+                        } else {
+                            PrintUsage("Unknown format: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-format expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-exportformat") == 0) {
+                    if (i + 1 < argc) {
+                        lpExportFormat = argv[++i];
+                    } else {
+                        PrintUsage("-exportformat expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-flag") == 0) {
+                    if (i + 1 < argc) {
+                        ImageFlag = StringToImageFlag(argv[++i]);
+                        if (ImageFlag != TEXTUREFLAGS_COUNT) {
+                            CreateOptions.flags |= ImageFlag;
+                        } else {
+                            PrintUsage("Unknown flag: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-flag expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-resize") == 0) {
+                    CreateOptions.resize = vlTrue;
+                } else if (stricmp(argv[i], "-rmethod") == 0) {
+                    if (i + 1 < argc) {
+                        ResizeMethod = StringToResizeMethod(argv[++i]);
+                        if (ResizeMethod != RESIZE_COUNT) {
+                            CreateOptions.resizeMethod = ResizeMethod;
+                        } else {
+                            PrintUsage("Unknown rmethod: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-rmethod expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-rfilter") == 0) {
+                    if (i + 1 < argc) {
+                        MipmapFilter = StringToMipmapFilter(argv[++i]);
+                        if (MipmapFilter != MIPMAP_FILTER_COUNT) {
+                            CreateOptions.resizeFilter = MipmapFilter;
+                        } else {
+                            PrintUsage("Unknown rfilter: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-rfilter expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-rwidth") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
+                        CreateOptions.resizeWidth = uiTemp0;
+                        if (CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0) {
+                            CreateOptions.resizeMethod = RESIZE_SET;
+                        }
+                    } else {
+                        PrintUsage("-rwidth expects unsigned integer argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-rheight") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
+                        CreateOptions.resizeHeight = uiTemp0;
+                        if (CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0) {
+                            CreateOptions.resizeMethod = RESIZE_SET;
+                        }
+                    } else {
+                        PrintUsage("-rheight expects unsigned integer argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-rclampwidth") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
+                        CreateOptions.resizeClampWidth = uiTemp0;
+                    } else {
+                        PrintUsage("-rclampwidth expects unsigned integer argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-rclampheight") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
+                        CreateOptions.resizeClampHeight = uiTemp0;
+                    } else {
+                        PrintUsage("-rclampheight expects unsigned integer argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-gamma") == 0) {
+                    CreateOptions.gammaCorrection = vlTrue;
+                } else if (stricmp(argv[i], "-gcorrection") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1) {
+                        CreateOptions.gammaCorrectionValue = sTemp;
+                    } else {
+                        PrintUsage("-gcorrection expects single argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-distancealpha") == 0) {
+                    bDistanceAlpha = vlTrue;
+                } else if (stricmp(argv[i], "-dspread") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1 && sTemp > 0.0f) {
+                        sDistanceAlphaSpread = sTemp;
+                    } else {
+                        PrintUsage("-dspread expects a positive single argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-dreduce") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 >= 1) {
+                        uiDistanceAlphaReduce = uiTemp0;
+                    } else {
+                        PrintUsage("-dreduce expects an unsigned integer argument of 1 or more.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-dthreshold") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 <= 255) {
+                        bDistanceAlphaThreshold = (uint8_t) uiTemp0;
+                    } else {
+                        PrintUsage("-dthreshold expects an unsigned integer argument between 0 and 255.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-nomipmaps") == 0) {
+                    CreateOptions.mipmaps = vlFalse;
+                } else if (stricmp(argv[i], "-mfilter") == 0) {
+                    if (i + 1 < argc) {
+                        MipmapFilter = StringToMipmapFilter(argv[++i]);
+                        if (MipmapFilter != MIPMAP_FILTER_COUNT) {
+                            CreateOptions.mipmapFilter = MipmapFilter;
+                        } else {
+                            PrintUsage("Unknown mfilter: %s.", argv[i]);
+                            return 2;
+                        }
+                    } else {
+                        PrintUsage("-mfilter expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-bumpscale") == 0) {
+                    if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1) {
+                        CreateOptions.bumpScale = sTemp;
+                    } else {
+                        PrintUsage("-bumpscale expects single argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-nothumbnail") == 0) {
+                    CreateOptions.thumbnail = vlFalse;
+                } else if (stricmp(argv[i], "-noreflectivity") == 0) {
+                    CreateOptions.reflectivity = vlFalse;
+                } else if (stricmp(argv[i], "-shader") == 0) {
+                    if (i + 1 < argc) {
+                        lpShader = argv[++i];
+                    } else {
+                        PrintUsage("-shader expects string argument.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-param") == 0) {
+                    if (i + 2 < argc) {
+                        lpParameters[uiParameterCount][0] = argv[++i];
+                        lpParameters[uiParameterCount][1] = argv[++i];
 
-	// If the user just wants help, give it to them.
-	if(bHelp)
-	{
-		PrintUsage(0);
-		return 0;
-	}
+                        uiParameterCount++;
+                    } else {
+                        PrintUsage("-shader expects two string arguments.");
+                        return 2;
+                    }
+                } else if (stricmp(argv[i], "-recurse") == 0) {
+                    bRecursive = vlTrue;
+                } else if (stricmp(argv[i], "-silent") == 0) {
+                    bSilent = vlTrue;
+                } else if (stricmp(argv[i], "-pause") == 0) {
+                    bPause = vlTrue;
+                } else if (stricmp(argv[i], "-help") == 0) {
+                    bHelp = vlTrue;
+                } else {
+                    PrintUsage("Unknown argument: %s.", argv[i]);
+                    return 2;
+                }
+            }
+            break;
+    }
 
-	// Make sure we have something to do.
-	if(uiFileCount == 0 && uiFolderCount == 0)
-	{
-		PrintUsage("-file or -folder not specified.");
-		return 2;
-	}
+    // If the user just wants help, give it to them.
+    if (bHelp) {
+        PrintUsage(nullptr);
+        return 0;
+    }
 
-	VTFLib::Diagnostics::CError error;
-	// Initialize VTFLib.
-	vlInitialize(error);
+    // Make sure we have something to do.
+    if (uiFileCount == 0 && uiFolderCount == 0) {
+        PrintUsage("-file or -folder not specified.");
+        return 2;
+    }
 
-	if (error.isSet()) {
-		Print(error.Get());
-		return 2;
-	}
+    VTFLib::Diagnostics::CError error;
+    // Initialize VTFLib.
+    vlInitialize(error);
 
-	vlCreateImage(&uiVTFImage, error);
-	if (error.isSet()) {
-		Print(error.Get());
-		return 2;
-	}
-	vlBindImage(uiVTFImage, error);
-	if (error.isSet()) {
-		Print(error.Get());
-		return 2;
-	}
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
 
-	vlCreateMaterial(&uiVMTMaterial, error);
-	if (error.isSet()) {
-		Print(error.Get());
-		return 2;
-	}
-	vlBindMaterial(uiVMTMaterial, error);
-	if (error.isSet()) {
-		Print(error.Get());
-		return 2;
-	}
+    vlCreateImage(&uiVTFImage, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
+    vlBindImage(uiVTFImage, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
 
-	// Initialize DevIL.
-	ilInit();
+    vlCreateMaterial(&uiVMTMaterial, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
+    vlBindMaterial(uiVMTMaterial, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
 
-	ilEnable(IL_ORIGIN_SET);  // Filps images that are upside down (by format).
-	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+    // Initialize DevIL.
+    // ilInit();
 
-	ilGenImages(1, &uiDevILImage);
-	ilBindImage(uiDevILImage);
+    // ilEnable(IL_ORIGIN_SET);  // Filps images that are upside down (by format).
+    // ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
 
-	// Process files.
-	for(i = 0; i < (int)uiFileCount; i++)
-	{
-		ProcessFile(lpFiles[i]);
-	}
+    // ilGenImages(1, &uiDevILImage);
+    // ilBindImage(uiDevILImage);
 
-	// Process folders.
-	for(i = 0; i < (int)uiFolderCount; i++)
-	{
-		// Grab the wildcard string from the folder path.
-		if((lpWildcard = strrchr(lpFolders[i], '\\')) == 0)
-		{
-			lpWildcard = "*.*";
-		}
-		else
-		{
-			// Wildcard starts after last \ in path.  e.g. C:\input\*.bmp
-			*lpWildcard = '\0';
-			lpWildcard++;
+    // Process files.
+    for (i = 0; i < (int) uiFileCount; i++) {
+        ProcessFile(lpFiles[i]);
+    }
 
-			// If there is no wildcard after the last \, use *.* as defult.
-			if(*lpWildcard == '\0')
-			{
-				lpWildcard = "*.*";
-			}
-		}
+    // Process folders.
+    for (i = 0; i < (int) uiFolderCount; i++) {
+        // Grab the wildcard string from the folder path.
+        if ((lpWildcard = strrchr(lpFolders[i], '\\')) == nullptr) {
+            lpWildcard = "*.*";
+        } else {
+            // Wildcard starts after last \ in path.  e.g. C:\input\*.bmp
+            *lpWildcard = '\0';
+            lpWildcard++;
 
-		ProcessFolder(lpFolders[i], lpWildcard);
-	}
+            // If there is no wildcard after the last \, use *.* as defult.
+            if (*lpWildcard == '\0') {
+                lpWildcard = "*.*";
+            }
+        }
 
-	// Shutdown DevIL.
-	ilDeleteImages(1, &uiDevILImage);
+        ProcessFolder(lpFolders[i], lpWildcard);
+    }
 
-	ilShutDown();
+    // Shutdown DevIL.
+    // ilDeleteImages(1, &uiDevILImage);
 
-	// Shutdown VTFLib.
-	vlDeleteMaterial(uiVMTMaterial);
+    // ilShutDown();
 
-	vlDeleteImage(uiVTFImage);
+    // Shutdown VTFLib.
+    vlDeleteMaterial(uiVMTMaterial);
 
-	vlShutdown();
+    vlDeleteImage(uiVTFImage);
 
-	Print("%d/%d files completed.\n", uiCompleted, uiProcessed);
+    vlShutdown();
 
-	// Pause the console.
-	Pause();
+    Print("%d/%d files completed.\n", uiCompleted, uiProcessed);
 
-	return 0;
+    // Pause the console.
+    Pause();
+
+    return 0;
 }
 
 //
 // Pause()
 // Puase the console.
 //
-void Pause()
-{
-	if(bPause)
-	{
-		Print("Press any key to continue...");
-		getchar();
-	}
+void Pause() {
+    if (bPause) {
+        Print("Press any key to continue...");
+        getchar();
+    }
 }
 
 //
 // Print()
 // Wrap printf() so we don't have to keep checking for silent mode.
 //
-void Print(const char *lpFormat, ...)
-{
-	va_list ArgumentList;
+void Print(const char *lpFormat, ...) {
+    va_list ArgumentList;
 
-	if(!bSilent)
-	{
-		va_start(ArgumentList, lpFormat);
-		vprintf(lpFormat, ArgumentList);
-		va_end(ArgumentList);
-	}
+    if (!bSilent) {
+        va_start(ArgumentList, lpFormat);
+        vprintf(lpFormat, ArgumentList);
+        va_end(ArgumentList);
+    }
 }
 
 //
 // PrintUsage()
 // Print VTFCmd command line usage help string.
 //
-void PrintUsage(const char *lpError, ...)
-{
-	va_list ArgumentList;
+void PrintUsage(const char *lpError, ...) {
+    va_list ArgumentList;
 
-	Print("Correct vtfcmd usage:\n");
-	Print(" -file <path>             (Input file path.)\n");
-	Print(" -folder <path>           (Input directory search string.)\n");
-	Print(" -output <path>           (Output directory.)\n");
-	Print(" -prefix <string>         (Output file prefix.)\n");
-	Print(" -postfix <string>        (Output file postfix.)\n");
-	Print(" -version <string>        (Output version.)\n");
-	Print(" -format <string>         (Output format to use on non-alpha (colour) textures.)\n");
-	Print(" -compress <integer>      (Compress image data; -1 default, 0 off, 1-9. Requires version 7.6.)\n");
-	Print(" -cmethod <string>        (Compression method: deflate or zstd.)\n");
-	Print(" -alphaformat <string>    (Output format to use on alpha textures.)\n");
-	Print(" -srgb                    (Whether to treat image as sRGB colour space or not)\n");
-	Print(" -flag <string>           (Output flags to set.)\n");
-	Print(" -resize                  (Resize the input to a power of 2.)\n");
-	Print(" -rmethod <string>        (Resize method to use.)\n");
-	Print(" -rfilter <string>        (Resize filter to use.)\n");
-	Print(" -rwidth <integer>        (Resize to specific width.)\n");
-	Print(" -rheight <integer>       (Resize to specific height.)\n");
-	Print(" -rclampwidth <integer>   (Maximum width to resize to.)\n");
-	Print(" -rclampheight <integer>  (Maximum height to resize to.)\n");
-	Print(" -gamma                   (Gamma correct image.)\n");
-	Print(" -gcorrection <single>    (Gamma correction to use.)\n");
-	Print(" -distancealpha           (Encode the alpha channel as a distance field.)\n");
-	Print(" -dspread <single>        (Width of the distance field gradient in output pixels.)\n");
-	Print(" -dreduce <integer>       (Shrink the image by this factor after computing the field.)\n");
-	Print(" -dthreshold <integer>    (Source alpha above which a pixel is inside the shape.)\n");
-	Print(" -nomipmaps               (Don't generate mipmaps.)\n");
-	Print(" -mfilter <string>        (Mipmap filter to use.)\n");
-	Print(" -bumpscale <single>      (Engine bump mapping scale to use.)\n");
-	Print(" -nothumbnail             (Don't generate thumbnail image.)\n");
-	Print(" -noreflectivity          (Don't calculate reflectivity.)\n");
-	Print(" -shader <string>         (Create a material for the texture.)\n");
-	Print(" -param <string> <string> (Add a parameter to the material.)\n");
-	Print(" -recurse                 (Process directories recursively.)\n");
-	Print(" -exportformat <string>   (Convert VTF files to the format of this extension.)\n");
-	Print(" -silent                  (Silent mode.)\n");
-	Print(" -pause                   (Pause when done.)\n");
-	Print(" -help                    (Display vtfcmd help.)\n");
-	Print("\n");
-	Print("Example vtfcmd usage:\n");
-	Print("vtfcmd.exe -file \"C:\\texture1.bmp\" -file \"C:\\texture2.bmp\" -format \"dxt1\"\n");
-	Print("vtfcmd.exe -folder \"C:\\input\\*.tga\" -output \"C:\\output\" -recurse -pause\n");
-	Print("vtfcmd.exe -folder \"C:\\output\\*.vtf\" -output \"C:\\input\" -exportformat \"jpg\"\n");
+    Print("Correct vtfcmd usage:\n");
+    Print(" -file <path>             (Input file path.)\n");
+    Print(" -folder <path>           (Input directory search string.)\n");
+    Print(" -output <path>           (Output directory.)\n");
+    Print(" -prefix <string>         (Output file prefix.)\n");
+    Print(" -postfix <string>        (Output file postfix.)\n");
+    Print(" -version <string>        (Output version.)\n");
+    Print(" -format <string>         (Output format to use on non-alpha (colour) textures.)\n");
+    Print(" -compress <integer>      (Compress image data; -1 default, 0 off, 1-9. Requires version 7.6.)\n");
+    Print(" -cmethod <string>        (Compression method: deflate or zstd.)\n");
+    Print(" -alphaformat <string>    (Output format to use on alpha textures.)\n");
+    Print(" -srgb                    (Whether to treat image as sRGB colour space or not)\n");
+    Print(" -flag <string>           (Output flags to set.)\n");
+    Print(" -resize                  (Resize the input to a power of 2.)\n");
+    Print(" -rmethod <string>        (Resize method to use.)\n");
+    Print(" -rfilter <string>        (Resize filter to use.)\n");
+    Print(" -rwidth <integer>        (Resize to specific width.)\n");
+    Print(" -rheight <integer>       (Resize to specific height.)\n");
+    Print(" -rclampwidth <integer>   (Maximum width to resize to.)\n");
+    Print(" -rclampheight <integer>  (Maximum height to resize to.)\n");
+    Print(" -gamma                   (Gamma correct image.)\n");
+    Print(" -gcorrection <single>    (Gamma correction to use.)\n");
+    Print(" -distancealpha           (Encode the alpha channel as a distance field.)\n");
+    Print(" -dspread <single>        (Width of the distance field gradient in output pixels.)\n");
+    Print(" -dreduce <integer>       (Shrink the image by this factor after computing the field.)\n");
+    Print(" -dthreshold <integer>    (Source alpha above which a pixel is inside the shape.)\n");
+    Print(" -nomipmaps               (Don't generate mipmaps.)\n");
+    Print(" -mfilter <string>        (Mipmap filter to use.)\n");
+    Print(" -bumpscale <single>      (Engine bump mapping scale to use.)\n");
+    Print(" -nothumbnail             (Don't generate thumbnail image.)\n");
+    Print(" -noreflectivity          (Don't calculate reflectivity.)\n");
+    Print(" -shader <string>         (Create a material for the texture.)\n");
+    Print(" -param <string> <string> (Add a parameter to the material.)\n");
+    Print(" -recurse                 (Process directories recursively.)\n");
+    Print(" -exportformat <string>   (Convert VTF files to the format of this extension.)\n");
+    Print(" -silent                  (Silent mode.)\n");
+    Print(" -pause                   (Pause when done.)\n");
+    Print(" -help                    (Display vtfcmd help.)\n");
+    Print("\n");
+    Print("Example vtfcmd usage:\n");
+    Print("vtfcmd.exe -file \"C:\\texture1.bmp\" -file \"C:\\texture2.bmp\" -format \"dxt1\"\n");
+    Print("vtfcmd.exe -folder \"C:\\input\\*.tga\" -output \"C:\\output\" -recurse -pause\n");
+    Print("vtfcmd.exe -folder \"C:\\output\\*.vtf\" -output \"C:\\input\" -exportformat \"jpg\"\n");
 
-	if(lpError != 0 && !bSilent)
-	{
-		Print("\n");
-		Print("Error:\n");
+    if (lpError != nullptr && !bSilent) {
+        Print("\n");
+        Print("Error:\n");
 
-		va_start(ArgumentList, lpError);
-		vprintf(lpError, ArgumentList);
-		va_end(ArgumentList);
+        va_start(ArgumentList, lpError);
+        vprintf(lpError, ArgumentList);
+        va_end(ArgumentList);
 
-		Print("\n");
-	}
+        Print("\n");
+    }
 
-	if(bHelp)
-	{
-		Print("\n");
-		Print("Formats: RGBA8888, ABGR8888, RGB888, BGR888, RGB565, I8, IA88, A8,\n");
-		Print("         RGB888_BLUESCREEN, BGR888_BLUESCREEN, ARGB8888, BGRA8888, DXT1,\n");
-		Print("         DXT3, DXT5, BGRX8888, BGR565, BGRX5551, BGRA4444,DXT1_ONEBITALPHA,\n");
-		Print("         BGRA5551, UV88, UVWQ8888, RGBA16161616F, RGBA16161616, UVLX8888,\n");
-		Print("         BC7, BC6H\n");
+    if (bHelp) {
+        Print("\n");
+        Print("Formats: RGBA8888, ABGR8888, RGB888, BGR888, RGB565, I8, IA88, A8,\n");
+        Print("         RGB888_BLUESCREEN, BGR888_BLUESCREEN, ARGB8888, BGRA8888, DXT1,\n");
+        Print("         DXT3, DXT5, BGRX8888, BGR565, BGRX5551, BGRA4444,DXT1_ONEBITALPHA,\n");
+        Print("         BGRA5551, UV88, UVWQ8888, RGBA16161616F, RGBA16161616, UVLX8888,\n");
+        Print("         BC7, BC6H\n");
 
-		Print("\n");
-		Print("Flags:   POINTSAMPLE, TRILINEAR, CLAMPS, CLAMPT, ANISOTROPIC, HINT_DXT5,\n");
-		Print("         NORMAL, NOMIP, NOLOD, MINMIP, PROCEDURAL, RENDERTARGET,\n");
-		Print("         DEPTHRENDERTARGET, NODEBUGOVERRIDE, SINGLECOPY, NODEPTHBUFFER\n");
-		Print("         CLAMPU, VERTEXTEXTURE, SSBUMP, BORDER");
+        Print("\n");
+        Print("Flags:   POINTSAMPLE, TRILINEAR, CLAMPS, CLAMPT, ANISOTROPIC, HINT_DXT5,\n");
+        Print("         NORMAL, NOMIP, NOLOD, MINMIP, PROCEDURAL, RENDERTARGET,\n");
+        Print("         DEPTHRENDERTARGET, NODEBUGOVERRIDE, SINGLECOPY, NODEPTHBUFFER\n");
+        Print("         CLAMPU, VERTEXTEXTURE, SSBUMP, BORDER");
 
-		Print("\n");
-		Print("Resize Method:  NEAREST, BIGGEST, SMALLEST, NEAREST4, BIGGEST4, SMALLEST4\n");
+        Print("\n");
+        Print("Resize Method:  NEAREST, BIGGEST, SMALLEST, NEAREST4, BIGGEST4, SMALLEST4\n");
 
-		Print("\n");
-		Print("Resize Filter:  POINT, BOX, TRIANGLE, QUADRATIC, CUBIC, CATROM, MITCHELL\n");
-		Print("                GAUSSIAN, SINC, BESSEL, HANNING, HAMMING, BLACKMAN, KAISER, NICE\n");
+        Print("\n");
+        Print("Resize Filter:  POINT, BOX, TRIANGLE, QUADRATIC, CUBIC, CATROM, MITCHELL\n");
+        Print("                GAUSSIAN, SINC, BESSEL, HANNING, HAMMING, BLACKMAN, KAISER, NICE\n");
 
-		Print("\n");
-		Print("Normal Kernal:  4X, 3X3, 5X5, 7X7, 9X9, DUDV\n");
+        Print("\n");
+        Print("Normal Kernal:  4X, 3X3, 5X5, 7X7, 9X9, DUDV\n");
 
-		Print("\n");
-		Print("Normal Height:  ALPHA, AVERAGERGB, BIASEDRGB, RED, GREEN, BLUE, MAXRGB,\n");
-		Print("                COLORSPACE\n");
+        Print("\n");
+        Print("Normal Height:  ALPHA, AVERAGERGB, BIASEDRGB, RED, GREEN, BLUE, MAXRGB,\n");
+        Print("                COLORSPACE\n");
 
-		Print("\n");
-		Print("Normal Alpha:   NOCHANGE, HEIGHT, BLACK, WHITE\n");
-	}
+        Print("\n");
+        Print("Normal Alpha:   NOCHANGE, HEIGHT, BLACK, WHITE\n");
+    }
 
-	Pause();
+    Pause();
 }
+
+#ifdef _WIN32
+#define PATHSEP "\\"
+#define PATHSEP_C '\\'
+#else
+#define PATHSEP "/"
+#define PATHSEP_C '/'
+#endif
+
 
 //
 // CreateOutputPath()
 // Create an output file path from the input file path.
 //
-void CreateOutputPath(char *lpOutputFile, char *lpInputFile, char *lpExtension)
-{
-	char *lpTemp;
+void CreateOutputPath(char *lpOutputFile, char *lpInputFile, char *lpExtension) {
+    char *lpTemp;
 
-	// Create output file string.
-	if(lpOutput != 0 && *lpOutput != '\0')
-	{
-		// Put the file in the lpOutput directory.
-		sprintf(lpOutputFile, "%s\\", lpOutput);
-	}
-	else
-	{
-		// Put the file in the same directory as the input file.
-		strcpy(lpOutputFile, lpInputFile);
-		if((lpTemp = strrchr(lpOutputFile, '\\')) != 0)
-		{
-			*(lpTemp + 1) = '\0';
-		}
-		else
-		{
-			*lpOutputFile = '\0';
-		}
-	}
+    // Create output file string.
+    if (lpOutput != nullptr && *lpOutput != '\0') {
+        // Put the file in the lpOutput directory.
+        sprintf(lpOutputFile, "%s" PATHSEP, lpOutput);
+    } else {
+        // Put the file in the same directory as the input file.
+        strcpy(lpOutputFile, lpInputFile);
+        if ((lpTemp = strrchr(lpOutputFile, PATHSEP_C)) != nullptr) {
+            *(lpTemp + 1) = '\0';
+        } else {
+            *lpOutputFile = '\0';
+        }
+    }
 
-	// Add the prefix to the file name.
-	strcat(lpOutputFile, lpPrefix);
+    // Add the prefix to the file name.
+    strcat(lpOutputFile, lpPrefix);
 
-	// Add the file name of the input file to the file name.
-	if((lpTemp = strrchr(lpInputFile, '\\')) != 0)
-	{
-		strcat(lpOutputFile, lpTemp + 1);
-	}
-	else
-	{
-		strcat(lpOutputFile, lpInputFile);
-	}
+    // Add the file name of the input file to the file name.
+    if ((lpTemp = strrchr(lpInputFile, PATHSEP_C)) != nullptr) {
+        strcat(lpOutputFile, lpTemp + 1);
+    } else {
+        strcat(lpOutputFile, lpInputFile);
+    }
 
-	if((lpTemp = strrchr(lpOutputFile, '.')) != 0 && lpTemp > strrchr(lpOutputFile, '\\'))
-	{
-		*lpTemp = '\0';
-	}
+    if ((lpTemp = strrchr(lpOutputFile, '.')) != nullptr && lpTemp > strrchr(lpOutputFile, PATHSEP_C)) {
+        *lpTemp = '\0';
+    }
 
-	// Add the postfix to the file name.
-	strcat(lpOutputFile, lpPostfix);
+    // Add the postfix to the file name.
+    strcat(lpOutputFile, lpPostfix);
 
-	// Add the extension to the file name.
-	strcat(lpOutputFile, ".");
-	strcat(lpOutputFile, lpExtension);
+    // Add the extension to the file name.
+    strcat(lpOutputFile, ".");
+    strcat(lpOutputFile, lpExtension);
 }
 
 //
 // FlipImage()
 // Flip lpImageData over the horizontal axis.
 //
-void FlipImage(uint8_t *lpImageData, uint32_t uiWidth, uint32_t uiHeight, uint32_t uiChannels)
-{
-	uint32_t i, j, k;
-	uint8_t bTemp;
+void FlipImage(uint8_t *lpImageData, uint32_t uiWidth, uint32_t uiHeight, uint32_t uiChannels) {
+    uint32_t i, j, k;
+    uint8_t bTemp;
 
-	for(i = 0; i < uiWidth; i++)
-	{
-		for(j = 0; j < uiHeight / 2; j++)
-		{
-			uint8_t *pOne = lpImageData + (i + j * uiWidth) * uiChannels;
-			uint8_t *pTwo = lpImageData + (i + (uiHeight - j - 1) * uiWidth) * uiChannels;
+    for (i = 0; i < uiWidth; i++) {
+        for (j = 0; j < uiHeight / 2; j++) {
+            uint8_t *pOne = lpImageData + (i + j * uiWidth) * uiChannels;
+            uint8_t *pTwo = lpImageData + (i + (uiHeight - j - 1) * uiWidth) * uiChannels;
 
-			for(k = 0; k < uiChannels; k++)
-			{
-				bTemp = pOne[k];
-				pOne[k] = pTwo[k];
-				pTwo[k] = bTemp;
-			}
-		}
-	}
+            for (k = 0; k < uiChannels; k++) {
+                bTemp = pOne[k];
+                pOne[k] = pTwo[k];
+                pTwo[k] = bTemp;
+            }
+        }
+    }
+}
+
+static uint32_t BytesPerPixel(const CMP_MipSet &image) {
+    uint32_t bytesPerChannel;
+
+    switch (image.m_ChannelFormat) {
+        case CF_8bit:
+            bytesPerChannel = 1;
+            break;
+
+        case CF_16bit:
+        case CF_Float16:
+            bytesPerChannel = 2;
+            break;
+
+        case CF_Float32:
+            bytesPerChannel = 4;
+            break;
+
+        default:
+            return 0; // compressed/unknown
+    }
+
+    auto channels = image.m_nChannels;
+    if (channels == 0) {
+        switch (image.m_TextureDataType) {
+            case TDT_XRGB:
+                channels = 3;
+                break;
+            case TDT_ARGB:
+                channels = 4;
+                break;
+            case TDT_R:
+                channels = 1;
+                break;
+            case TDT_RG:
+                channels = 2;
+                break;
+            case TDT_RGB:
+                channels = 3;
+                break;
+            case TDT_8:
+                channels = 1;
+                break;
+            case TDT_16:
+                channels = 1;
+                break;
+            default: {
+                return 0;
+            }
+        }
+    }
+
+    return bytesPerChannel * channels;
+}
+
+CMP_ERROR CreateMipSet(
+    CMP_MipSet &mipSet,
+    const void *data,
+    int width,
+    int height,
+    CMP_FORMAT format) {
+    int channels;
+
+    switch (format) {
+        case CMP_FORMAT_RGB_888:
+        case CMP_FORMAT_BGR_888:
+            channels = 3;
+            break;
+
+        case CMP_FORMAT_RGBA_8888:
+        case CMP_FORMAT_BGRA_8888:
+        case CMP_FORMAT_ARGB_8888:
+        case CMP_FORMAT_ABGR_8888:
+            channels = 4;
+            break;
+
+        default:
+            return CMP_ERR_UNSUPPORTED_SOURCE_FORMAT;
+    }
+
+    mipSet = {};
+
+    CMP_ERROR err = CMP_CreateMipSet(
+        &mipSet,
+        width,
+        height,
+        1,
+        CF_8bit,
+        TT_2D
+    );
+
+    if (err != CMP_OK)
+        return err;
+
+    CMP_MipLevel *mip = nullptr;
+    CMP_GetMipLevel(&mip, &mipSet, 0, 0);
+
+    if (!mip) {
+        CMP_FreeMipSet(&mipSet);
+        return CMP_ERR_MEM_ALLOC_FOR_MIPSET;
+    }
+
+    const size_t size =
+            static_cast<size_t>(width) *
+            static_cast<size_t>(height) *
+            channels;
+
+    mipSet.m_format = format;
+    mipSet.m_nChannels = channels;
+    mipSet.m_TextureDataType =
+            channels == 4 ? TDT_ARGB : TDT_RGB;
+
+    mipSet.dwWidth = width;
+    mipSet.dwHeight = height;
+    mipSet.dwDataSize = static_cast<CMP_DWORD>(size);
+
+    mip->m_nWidth = width;
+    mip->m_nHeight = height;
+    mip->m_dwLinearSize = static_cast<CMP_DWORD>(size);
+
+    std::memcpy(mip->m_pbData, data, size);
+
+    mipSet.pData = mip->m_pbData;
+
+    return CMP_OK;
 }
 
 //
 // ProcessFile()
 // Convert input file to a vtf file and place it in the output folder.
 //
-void ProcessFile(char *lpInputFile)
-{
-	uint32_t i;
-	VTFLib::Diagnostics::CError error;
+void ProcessFile(char *lpInputFile) {
+    uint32_t i;
+    VTFLib::Diagnostics::CError error;
 
-	char *lpTemp;					// Temp variable for string manipulation.
-	char lpVTFFile[512];			// Holds output .vtf file name.
-	char lpVMTFile[512];			// Holds output .vmt file name.
-	char lpVMTBaseTexture[512];	// Holds $basetexture .vmt param.
-	char lpExportFile[512];		// Holds output export file name.
+    // Temp variable for string manipulation.
+    char lpVTFFile[512]; // Holds output .vtf file name.
+    char lpVMTFile[512]; // Holds output .vmt file name.
+    char lpVMTBaseTexture[512]; // Holds $basetexture .vmt param.
+    char lpExportFile[512]; // Holds output export file name.
 
-	int32_t iTest;					// Holds .vmt integer test result.
-	float sTest;					// Holds .vmt float test result.
-	char cTest[4096];				// Holds .vmt string test result.
+    int32_t iTest; // Holds .vmt integer test result.
+    float sTest; // Holds .vmt float test result.
+    char cTest[4096]; // Holds .vmt string test result.
 
-	uint32_t uiImageWidth, uiImageHeight;	// Dimensions of the image being created.
-	uint8_t *lpSourceData;				// Image data to create the texture from.
-	uint8_t *lpDistanceData;				// Distance field data.
-	uint32_t uiDestWidth, uiDestHeight;	// Distance field dimensions.
-	vlBool bClipped;					// Was the distance field clipped?
+    uint32_t uiImageWidth, uiImageHeight; // Dimensions of the image being created.
+    uint8_t *lpSourceData; // Image data to create the texture from.
+    uint8_t *lpDistanceData; // Distance field data.
+    uint32_t uiDestWidth, uiDestHeight; // Distance field dimensions.
+    vlBool bClipped; // Was the distance field clipped?
 
-	float sR, sG, sB;			// Reflectivity.
-	uint8_t *lpImageData;			// Export data.
-	VTFImageFormat DestFormat;		// Export format.
+    float sR, sG, sB; // Reflectivity.
+    uint8_t *lpImageData; // Export data.
+    VTFImageFormat DestFormat; // Export format.
 
-	uiProcessed++;
+    uiProcessed++;
 
-	Print("Processing %s...\n", lpInputFile);
+    Print("Processing %s...\n", lpInputFile);
 
-	lpTemp = strrchr(lpInputFile, '.');
-	
-	if(lpTemp == 0 || stricmp(lpTemp, ".vtf") != 0)
-	{
-		// Load input file.
-		if(!ilLoadImage(lpInputFile))
-		{
-			Print(" Error loading input file.\n\n");
-			return;
-		}
+    const char *lpTemp = strrchr(lpInputFile, '.');
 
-		Print(" Information:\n");
+    if (lpTemp == nullptr || stricmp(lpTemp, ".vtf") != 0) {
+        // Load input file.
 
-		// Display input file info.
-		Print("  Width: %d\n", ilGetInteger(IL_IMAGE_WIDTH));
-		Print("  Height: %d\n", ilGetInteger(IL_IMAGE_HEIGHT));
-		Print("  BPP: %d\n\n", ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL));
+        CMP_MipSet image{};
+        if (CMP_LoadTexture(lpInputFile, &image) != CMP_OK) {
+            Print(" Error loading input file.\n\n");
+            return;
+        }
 
-		CreateOptions.imageFormat = ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL) == 4 ? AlphaFormat : NormalFormat;
+        Print(" Information:\n");
 
-		Print(" Creating texture:\n");
+        // Display input file info.
+        Print("  Width: %d\n", image.m_nWidth);
+        Print("  Height: %d\n", image.m_nHeight);
+        Print("  BPP: %d\n\n", BytesPerPixel(image));
 
-		// Convert input file to RGBA.
-		if(!ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE))
-		{
-			Print("  Error converting input file.\n\n");
-			return;
-		}
+        CreateOptions.imageFormat = BytesPerPixel(image) == 4 ? AlphaFormat : NormalFormat;
 
-		uiImageWidth = (uint32_t)ilGetInteger(IL_IMAGE_WIDTH);
-		uiImageHeight = (uint32_t)ilGetInteger(IL_IMAGE_HEIGHT);
-		lpSourceData = ilGetData();
-		lpDistanceData = 0;
+        Print(" Creating texture:\n");
 
-		// Replace the alpha channel with a distance field.
-		if(bDistanceAlpha)
-		{
-			uiDestWidth = uiImageWidth / uiDistanceAlphaReduce;
-			uiDestHeight = uiImageHeight / uiDistanceAlphaReduce;
+        CMP_MipSet rgba_mipset{};
+        CMP_CompressOptions options{0};
+        options.DestFormat = CMP_FORMAT_RGBA_8888;
+        options.dwnumThreads = 4;
+        if (CMP_ConvertMipTexture(&image, &rgba_mipset, &options, nullptr) != CMP_OK) {
+            Print("  Error converting input file.\n\n");
+            return;
+        }
 
-			if(uiDestWidth == 0)
-				uiDestWidth = 1;
-			if(uiDestHeight == 0)
-				uiDestHeight = 1;
+        uiImageWidth = (uint32_t) image.m_nWidth;
+        uiImageHeight = (uint32_t) image.m_nHeight;
+        CMP_MipLevel *mip = nullptr;
+        CMP_GetMipLevel(&mip, &image, 0, 0);
+        lpSourceData = mip->m_pbData;
+        lpDistanceData = nullptr;
 
-			lpDistanceData = (uint8_t *)malloc(uiDestWidth * uiDestHeight * 4);
+        // Replace the alpha channel with a distance field.
+        if (bDistanceAlpha) {
+            uiDestWidth = uiImageWidth / uiDistanceAlphaReduce;
+            uiDestHeight = uiImageHeight / uiDistanceAlphaReduce;
 
-			if(lpDistanceData == 0)
-			{
-				Print("  Error allocating distance field.\n\n");
-				return;
-			}
+            if (uiDestWidth == 0)
+                uiDestWidth = 1;
+            if (uiDestHeight == 0)
+                uiDestHeight = 1;
 
-			bClipped = vlFalse;
+            lpDistanceData = (uint8_t *) malloc(uiDestWidth * uiDestHeight * 4);
 
-			if(!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth, uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped, error))
-			{
-				Print("  Error creating distance field:\n%s\n\n", error.Get());
-				free(lpDistanceData);
-				return;
-			}
+            if (lpDistanceData == nullptr) {
+                Print("  Error allocating distance field.\n\n");
+                return;
+            }
 
-			if(bClipped)
-			{
-				Print("  Warning: the distance field reaches the edge of the image and has been clipped.\n");
-			}
+            bClipped = vlFalse;
 
-			lpSourceData = lpDistanceData;
-			uiImageWidth = uiDestWidth;
-			uiImageHeight = uiDestHeight;
+            if (!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth,
+                                               uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped,
+                                               error)) {
+                Print("  Error creating distance field:\n%s\n\n", error.Get());
+                free(lpDistanceData);
+                return;
+            }
 
-			// The distance field always needs an alpha channel.
-			CreateOptions.imageFormat = AlphaFormat;
-		}
+            if (bClipped) {
+                Print("  Warning: the distance field reaches the edge of the image and has been clipped.\n");
+            }
 
-		// Create vtf file.
-		if(!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions, error))
-		{
-			Print("  Error creating vtf file:\n%s\n\n", error.Get());
-			free(lpDistanceData);
-			return;
-		}
+            lpSourceData = lpDistanceData;
+            uiImageWidth = uiDestWidth;
+            uiImageHeight = uiDestHeight;
 
-		free(lpDistanceData);
+            // The distance field always needs an alpha channel.
+            CreateOptions.imageFormat = AlphaFormat;
+        }
 
-		CreateOutputPath(lpVTFFile, lpInputFile, "vtf");
+        // Create vtf file.
+        if (!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions, error)) {
+            Print("  Error creating vtf file:\n%s\n\n", error.Get());
+            free(lpDistanceData);
+            return;
+        }
 
-		// Write vtf file.
-		Print("  Writing %s...\n", lpVTFFile);
-		if(!vlImageSave(lpVTFFile, error))
-		{
-			Print(" Error creating vtf file:\n%s\n\n", error.Get());
-			return;
-		}
-		Print("  %s written.\n\n", lpVTFFile);
+        free(lpDistanceData);
 
-		// Do we build a material?
-		if(lpShader != 0)
-		{
-			Print(" Creating material:\n");
+        CreateOutputPath(lpVTFFile, lpInputFile, "vtf");
 
-			// We need to constuct a $basetexture string, to do this we need the path
-			// of the vtf file relative to the materials folder.  If we arn't in a
-			// materials folder we can't do this.
-			if((lpTemp = stristr(lpVTFFile, "materials\\")) == 0)
-			{
-				Print("  Error creating vmt: texture is not in a ...\\materials\\ folder.\n\n");
-			}
-			else
-			{
-				strcpy(lpVMTFile, lpVTFFile);
-				strcpy(strrchr(lpVMTFile, '.'), ".vmt");
+        // Write vtf file.
+        Print("  Writing %s...\n", lpVTFFile);
+        if (!vlImageSave(lpVTFFile, error)) {
+            Print(" Error creating vtf file:\n%s\n\n", error.Get());
+            return;
+        }
+        Print("  %s written.\n\n", lpVTFFile);
 
-				strcpy(lpVMTBaseTexture, lpTemp + strlen("materials\\"));
-				*strrchr(lpVMTBaseTexture, '.') = '\0';
-				strrpl(lpVMTBaseTexture, '\\', '/');
+        // Do we build a material?
+        if (lpShader != nullptr) {
+            Print(" Creating material:\n");
 
-				vlMaterialCreate(lpShader, error); // Create the root node.
-				vlMaterialGetFirstNode(); // Go to the root node.
-				vlMaterialAddNodeString("$basetexture", lpVMTBaseTexture); // Add a string node to the root node.
+            // We need to constuct a $basetexture string, to do this we need the path
+            // of the vtf file relative to the materials folder.  If we arn't in a
+            // materials folder we can't do this.
+            if ((lpTemp = stristr(lpVTFFile, "materials\\")) == nullptr) {
+                Print("  Error creating vmt: texture is not in a ...\\materials\\ folder.\n\n");
+            } else {
+                strcpy(lpVMTFile, lpVTFFile);
+                strcpy(strrchr(lpVMTFile, '.'), ".vmt");
 
-				// Add the custom parameters.
-				for(i = 0; i < uiParameterCount; i++)
-				{
-					// Figure out if the parameter is a string, single or integer.
+                strcpy(lpVMTBaseTexture, lpTemp + strlen("materials\\"));
+                *strrchr(lpVMTBaseTexture, '.') = '\0';
+                strrpl(lpVMTBaseTexture, '\\', '/');
 
-					if(sscanf(lpParameters[i][1], "%d%s", &iTest, cTest) == 1)
-					{
-						// We can interpet the string as an integer, assume it is one.
-						vlMaterialAddNodeInteger(lpParameters[i][0], iTest);
-					}
-					else if(sscanf(lpParameters[i][1], "%f%s", &sTest, cTest) == 1)
-					{
-						// We can interpet the string as an single, assume it is one.
-						vlMaterialAddNodeSingle(lpParameters[i][0], sTest);
-					}
-					else
-					{
-						// The string must be a string...
-						vlMaterialAddNodeString(lpParameters[i][0], lpParameters[i][1]);
-					}
-				}
+                vlMaterialCreate(lpShader, error); // Create the root node.
+                vlMaterialGetFirstNode(); // Go to the root node.
+                vlMaterialAddNodeString("$basetexture", lpVMTBaseTexture); // Add a string node to the root node.
 
-				// Write vmt file.
-				Print("  Writing %s...\n", lpVMTFile);
-				if(!vlMaterialSave(lpVMTFile, error))
-				{
-					Print("Error creating vtf file:\n%s\n\n", error.Get());
-					return;
-				}
-				Print("  %s written.\n\n", lpVMTFile);
-			}
-		}
-	}
-	else
-	{
-		if(!vlImageLoad(lpInputFile, vlFalse, error))
-		{
-			Print(" Error loading input file:\n%s\n\n", error.Get());
-			return;
-		}
+                // Add the custom parameters.
+                for (i = 0; i < uiParameterCount; i++) {
+                    // Figure out if the parameter is a string, single or integer.
 
-		Print(" Information:\n");
+                    if (sscanf(lpParameters[i][1], "%d%s", &iTest, cTest) == 1) {
+                        // We can interpet the string as an integer, assume it is one.
+                        vlMaterialAddNodeInteger(lpParameters[i][0], iTest);
+                    } else if (sscanf(lpParameters[i][1], "%f%s", &sTest, cTest) == 1) {
+                        // We can interpet the string as an single, assume it is one.
+                        vlMaterialAddNodeSingle(lpParameters[i][0], sTest);
+                    } else {
+                        // The string must be a string...
+                        vlMaterialAddNodeString(lpParameters[i][0], lpParameters[i][1]);
+                    }
+                }
 
-		// Display input file info.
-		Print("  Version: v%u.%u\n", vlImageGetMajorVersion(), vlImageGetMinorVersion());
-		Print("  Size On Disk: %.2f KB\n", (float)vlImageGetSize(error) / 1024.0f);
-		Print("  Width: %u\n", vlImageGetWidth());
-		Print("  Height: %u\n", vlImageGetHeight());
-		Print("  Depth: %u\n", vlImageGetDepth());
-		Print("  Frames: %u\n", vlImageGetFrameCount());
-		Print("  Start Frame: %u\n", vlImageGetStartFrame());
-		Print("  Faces: %u\n", vlImageGetFaceCount());
-		Print("  Mipmaps: %u\n", vlImageGetMipmapCount());
-		if(vlImageGetSupportsAuxCompression() && vlImageGetAuxCompressionLevel() != VTF_AUX_COMPRESSION_LEVEL_NONE)
-		{
-			Print("  Compression: %s, level %d\n", vlImageGetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD ? "Zstandard" : "deflate", vlImageGetAuxCompressionLevel());
-		}
-		Print("  Flags: %#.8x\n", vlImageGetFlags());
-		Print("  Bumpmap Scale: %.2f\n", vlImageGetBumpmapScale());
-		vlImageGetReflectivity(&sR, &sG, &sB);
-		Print("  Reflectivity: %.2f, %.2f, %.2f\n", sR, sG, sB);
-		Print("  Format: %s\n\n", vlImageGetImageFormatInfo(vlImageGetFormat())->lpName);
-		Print("  Resources: %u\n", vlImageGetResourceCount());
+                // Write vmt file.
+                Print("  Writing %s...\n", lpVMTFile);
+                if (!vlMaterialSave(lpVMTFile, error)) {
+                    Print("Error creating vtf file:\n%s\n\n", error.Get());
+                    return;
+                }
+                Print("  %s written.\n\n", lpVMTFile);
+            }
+        }
+    } else {
+        if (!vlImageLoad(lpInputFile, vlFalse, error)) {
+            Print(" Error loading input file:\n%s\n\n", error.Get());
+            return;
+        }
 
-		Print(" Creating texture:\n");
+        Print(" Information:\n");
 
-		// Figure out which destination format to use.
-		DestFormat = (vlImageGetFlags() & (TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA)) ? IMAGE_FORMAT_RGBA8888 : IMAGE_FORMAT_RGB888;
+        // Display input file info.
+        Print("  Version: v%u.%u\n", vlImageGetMajorVersion(), vlImageGetMinorVersion());
+        Print("  Size On Disk: %.2f KB\n", (float) vlImageGetSize(error) / 1024.0f);
+        Print("  Width: %u\n", vlImageGetWidth());
+        Print("  Height: %u\n", vlImageGetHeight());
+        Print("  Depth: %u\n", vlImageGetDepth());
+        Print("  Frames: %u\n", vlImageGetFrameCount());
+        Print("  Start Frame: %u\n", vlImageGetStartFrame());
+        Print("  Faces: %u\n", vlImageGetFaceCount());
+        Print("  Mipmaps: %u\n", vlImageGetMipmapCount());
+        if (vlImageGetSupportsAuxCompression() && vlImageGetAuxCompressionLevel() != VTF_AUX_COMPRESSION_LEVEL_NONE) {
+            Print("  Compression: %s, level %d\n",
+                  vlImageGetAuxCompressionMethod() == AUX_COMPRESSION_METHOD_ZSTD ? "Zstandard" : "deflate",
+                  vlImageGetAuxCompressionLevel());
+        }
+        Print("  Flags: %#.8x\n", vlImageGetFlags());
+        Print("  Bumpmap Scale: %.2f\n", vlImageGetBumpmapScale());
+        vlImageGetReflectivity(&sR, &sG, &sB);
+        Print("  Reflectivity: %.2f, %.2f, %.2f\n", sR, sG, sB);
+        Print("  Format: %s\n\n", vlImageGetImageFormatInfo(vlImageGetFormat())->lpName);
+        Print("  Resources: %u\n", vlImageGetResourceCount());
 
-		// Alocate the required memory to convert the vtf to.
-		lpImageData = static_cast<uint8_t *>(malloc(vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat)));
+        Print(" Creating texture:\n");
 
-		if(lpImageData == 0)
-		{
-			Print(" malloc() failed.\n\n");
-			return;
-		}
+        // Figure out which destination format to use.
+        DestFormat = (vlImageGetFlags() & (TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA))
+                         ? IMAGE_FORMAT_RGBA8888
+                         : IMAGE_FORMAT_RGB888;
 
-		// Convert the .vtf.
-		if(!vlImageConvert(vlImageGetData(0, 0, 0, 0), lpImageData, vlImageGetWidth(), vlImageGetHeight(), vlImageGetFormat(), DestFormat, error))
-		{
-			free(lpImageData);
+        // Alocate the required memory to convert the vtf to.
+        lpImageData = static_cast<uint8_t *>(malloc(
+            vlImageComputeImageSize(vlImageGetWidth(), vlImageGetHeight(), 1, 1, DestFormat)));
 
-			Print(" Error converting input file:\n%s\n\n", error.Get());
-			return;
-		}
+        if (lpImageData == nullptr) {
+            Print(" malloc() failed.\n\n");
+            return;
+        }
 
-		// DevIL likes the image data upside down.
-		FlipImage(lpImageData, vlImageGetWidth(), vlImageGetHeight(), DestFormat == IMAGE_FORMAT_RGBA8888 ? 4 : 3);
+        // Convert the .vtf.
+        if (!vlImageConvert(vlImageGetData(0, 0, 0, 0), lpImageData, vlImageGetWidth(), vlImageGetHeight(),
+                            vlImageGetFormat(), DestFormat, error)) {
+            free(lpImageData);
 
-		// Create a new image with the converted image data in DevIL.
-		if(!ilTexImage(vlImageGetWidth(), vlImageGetHeight(), 1, DestFormat == IMAGE_FORMAT_RGBA8888 ? 4 : 3, DestFormat == IMAGE_FORMAT_RGBA8888 ? IL_RGBA : IL_RGB, IL_UNSIGNED_BYTE, lpImageData))
-		{
-			free(lpImageData);
+            Print(" Error converting input file:\n%s\n\n", error.Get());
+            return;
+        }
 
-			Print("  Error creating %s file.\n\n", lpExportFormat);
-			return;
-		}
+        // DevIL likes the image data upside down.
+        FlipImage(lpImageData, vlImageGetWidth(), vlImageGetHeight(), DestFormat == IMAGE_FORMAT_RGBA8888 ? 4 : 3);
+        CMP_MipSet image{};
+        // Create a new image with the converted image data in DevIL.
+        if (CreateMipSet(image, lpImageData, vlImageGetWidth(), vlImageGetHeight(), CMP_FORMAT_RGBA_8888) != CMP_OK) {
+            free(lpImageData);
+            Print("  Error creating %s file.\n\n", lpExportFormat);
+            return;
+        }
 
-		free(lpImageData);
+        free(lpImageData);
 
-		CreateOutputPath(lpExportFile, lpInputFile, lpExportFormat);
+        CreateOutputPath(lpExportFile, lpInputFile, lpExportFormat);
 
-		// Write tga file.
-		Print("  Writing %s...\n", lpExportFile);
-		if(!ilSaveImage(lpExportFile))
-		{
-			Print(" Error creating %s file.\n\n", lpExportFormat);
-			return;
-		}
-		Print("  %s written.\n\n", lpExportFile);
-	}
+        // Write tga file.
+        Print("  Writing %s...\n", lpExportFile);
+        if (CMP_SaveTexture(lpExportFile, &image) != CMP_OK) {
+            Print(" Error creating %s file.\n\n", lpExportFormat);
+            return;
+        }
+        Print("  %s written.\n\n", lpExportFile);
+    }
 
-	Print("%s processed.\n\n", lpInputFile);
+    Print("%s processed.\n\n", lpInputFile);
 
-	uiCompleted++;
+    uiCompleted++;
 }
 
 //
 // ProcessFile()
 // Process all files in the input folder.
 //
-void ProcessFolder(char *lpInputFolder, char *lpWildcard)
-{
-	char lpSearchString[512];
-	char lpPath[512];
+void ProcessFolder(char *lpInputFolder, char *lpWildcard) {
+    char lpSearchString[512];
+    char lpPath[512];
 
-	winfind::WIN32_FIND_DATA FindData;
-	winfind::HANDLE Handle;
+    winfind::WIN32_FIND_DATA FindData;
+    winfind::HANDLE Handle;
 
-	Print("Processing %s\\...\n\n", lpInputFolder);
+    Print("Processing %s\\...\n\n", lpInputFolder);
 
-	if(bRecursive)
-	{
-		sprintf(lpSearchString, "%s\\*", lpInputFolder);
+    if (bRecursive) {
+        sprintf(lpSearchString, "%s\\*", lpInputFolder);
 
-		Handle = FindFirstFile(lpSearchString, &FindData);
+        Handle = FindFirstFile(lpSearchString, &FindData);
 
-		if(Handle != INVALID_HANDLE_VALUE)
-		{
-			do
-			{
-				if(stricmp(FindData.cFileName, ".") != 0 && stricmp(FindData.cFileName, "..") != 0)
-				{
-					sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
+        if (Handle != INVALID_HANDLE_VALUE) {
+            do {
+                if (stricmp(FindData.cFileName, ".") != 0 && stricmp(FindData.cFileName, "..") != 0) {
+                    sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-					if(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-					{
-						ProcessFolder(lpPath, lpWildcard);
-					}
-				}
-			} while(FindNextFile(Handle, &FindData));
+                    if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                        ProcessFolder(lpPath, lpWildcard);
+                    }
+                }
+            } while (FindNextFile(Handle, &FindData));
 
-			winfind::FindClose(Handle);
-		}
-	}
+            winfind::FindClose(Handle);
+        }
+    }
 
-	sprintf(lpSearchString, "%s\\%s", lpInputFolder, lpWildcard);
+    sprintf(lpSearchString, "%s\\%s", lpInputFolder, lpWildcard);
 
-	Handle = FindFirstFile(lpSearchString, &FindData);
+    Handle = FindFirstFile(lpSearchString, &FindData);
 
-	if(Handle != INVALID_HANDLE_VALUE)
-	{
-		do
-		{
-			if(stricmp(FindData.cFileName, ".") != 0 && stricmp(FindData.cFileName, "..") != 0)
-			{
-				sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
+    if (Handle != INVALID_HANDLE_VALUE) {
+        do {
+            if (stricmp(FindData.cFileName, ".") != 0 && stricmp(FindData.cFileName, "..") != 0) {
+                sprintf(lpPath, "%s\\%s", lpInputFolder, FindData.cFileName);
 
-				if((FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-				{
-					ProcessFile(lpPath);
-				}
-			}
-		} while(winfind::FindNextFile(Handle, &FindData));
+                if ((FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+                    ProcessFile(lpPath);
+                }
+            }
+        } while (winfind::FindNextFile(Handle, &FindData));
 
-		winfind::FindClose(Handle);
-	}
+        winfind::FindClose(Handle);
+    }
 
-	Print("%s\\ processed.\n\n", lpInputFolder);
+    Print("%s\\ processed.\n\n", lpInputFolder);
 }

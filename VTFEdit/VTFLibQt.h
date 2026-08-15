@@ -35,8 +35,6 @@
 #	undef _UNICODE
 #endif
 
-#include <IL/il.h>
-
 #ifdef VTFEDIT_UNICODE_WAS_DEFINED
 #	define _UNICODE
 #	undef VTFEDIT_UNICODE_WAS_DEFINED
