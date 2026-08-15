@@ -70,7 +70,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(_indirect_extern_flag "-fno-direct-access-external-data")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(_indirect_extern_flag "-mno-direct-extern-access -fno-plt")
+    set(_indirect_extern_flag "-mno-direct-extern-access")
 endif ()
 
 if (_indirect_extern_flag)
@@ -84,6 +84,7 @@ if (_indirect_extern_flag)
                 vtfedit
                 PRIVATE
                 "${_indirect_extern_flag}"
+                -fno-plt
         )
     endif ()
 endif ()
