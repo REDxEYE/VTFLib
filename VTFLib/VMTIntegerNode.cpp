@@ -11,6 +11,8 @@
 
 #include "VMTIntegerNode.h"
 
+#include <cstdlib>
+
 using namespace VTFLib::Nodes;
 
 CVMTIntegerNode::CVMTIntegerNode(const char *name) : CVMTValueNode(name) {

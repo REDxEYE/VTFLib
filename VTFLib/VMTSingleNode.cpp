@@ -11,6 +11,8 @@
 
 #include "VMTSingleNode.h"
 
+#include <cstdlib>
+
 using namespace VTFLib::Nodes;
 
 CVMTSingleNode::CVMTSingleNode(const char *name) : CVMTValueNode(name) {
