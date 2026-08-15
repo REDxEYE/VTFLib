@@ -40,7 +40,7 @@ namespace VTFLib::IO::Writers {
         ssize_t Write(const void *src, ssize_t size, Diagnostics::CError &error) override;
 
     private:
-        HANDLE mHandle;
+        FILE* mHandle;
         char *mFilePath;
 
     };

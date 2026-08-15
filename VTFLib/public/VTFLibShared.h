@@ -76,7 +76,6 @@ using ssize_t = SSIZE_T;
 typedef char*  LPSTR;
 #define stricmp strcasecmp
 #define _stricmp strcasecmp
-typedef FILE *HANDLE;
 
 #define FILE_BEGIN   0
 #define FILE_CURRENT 1
