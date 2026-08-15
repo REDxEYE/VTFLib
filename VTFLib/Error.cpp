@@ -74,7 +74,7 @@ void CError::Set(const char *errorMessage, const bool systemError)
 				message
 			);
 
-			LocalFree(message);
+			LocalFree((HLOCAL)message);
 		}
 		else
 		{
