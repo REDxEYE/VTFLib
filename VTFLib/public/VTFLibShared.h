@@ -61,6 +61,9 @@ typedef unsigned char	vlBool;				//!< Boolean value 0/1.
 #include <math.h>
 #include <stdarg.h>
 
+#include <BaseTsd.h>
+using ssize_t = SSIZE_T;
+
 #else
 #include <cstring>
 #include <cmath>
