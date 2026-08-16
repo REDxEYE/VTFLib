@@ -2,7 +2,7 @@
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-1                       ICON                    "..\\app.ico"
+1                       ICON                    ".\\app.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 4,0,1,0
