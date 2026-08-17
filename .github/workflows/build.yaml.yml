@@ -132,6 +132,6 @@ jobs:
           name: VTFLib-linux-x64
           if-no-files-found: error
           path: |
-            build/bin/*.*
+            build/bin/*
             build/lib/**/*.so
             build/lib/**/*.a

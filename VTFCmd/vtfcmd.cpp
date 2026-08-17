@@ -29,38 +29,42 @@
 
 #define MAX_ITEMS	1024
 
-uint32_t uiFileCount = 0;
-char *lpFiles[MAX_ITEMS]; // Files to convert.
-uint32_t uiFolderCount = 0;
-char *lpFolders[MAX_ITEMS]; // Folders to convert.
-vlBool bRecursive = vlFalse; // Recursively search folders.
+struct VTFCmdState {
+    uint32_t fileCount{};
+    char *files[MAX_ITEMS]{}; // Files to convert.
+    uint32_t folderCount{};
+    char *folders[MAX_ITEMS]{}; // Folders to convert.
+    bool recursive{}; // Recursively search folders.
+    uint32_t processed{}; // Files processed.
+    uint32_t completed{}; // Files processed without error.
 
-uint32_t uiProcessed = 0; // Files processed.
-uint32_t uiCompleted = 0; // Files processed without error.
+    const char *prefix{}; // String to add to start of output file name.
+    const char *postfix{}; // String to add to end of output file name.
+    const char *output{}; // Output folder.
 
-char *lpPrefix = ""; // String to add to start of output file name.
-char *lpPostfix = ""; // String to add to end of output file name.
-char *lpOutput = nullptr; // Output folder.
+    bool silent{}; // Don't display output.
+    bool pause{}; // Don't pause the console.
+    bool help{}; // Display help.
 
-vlBool bSilent = vlFalse; // Don't display output.
-vlBool bPause = vlFalse; // Don't pause the console.
-vlBool bHelp = vlFalse; // Display help.
+    uint32_t vtfImage{}; // VTF image handle.
+    uint32_t vmtMaterial{}; // VMT material handle.
 
-uint32_t uiVTFImage; // VTF image handle.
-uint32_t uiVMTMaterial; // VMT material handle.
+    VTFImageFormat alphaFormat = IMAGE_FORMAT_DXT5; // VTF image format for alpha textures.
+    VTFImageFormat normalFormat = IMAGE_FORMAT_DXT1; // VTF image format for non-alpha textures.
 
-VTFImageFormat AlphaFormat = IMAGE_FORMAT_DXT5; // VTF image format for alpha textures.
-VTFImageFormat NormalFormat = IMAGE_FORMAT_DXT1; // VTF image format for non-alpha textures.
-SVTFCreateOptions CreateOptions; // VTF creation options.
-char *lpShader = nullptr; // VMT shader to use.
-uint32_t uiParameterCount = 0;
-char *lpParameters[MAX_ITEMS][2]; // VMT parameters.
-char *lpExportFormat = "tga"; // Format extension for exporting VTF images.
+    SVTFCreateOptions createOptions{}; // VTF creation options.
+    char *shader = nullptr; // VMT shader to use.
+    uint32_t parameterCount = 0;
+    char *parameters[MAX_ITEMS][2]{}; // VMT parameters.
+    const char *exportFormat{}; // Format extension for exporting VTF images.
 
-vlBool bDistanceAlpha = vlFalse; // Encode the alpha channel as a distance field.
-float sDistanceAlphaSpread = 1.0f; // Width of the distance field gradient in output pixels.
-uint32_t uiDistanceAlphaReduce = 1; // Amount to shrink the image by after computing the field.
-uint8_t bDistanceAlphaThreshold = 10; // Source alpha above which a pixel is inside the shape.
+    bool distanceAlpha{}; // Encode the alpha channel as a distance field.
+    float distanceAlphaSpread{1.0f}; // Width of the distance field gradient in output pixels.
+    uint32_t distanceAlphaReduce{1}; // Amount to shrink the image by after computing the field.
+    uint8_t distanceAlphaThreshold{10}; // Source alpha above which a pixel is inside the shape.
+};
+
+static VTFCmdState g_state{};
 
 void Pause();
 
@@ -77,12 +81,11 @@ void ProcessFolder(char *lpInputFolder, char *lpWildcard);
 // Case insensitive version of strstr().
 //
 char *stristr(const char *string, const char *strSearch) {
-    const char *ptr = string;
-    const char *ptr2;
+    const char *ptr = nullptr;
 
-    while (1) {
+    while (true) {
         ptr = strchr(string, toupper(*strSearch));
-        ptr2 = strchr(string, tolower(*strSearch));
+        const char *ptr2 = strchr(string, tolower(*strSearch));
 
         if (ptr == nullptr) {
             ptr = ptr2;
@@ -94,7 +97,7 @@ char *stristr(const char *string, const char *strSearch) {
             ptr = ptr2;
         }
         if (!strnicmp(ptr, strSearch, strlen(strSearch))) {
-            return (char *) ptr;
+            return const_cast<char *>(ptr);
         }
 
         string = ptr + 1;
@@ -107,31 +110,32 @@ char *stristr(const char *string, const char *strSearch) {
 // strrpl()
 // Replace a char in a string with another.
 //
-void strrpl(char *string, char chr, char rplChr) {
+void strrpl(char *string, const char chr, const char replacement) {
     while (*string != 0) {
         if (*string == chr)
-            *string = rplChr;
+            *string = replacement;
         string++;
     }
 }
 
-int main(int argc, char *argv[]) {
+int main(const int argc, char *argv[]) {
     CMP_InitFramework();
+    g_state.postfix = "";
+    g_state.prefix = "";
+    g_state.output = "";
+    g_state.exportFormat = "tga";
 
-    int i;
     char *lpWildcard; // Holds wildcard string for folder searches.
 
-    VTFImageFormat ImageFormat; // Temp variable for string to VTFImageFormat test.
-    VTFImageFlag ImageFlag; // Temp variable for string to VTFImageFlag test.
+    VTFImageFormat imageFormat; // Temp variable for string to VTFImageFormat test.
+    VTFImageFlag imageFlag; // Temp variable for string to VTFImageFlag test.
+    VTFResizeMethod resizeMethod; // Temp variable for string to VTFResizeMethod test.
+    VTFMipmapFilter mipmapFilter; // Temp variable for string to VTFMipmapFilter test.
 
     uint32_t uiTemp0, uiTemp1; // Temp variables for string to integer test.
     int32_t iTemp0; // Temp variable for signed string to integer test.
     float sTemp; // Temp variable for string to single test.
-
-    VTFResizeMethod ResizeMethod; // Temp variable for string to VTFResizeMethod test.
-
-    VTFMipmapFilter MipmapFilter; // Temp variable for string to VTFMipmapFilter test.
-
+    
     winfind::WIN32_FIND_DATA FindData;
     winfind::HANDLE Handle;
 
@@ -142,13 +146,13 @@ int main(int argc, char *argv[]) {
     }
 
     // Fill in our CreateOptions struct with VTFLib defaults.
-    vlImageCreateDefaultCreateStructure(&CreateOptions);
+    vlImageCreateDefaultCreateStructure(&g_state.createOptions);
 
     // Grab command arguments.
     switch (argc) {
         case 1:
             // If no arguments assume double click.
-            bPause = vlTrue;
+            g_state.pause = vlTrue;
             break;
         case 2:
             // If only one argument assume drag and drop.
@@ -156,13 +160,13 @@ int main(int argc, char *argv[]) {
 
             if (Handle != INVALID_HANDLE_VALUE) {
                 if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    lpFolders[uiFolderCount++] = argv[1];
-                    CreateOptions.resize = vlTrue;
-                    bPause = vlTrue;
+                    g_state.folders[g_state.folderCount++] = argv[1];
+                    g_state.createOptions.resize = vlTrue;
+                    g_state.pause = vlTrue;
                 } else {
-                    lpFiles[uiFileCount++] = argv[1];
-                    CreateOptions.resize = vlTrue;
-                    bPause = vlTrue;
+                    g_state.files[g_state.fileCount++] = argv[1];
+                    g_state.createOptions.resize = vlTrue;
+                    g_state.pause = vlTrue;
                 }
 
                 winfind::FindClose(Handle);
@@ -170,46 +174,46 @@ int main(int argc, char *argv[]) {
             }
         // Fall through.
         default:
-            for (i = 1; i < argc; i++) {
+            for (uint32_t i = 1; i < argc; i++) {
                 if (stricmp(argv[i], "-file") == 0) {
-                    if (i + 1 < argc && uiFileCount < MAX_ITEMS) {
-                        lpFiles[uiFileCount++] = argv[++i];
+                    if (i + 1 < argc && g_state.fileCount < MAX_ITEMS) {
+                        g_state.files[g_state.fileCount++] = argv[++i];
                     } else {
                         PrintUsage("-file expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-folder") == 0) {
-                    if (i + 1 < argc && uiFolderCount < MAX_ITEMS) {
-                        lpFolders[uiFolderCount++] = argv[++i];
+                    if (i + 1 < argc && g_state.folderCount < MAX_ITEMS) {
+                        g_state.folders[g_state.folderCount++] = argv[++i];
                     } else {
                         PrintUsage("-folder expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-output") == 0) {
                     if (i + 1 < argc) {
-                        lpOutput = argv[++i];
+                        g_state.output = argv[++i];
                     } else {
                         PrintUsage("-output expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-prefix") == 0) {
                     if (i + 1 < argc) {
-                        lpPrefix = argv[++i];
+                        g_state.prefix = argv[++i];
                     } else {
                         PrintUsage("-prefix expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-postfix") == 0) {
                     if (i + 1 < argc) {
-                        lpPostfix = argv[++i];
+                        g_state.postfix = argv[++i];
                     } else {
                         PrintUsage("-postfix expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-version") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u.%u", &uiTemp0, &uiTemp1) == 2) {
-                        CreateOptions.version[0] = uiTemp0;
-                        CreateOptions.version[1] = uiTemp1;
+                        g_state.createOptions.version[0] = uiTemp0;
+                        g_state.createOptions.version[1] = uiTemp1;
                     } else {
                         PrintUsage("-version expects string argument.");
                         return 2;
@@ -217,7 +221,7 @@ int main(int argc, char *argv[]) {
                 } else if (stricmp(argv[i], "-compress") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%d", &iTemp0) == 1
                         && iTemp0 >= VTF_AUX_COMPRESSION_LEVEL_DEFAULT && iTemp0 <= VTF_AUX_COMPRESSION_LEVEL_MAX) {
-                        CreateOptions.auxCompressionLevel = (int16_t) iTemp0;
+                        g_state.createOptions.auxCompressionLevel = (int16_t) iTemp0;
                     } else {
                         PrintUsage("-compress expects an integer argument between %d and %d.",
                                    VTF_AUX_COMPRESSION_LEVEL_DEFAULT, VTF_AUX_COMPRESSION_LEVEL_MAX);
@@ -227,9 +231,9 @@ int main(int argc, char *argv[]) {
                     if (i + 1 < argc) {
                         i++;
                         if (stricmp(argv[i], "deflate") == 0) {
-                            CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
+                            g_state.createOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_DEFLATE;
                         } else if (stricmp(argv[i], "zstd") == 0) {
-                            CreateOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
+                            g_state.createOptions.auxCompressionMethod = AUX_COMPRESSION_METHOD_ZSTD;
                         } else {
                             PrintUsage("Unknown compression method: %s.", argv[i]);
                             return 2;
@@ -240,9 +244,9 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-format") == 0) {
                     if (i + 1 < argc) {
-                        ImageFormat = StringToImageFormat(argv[++i]);
-                        if (ImageFormat != IMAGE_FORMAT_COUNT) {
-                            NormalFormat = ImageFormat;
+                        imageFormat = StringToImageFormat(argv[++i]);
+                        if (imageFormat != IMAGE_FORMAT_COUNT) {
+                            g_state.normalFormat = imageFormat;
                         } else {
                             PrintUsage("Unknown format: %s.", argv[i]);
                             return 2;
@@ -252,13 +256,13 @@ int main(int argc, char *argv[]) {
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-srgb") == 0) {
-                    CreateOptions.sRGB = vlTrue;
-                    CreateOptions.flags |= TEXTUREFLAGS_SRGB;
+                    g_state.createOptions.sRGB = vlTrue;
+                    g_state.createOptions.flags |= TEXTUREFLAGS_SRGB;
                 } else if (stricmp(argv[i], "-alphaformat") == 0) {
                     if (i + 1 < argc) {
-                        ImageFormat = StringToImageFormat(argv[++i]);
-                        if (ImageFormat != IMAGE_FORMAT_COUNT) {
-                            AlphaFormat = ImageFormat;
+                        imageFormat = StringToImageFormat(argv[++i]);
+                        if (imageFormat != IMAGE_FORMAT_COUNT) {
+                            g_state.alphaFormat = imageFormat;
                         } else {
                             PrintUsage("Unknown format: %s.", argv[i]);
                             return 2;
@@ -269,16 +273,16 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-exportformat") == 0) {
                     if (i + 1 < argc) {
-                        lpExportFormat = argv[++i];
+                        g_state.exportFormat = argv[++i];
                     } else {
                         PrintUsage("-exportformat expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-flag") == 0) {
                     if (i + 1 < argc) {
-                        ImageFlag = StringToImageFlag(argv[++i]);
-                        if (ImageFlag != TEXTUREFLAGS_COUNT) {
-                            CreateOptions.flags |= ImageFlag;
+                        imageFlag = StringToImageFlag(argv[++i]);
+                        if (imageFlag != TEXTUREFLAGS_COUNT) {
+                            g_state.createOptions.flags |= imageFlag;
                         } else {
                             PrintUsage("Unknown flag: %s.", argv[i]);
                             return 2;
@@ -288,12 +292,12 @@ int main(int argc, char *argv[]) {
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-resize") == 0) {
-                    CreateOptions.resize = vlTrue;
+                    g_state.createOptions.resize = vlTrue;
                 } else if (stricmp(argv[i], "-rmethod") == 0) {
                     if (i + 1 < argc) {
-                        ResizeMethod = StringToResizeMethod(argv[++i]);
-                        if (ResizeMethod != RESIZE_COUNT) {
-                            CreateOptions.resizeMethod = ResizeMethod;
+                        resizeMethod = StringToResizeMethod(argv[++i]);
+                        if (resizeMethod != RESIZE_COUNT) {
+                            g_state.createOptions.resizeMethod = resizeMethod;
                         } else {
                             PrintUsage("Unknown rmethod: %s.", argv[i]);
                             return 2;
@@ -304,9 +308,9 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-rfilter") == 0) {
                     if (i + 1 < argc) {
-                        MipmapFilter = StringToMipmapFilter(argv[++i]);
-                        if (MipmapFilter != MIPMAP_FILTER_COUNT) {
-                            CreateOptions.resizeFilter = MipmapFilter;
+                        mipmapFilter = StringToMipmapFilter(argv[++i]);
+                        if (mipmapFilter != MIPMAP_FILTER_COUNT) {
+                            g_state.createOptions.resizeFilter = mipmapFilter;
                         } else {
                             PrintUsage("Unknown rfilter: %s.", argv[i]);
                             return 2;
@@ -317,9 +321,9 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-rwidth") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
-                        CreateOptions.resizeWidth = uiTemp0;
-                        if (CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0) {
-                            CreateOptions.resizeMethod = RESIZE_SET;
+                        g_state.createOptions.resizeWidth = uiTemp0;
+                        if (g_state.createOptions.resizeWidth != 0 && g_state.createOptions.resizeHeight != 0) {
+                            g_state.createOptions.resizeMethod = RESIZE_SET;
                         }
                     } else {
                         PrintUsage("-rwidth expects unsigned integer argument.");
@@ -327,9 +331,9 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-rheight") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
-                        CreateOptions.resizeHeight = uiTemp0;
-                        if (CreateOptions.resizeWidth != 0 && CreateOptions.resizeHeight != 0) {
-                            CreateOptions.resizeMethod = RESIZE_SET;
+                        g_state.createOptions.resizeHeight = uiTemp0;
+                        if (g_state.createOptions.resizeWidth != 0 && g_state.createOptions.resizeHeight != 0) {
+                            g_state.createOptions.resizeMethod = RESIZE_SET;
                         }
                     } else {
                         PrintUsage("-rheight expects unsigned integer argument.");
@@ -337,57 +341,57 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-rclampwidth") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
-                        CreateOptions.resizeClampWidth = uiTemp0;
+                        g_state.createOptions.resizeClampWidth = uiTemp0;
                     } else {
                         PrintUsage("-rclampwidth expects unsigned integer argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-rclampheight") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1) {
-                        CreateOptions.resizeClampHeight = uiTemp0;
+                        g_state.createOptions.resizeClampHeight = uiTemp0;
                     } else {
                         PrintUsage("-rclampheight expects unsigned integer argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-gamma") == 0) {
-                    CreateOptions.gammaCorrection = vlTrue;
+                    g_state.createOptions.gammaCorrection = vlTrue;
                 } else if (stricmp(argv[i], "-gcorrection") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1) {
-                        CreateOptions.gammaCorrectionValue = sTemp;
+                        g_state.createOptions.gammaCorrectionValue = sTemp;
                     } else {
                         PrintUsage("-gcorrection expects single argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-distancealpha") == 0) {
-                    bDistanceAlpha = vlTrue;
+                    g_state.distanceAlpha = vlTrue;
                 } else if (stricmp(argv[i], "-dspread") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1 && sTemp > 0.0f) {
-                        sDistanceAlphaSpread = sTemp;
+                        g_state.distanceAlphaSpread = sTemp;
                     } else {
                         PrintUsage("-dspread expects a positive single argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-dreduce") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 >= 1) {
-                        uiDistanceAlphaReduce = uiTemp0;
+                        g_state.distanceAlphaReduce = uiTemp0;
                     } else {
                         PrintUsage("-dreduce expects an unsigned integer argument of 1 or more.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-dthreshold") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%u", &uiTemp0) == 1 && uiTemp0 <= 255) {
-                        bDistanceAlphaThreshold = (uint8_t) uiTemp0;
+                        g_state.distanceAlphaThreshold = (uint8_t) uiTemp0;
                     } else {
                         PrintUsage("-dthreshold expects an unsigned integer argument between 0 and 255.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-nomipmaps") == 0) {
-                    CreateOptions.mipmaps = vlFalse;
+                    g_state.createOptions.mipmaps = vlFalse;
                 } else if (stricmp(argv[i], "-mfilter") == 0) {
                     if (i + 1 < argc) {
-                        MipmapFilter = StringToMipmapFilter(argv[++i]);
-                        if (MipmapFilter != MIPMAP_FILTER_COUNT) {
-                            CreateOptions.mipmapFilter = MipmapFilter;
+                        mipmapFilter = StringToMipmapFilter(argv[++i]);
+                        if (mipmapFilter != MIPMAP_FILTER_COUNT) {
+                            g_state.createOptions.mipmapFilter = mipmapFilter;
                         } else {
                             PrintUsage("Unknown mfilter: %s.", argv[i]);
                             return 2;
@@ -398,40 +402,40 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (stricmp(argv[i], "-bumpscale") == 0) {
                     if (i + 1 < argc && sscanf(argv[++i], "%f", &sTemp) == 1) {
-                        CreateOptions.bumpScale = sTemp;
+                        g_state.createOptions.bumpScale = sTemp;
                     } else {
                         PrintUsage("-bumpscale expects single argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-nothumbnail") == 0) {
-                    CreateOptions.thumbnail = vlFalse;
+                    g_state.createOptions.thumbnail = vlFalse;
                 } else if (stricmp(argv[i], "-noreflectivity") == 0) {
-                    CreateOptions.reflectivity = vlFalse;
+                    g_state.createOptions.reflectivity = vlFalse;
                 } else if (stricmp(argv[i], "-shader") == 0) {
                     if (i + 1 < argc) {
-                        lpShader = argv[++i];
+                        g_state.shader = argv[++i];
                     } else {
                         PrintUsage("-shader expects string argument.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-param") == 0) {
                     if (i + 2 < argc) {
-                        lpParameters[uiParameterCount][0] = argv[++i];
-                        lpParameters[uiParameterCount][1] = argv[++i];
+                        g_state.parameters[g_state.parameterCount][0] = argv[++i];
+                        g_state.parameters[g_state.parameterCount][1] = argv[++i];
 
-                        uiParameterCount++;
+                        g_state.parameterCount++;
                     } else {
                         PrintUsage("-shader expects two string arguments.");
                         return 2;
                     }
                 } else if (stricmp(argv[i], "-recurse") == 0) {
-                    bRecursive = vlTrue;
+                    g_state.recursive = vlTrue;
                 } else if (stricmp(argv[i], "-silent") == 0) {
-                    bSilent = vlTrue;
+                    g_state.silent = vlTrue;
                 } else if (stricmp(argv[i], "-pause") == 0) {
-                    bPause = vlTrue;
+                    g_state.pause = vlTrue;
                 } else if (stricmp(argv[i], "-help") == 0) {
-                    bHelp = vlTrue;
+                    g_state.help = vlTrue;
                 } else {
                     PrintUsage("Unknown argument: %s.", argv[i]);
                     return 2;
@@ -441,13 +445,13 @@ int main(int argc, char *argv[]) {
     }
 
     // If the user just wants help, give it to them.
-    if (bHelp) {
+    if (g_state.help) {
         PrintUsage(nullptr);
         return 0;
     }
 
     // Make sure we have something to do.
-    if (uiFileCount == 0 && uiFolderCount == 0) {
+    if (g_state.fileCount == 0 && g_state.folderCount == 0) {
         PrintUsage("-file or -folder not specified.");
         return 2;
     }
@@ -461,46 +465,37 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
-    vlCreateImage(&uiVTFImage, error);
+    vlCreateImage(&g_state.vtfImage, error);
     if (error.isSet()) {
         Print(error.Get());
         return 2;
     }
-    vlBindImage(uiVTFImage, error);
-    if (error.isSet()) {
-        Print(error.Get());
-        return 2;
-    }
-
-    vlCreateMaterial(&uiVMTMaterial, error);
-    if (error.isSet()) {
-        Print(error.Get());
-        return 2;
-    }
-    vlBindMaterial(uiVMTMaterial, error);
+    vlBindImage(g_state.vtfImage, error);
     if (error.isSet()) {
         Print(error.Get());
         return 2;
     }
 
-    // Initialize DevIL.
-    // ilInit();
-
-    // ilEnable(IL_ORIGIN_SET);  // Filps images that are upside down (by format).
-    // ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
-
-    // ilGenImages(1, &uiDevILImage);
-    // ilBindImage(uiDevILImage);
+    vlCreateMaterial(&g_state.vmtMaterial, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
+    vlBindMaterial(g_state.vmtMaterial, error);
+    if (error.isSet()) {
+        Print(error.Get());
+        return 2;
+    }
 
     // Process files.
-    for (i = 0; i < (int) uiFileCount; i++) {
-        ProcessFile(lpFiles[i]);
+    for (uint32_t i = 0; i < (int) g_state.fileCount; i++) {
+        ProcessFile(g_state.files[i]);
     }
 
     // Process folders.
-    for (i = 0; i < (int) uiFolderCount; i++) {
+    for (uint32_t i = 0; i < (int) g_state.folderCount; i++) {
         // Grab the wildcard string from the folder path.
-        if ((lpWildcard = strrchr(lpFolders[i], '\\')) == nullptr) {
+        if ((lpWildcard = strrchr(g_state.folders[i], '\\')) == nullptr) {
             lpWildcard = "*.*";
         } else {
             // Wildcard starts after last \ in path.  e.g. C:\input\*.bmp
@@ -513,22 +508,17 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        ProcessFolder(lpFolders[i], lpWildcard);
+        ProcessFolder(g_state.folders[i], lpWildcard);
     }
 
-    // Shutdown DevIL.
-    // ilDeleteImages(1, &uiDevILImage);
-
-    // ilShutDown();
-
     // Shutdown VTFLib.
-    vlDeleteMaterial(uiVMTMaterial);
+    vlDeleteMaterial(g_state.vmtMaterial);
 
-    vlDeleteImage(uiVTFImage);
+    vlDeleteImage(g_state.vtfImage);
 
     vlShutdown();
 
-    Print("%d/%d files completed.\n", uiCompleted, uiProcessed);
+    Print("%d/%d files completed.\n", g_state.completed, g_state.processed);
 
     // Pause the console.
     Pause();
@@ -541,7 +531,7 @@ int main(int argc, char *argv[]) {
 // Puase the console.
 //
 void Pause() {
-    if (bPause) {
+    if (g_state.pause) {
         Print("Press any key to continue...");
         getchar();
     }
@@ -554,7 +544,7 @@ void Pause() {
 void Print(const char *lpFormat, ...) {
     va_list ArgumentList;
 
-    if (!bSilent) {
+    if (!g_state.silent) {
         va_start(ArgumentList, lpFormat);
         vprintf(lpFormat, ArgumentList);
         va_end(ArgumentList);
@@ -612,7 +602,7 @@ void PrintUsage(const char *lpError, ...) {
     Print("vtfcmd.exe -folder \"C:\\input\\*.tga\" -output \"C:\\output\" -recurse -pause\n");
     Print("vtfcmd.exe -folder \"C:\\output\\*.vtf\" -output \"C:\\input\" -exportformat \"jpg\"\n");
 
-    if (lpError != nullptr && !bSilent) {
+    if (lpError != nullptr && !g_state.silent) {
         Print("\n");
         Print("Error:\n");
 
@@ -623,7 +613,7 @@ void PrintUsage(const char *lpError, ...) {
         Print("\n");
     }
 
-    if (bHelp) {
+    if (g_state.help) {
         Print("\n");
         Print("Formats: RGBA8888, ABGR8888, RGB888, BGR888, RGB565, I8, IA88, A8,\n");
         Print("         RGB888_BLUESCREEN, BGR888_BLUESCREEN, ARGB8888, BGRA8888, DXT1,\n");
@@ -671,43 +661,43 @@ void PrintUsage(const char *lpError, ...) {
 // CreateOutputPath()
 // Create an output file path from the input file path.
 //
-void CreateOutputPath(char *lpOutputFile, char *lpInputFile, char *lpExtension) {
+void CreateOutputPath(char *outputFile, char *inputFile, const char *extension) {
     char *lpTemp;
 
     // Create output file string.
-    if (lpOutput != nullptr && *lpOutput != '\0') {
-        // Put the file in the lpOutput directory.
-        sprintf(lpOutputFile, "%s" PATHSEP, lpOutput);
+    if (g_state.output != nullptr && *g_state.output != '\0') {
+        // Put the file in the g_state.output directory.
+        sprintf(outputFile, "%s" PATHSEP, g_state.output);
     } else {
         // Put the file in the same directory as the input file.
-        strcpy(lpOutputFile, lpInputFile);
-        if ((lpTemp = strrchr(lpOutputFile, PATHSEP_C)) != nullptr) {
+        strcpy(outputFile, inputFile);
+        if ((lpTemp = strrchr(outputFile, PATHSEP_C)) != nullptr) {
             *(lpTemp + 1) = '\0';
         } else {
-            *lpOutputFile = '\0';
+            *outputFile = '\0';
         }
     }
 
     // Add the prefix to the file name.
-    strcat(lpOutputFile, lpPrefix);
+    strcat(outputFile, g_state.prefix);
 
     // Add the file name of the input file to the file name.
-    if ((lpTemp = strrchr(lpInputFile, PATHSEP_C)) != nullptr) {
-        strcat(lpOutputFile, lpTemp + 1);
+    if ((lpTemp = strrchr(inputFile, PATHSEP_C)) != nullptr) {
+        strcat(outputFile, lpTemp + 1);
     } else {
-        strcat(lpOutputFile, lpInputFile);
+        strcat(outputFile, inputFile);
     }
 
-    if ((lpTemp = strrchr(lpOutputFile, '.')) != nullptr && lpTemp > strrchr(lpOutputFile, PATHSEP_C)) {
+    if ((lpTemp = strrchr(outputFile, '.')) != nullptr && lpTemp > strrchr(outputFile, PATHSEP_C)) {
         *lpTemp = '\0';
     }
 
     // Add the postfix to the file name.
-    strcat(lpOutputFile, lpPostfix);
+    strcat(outputFile, g_state.postfix);
 
     // Add the extension to the file name.
-    strcat(lpOutputFile, ".");
-    strcat(lpOutputFile, lpExtension);
+    strcat(outputFile, ".");
+    strcat(outputFile, extension);
 }
 
 //
@@ -886,7 +876,7 @@ void ProcessFile(char *lpInputFile) {
     uint8_t *lpImageData; // Export data.
     VTFImageFormat DestFormat; // Export format.
 
-    uiProcessed++;
+    g_state.processed++;
 
     Print("Processing %s...\n", lpInputFile);
 
@@ -908,7 +898,7 @@ void ProcessFile(char *lpInputFile) {
         Print("  Height: %d\n", image.m_nHeight);
         Print("  BPP: %d\n\n", BytesPerPixel(image));
 
-        CreateOptions.imageFormat = BytesPerPixel(image) == 4 ? AlphaFormat : NormalFormat;
+        g_state.createOptions.imageFormat = BytesPerPixel(image) == 4 ? g_state.alphaFormat : g_state.normalFormat;
 
         Print(" Creating texture:\n");
 
@@ -921,24 +911,24 @@ void ProcessFile(char *lpInputFile) {
             return;
         }
 
-        uiImageWidth = (uint32_t) image.m_nWidth;
-        uiImageHeight = (uint32_t) image.m_nHeight;
+        uiImageWidth = static_cast<uint32_t>(image.m_nWidth);
+        uiImageHeight = static_cast<uint32_t>(image.m_nHeight);
         CMP_MipLevel *mip = nullptr;
         CMP_GetMipLevel(&mip, &image, 0, 0);
         lpSourceData = mip->m_pbData;
         lpDistanceData = nullptr;
 
         // Replace the alpha channel with a distance field.
-        if (bDistanceAlpha) {
-            uiDestWidth = uiImageWidth / uiDistanceAlphaReduce;
-            uiDestHeight = uiImageHeight / uiDistanceAlphaReduce;
+        if (g_state.distanceAlpha) {
+            uiDestWidth = uiImageWidth / g_state.distanceAlphaReduce;
+            uiDestHeight = uiImageHeight / g_state.distanceAlphaReduce;
 
             if (uiDestWidth == 0)
                 uiDestWidth = 1;
             if (uiDestHeight == 0)
                 uiDestHeight = 1;
 
-            lpDistanceData = (uint8_t *) malloc(uiDestWidth * uiDestHeight * 4);
+            lpDistanceData = static_cast<uint8_t *>(malloc(uiDestWidth * uiDestHeight * 4));
 
             if (lpDistanceData == nullptr) {
                 Print("  Error allocating distance field.\n\n");
@@ -948,7 +938,7 @@ void ProcessFile(char *lpInputFile) {
             bClipped = vlFalse;
 
             if (!vlImageConvertToDistanceField(lpSourceData, lpDistanceData, uiImageWidth, uiImageHeight, uiDestWidth,
-                                               uiDestHeight, sDistanceAlphaSpread, bDistanceAlphaThreshold, &bClipped,
+                                               uiDestHeight, g_state.distanceAlphaSpread, g_state.distanceAlphaThreshold, &bClipped,
                                                error)) {
                 Print("  Error creating distance field:\n%s\n\n", error.Get());
                 free(lpDistanceData);
@@ -964,11 +954,11 @@ void ProcessFile(char *lpInputFile) {
             uiImageHeight = uiDestHeight;
 
             // The distance field always needs an alpha channel.
-            CreateOptions.imageFormat = AlphaFormat;
+            g_state.createOptions.imageFormat = g_state.alphaFormat;
         }
 
         // Create vtf file.
-        if (!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &CreateOptions, error)) {
+        if (!vlImageCreateSingle(uiImageWidth, uiImageHeight, lpSourceData, &g_state.createOptions, error)) {
             Print("  Error creating vtf file:\n%s\n\n", error.Get());
             free(lpDistanceData);
             return;
@@ -987,7 +977,7 @@ void ProcessFile(char *lpInputFile) {
         Print("  %s written.\n\n", lpVTFFile);
 
         // Do we build a material?
-        if (lpShader != nullptr) {
+        if (g_state.shader != nullptr) {
             Print(" Creating material:\n");
 
             // We need to constuct a $basetexture string, to do this we need the path
@@ -1003,23 +993,23 @@ void ProcessFile(char *lpInputFile) {
                 *strrchr(lpVMTBaseTexture, '.') = '\0';
                 strrpl(lpVMTBaseTexture, '\\', '/');
 
-                vlMaterialCreate(lpShader, error); // Create the root node.
+                vlMaterialCreate(g_state.shader, error); // Create the root node.
                 vlMaterialGetFirstNode(); // Go to the root node.
                 vlMaterialAddNodeString("$basetexture", lpVMTBaseTexture); // Add a string node to the root node.
 
                 // Add the custom parameters.
-                for (i = 0; i < uiParameterCount; i++) {
+                for (i = 0; i < g_state.parameterCount; i++) {
                     // Figure out if the parameter is a string, single or integer.
 
-                    if (sscanf(lpParameters[i][1], "%d%s", &iTest, cTest) == 1) {
+                    if (sscanf(g_state.parameters[i][1], "%d%s", &iTest, cTest) == 1) {
                         // We can interpet the string as an integer, assume it is one.
-                        vlMaterialAddNodeInteger(lpParameters[i][0], iTest);
-                    } else if (sscanf(lpParameters[i][1], "%f%s", &sTest, cTest) == 1) {
+                        vlMaterialAddNodeInteger(g_state.parameters[i][0], iTest);
+                    } else if (sscanf(g_state.parameters[i][1], "%f%s", &sTest, cTest) == 1) {
                         // We can interpet the string as an single, assume it is one.
-                        vlMaterialAddNodeSingle(lpParameters[i][0], sTest);
+                        vlMaterialAddNodeSingle(g_state.parameters[i][0], sTest);
                     } else {
                         // The string must be a string...
-                        vlMaterialAddNodeString(lpParameters[i][0], lpParameters[i][1]);
+                        vlMaterialAddNodeString(g_state.parameters[i][0], g_state.parameters[i][1]);
                     }
                 }
 
@@ -1093,18 +1083,18 @@ void ProcessFile(char *lpInputFile) {
         // Create a new image with the converted image data in DevIL.
         if (CreateMipSet(image, lpImageData, vlImageGetWidth(), vlImageGetHeight(), CMP_FORMAT_RGBA_8888) != CMP_OK) {
             free(lpImageData);
-            Print("  Error creating %s file.\n\n", lpExportFormat);
+            Print("  Error creating %s file.\n\n", g_state.exportFormat);
             return;
         }
 
         free(lpImageData);
 
-        CreateOutputPath(lpExportFile, lpInputFile, lpExportFormat);
+        CreateOutputPath(lpExportFile, lpInputFile, g_state.exportFormat);
 
         // Write tga file.
         Print("  Writing %s...\n", lpExportFile);
         if (CMP_SaveTexture(lpExportFile, &image) != CMP_OK) {
-            Print(" Error creating %s file.\n\n", lpExportFormat);
+            Print(" Error creating %s file.\n\n", g_state.exportFormat);
             return;
         }
         Print("  %s written.\n\n", lpExportFile);
@@ -1112,7 +1102,7 @@ void ProcessFile(char *lpInputFile) {
 
     Print("%s processed.\n\n", lpInputFile);
 
-    uiCompleted++;
+    g_state.completed++;
 }
 
 //
@@ -1128,7 +1118,7 @@ void ProcessFolder(char *lpInputFolder, char *lpWildcard) {
 
     Print("Processing %s\\...\n\n", lpInputFolder);
 
-    if (bRecursive) {
+    if (g_state.recursive) {
         sprintf(lpSearchString, "%s\\*", lpInputFolder);
 
         Handle = FindFirstFile(lpSearchString, &FindData);
