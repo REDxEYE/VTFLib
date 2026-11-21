@@ -23,7 +23,9 @@
 #include "zstd.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize.h"
+// Static: pylib compiles its own copy of the same header into the final module.
+#define STB_IMAGE_RESIZE_STATIC
+#include "stb_image_resize2.h"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -33,6 +35,10 @@
 #define PI		3.14159265358979323846
 
 using namespace VTFLib;
+
+static vlBool ResizeImage(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888, uint32_t sourceWidth,
+                          uint32_t sourceHeight, uint32_t destWidth, uint32_t destHeight,
+                          VTFMipmapFilter filter, vlBool sRGB, vlBool independentAlpha, Diagnostics::CError &error);
 
 // Class construction
 // ------------------
@@ -562,8 +568,9 @@ vlBool CVTFFile::Create(uint32_t uiWidth, uint32_t uiHeight, const uint32_t uiFr
                     lpNewImageDataRGBA8888[i] = new uint8_t[ComputeImageSize(
                         uiNewWidth, uiNewHeight, 1, IMAGE_FORMAT_RGBA8888)];
 
-                    if (!Resize(lpImageDataRGBA8888[i], lpNewImageDataRGBA8888[i], uiWidth, uiHeight, uiNewWidth,
-                                uiNewHeight, VTFCreateOptions.resizeFilter, VTFCreateOptions.sRGB, error)) {
+                    if (!ResizeImage(lpImageDataRGBA8888[i], lpNewImageDataRGBA8888[i], uiWidth, uiHeight, uiNewWidth,
+                                     uiNewHeight, VTFCreateOptions.resizeFilter, VTFCreateOptions.sRGB,
+                                     (VTFCreateOptions.flags & TEXTUREFLAGS_NORMAL) != 0, error)) {
                         throw 0;
                     }
                 }
@@ -610,36 +617,48 @@ vlBool CVTFFile::Create(uint32_t uiWidth, uint32_t uiHeight, const uint32_t uiFr
             }
         }
 
-        // Generate mipmaps off source image.
+        // Generate mipmaps, each level from the previous one.
         if (VTFCreateOptions.mipmaps && mHeader->mipCount != 1) {
-            auto temp = std::vector<uint8_t>(mHeader->width * mHeader->height * 4);
+            // Level 1 is the largest level that needs a buffer; ping-pong between two of them.
+            const size_t mipBufferSize = static_cast<size_t>(std::max(1u, static_cast<uint32_t>(mHeader->width) >> 1)) *
+                                         std::max(1u, static_cast<uint32_t>(mHeader->height) >> 1) * 4;
+            std::vector<uint8_t> mipBuffers[2] = {std::vector<uint8_t>(mipBufferSize),
+                                                  std::vector<uint8_t>(mipBufferSize)};
+            const bool independentAlpha = (VTFCreateOptions.flags & TEXTUREFLAGS_NORMAL) != 0;
 
             for (uint32_t i = 0; i < uiFrames; i++) {
                 for (uint32_t j = 0; j < uiFaces; j++) {
                     for (uint32_t k = 0; k < vlSlices; k++) {
-                        uint8_t *pSource = lpImageDataRGBA8888[i + j + k];
+                        uint8_t *pBase = lpImageDataRGBA8888[i + j + k];
+                        const uint8_t *pSource = pBase;
 
-                        if (!ConvertFromRGBA8888(pSource, GetData(i, j, k, 0), mHeader->width,
+                        if (!ConvertFromRGBA8888(pBase, GetData(i, j, k, 0), mHeader->width,
                                                  mHeader->height, mHeader->imageFormat, error)) {
                             throw 0;
                         }
 
-                        for (uint32_t m = 1; m < mHeader->mipCount; m++) {
-                            uint16_t usWidth = std::max(1u, static_cast<uint32_t>(mHeader->width) >> m);
-                            uint16_t usHeight = std::max(1u, static_cast<uint32_t>(mHeader->height) >> m);
+                        uint32_t usSrcWidth = mHeader->width;
+                        uint32_t usSrcHeight = mHeader->height;
 
-                            if (!Resize(
-                                pSource, temp.data(),
-                                mHeader->width, mHeader->height,
-                                usWidth, usHeight,
-                                VTFCreateOptions.mipmapFilter, VTFCreateOptions.sRGB, error)) {
+                        for (uint32_t m = 1; m < mHeader->mipCount; m++) {
+                            const uint32_t usWidth = std::max(1u, static_cast<uint32_t>(mHeader->width) >> m);
+                            const uint32_t usHeight = std::max(1u, static_cast<uint32_t>(mHeader->height) >> m);
+                            uint8_t *pDest = mipBuffers[m & 1].data();
+
+                            if (!ResizeImage(pSource, pDest, usSrcWidth, usSrcHeight, usWidth, usHeight,
+                                             VTFCreateOptions.mipmapFilter, VTFCreateOptions.sRGB,
+                                             independentAlpha, error)) {
                                 throw 0;
                             }
 
-                            if (!ConvertFromRGBA8888(temp.data(), GetData(i, j, k, m), usWidth, usHeight,
+                            if (!ConvertFromRGBA8888(pDest, GetData(i, j, k, m), usWidth, usHeight,
                                                      mHeader->imageFormat, error)) {
                                 throw 0;
                             }
+
+                            pSource = pDest;
+                            usSrcWidth = usWidth;
+                            usSrcHeight = usHeight;
                         }
                     }
                 }
@@ -2363,35 +2382,8 @@ vlBool CVTFFile::GenerateMipmaps(const uint32_t uiFace, const uint32_t uiFrame, 
     if (mHeader->mipCount <= 1)
         return true;
 
-    stbir_filter stbFilter = STBIR_FILTER_DEFAULT;
-
-    switch (MipmapFilter) {
-        case MIPMAP_FILTER_BOX:
-            stbFilter = STBIR_FILTER_BOX;
-            break;
-        case MIPMAP_FILTER_TRIANGLE:
-            stbFilter = STBIR_FILTER_TRIANGLE;
-            break;
-        case MIPMAP_FILTER_QUADRATIC:
-        case MIPMAP_FILTER_CUBIC:
-        case MIPMAP_FILTER_GAUSSIAN:
-            stbFilter = STBIR_FILTER_CUBICBSPLINE;
-            break;
-        case MIPMAP_FILTER_CATROM:
-            stbFilter = STBIR_FILTER_CATMULLROM;
-            break;
-        case MIPMAP_FILTER_MITCHELL:
-        case MIPMAP_FILTER_SINC:
-        case MIPMAP_FILTER_BESSEL:
-        case MIPMAP_FILTER_HANNING:
-        case MIPMAP_FILTER_HAMMING:
-        case MIPMAP_FILTER_BLACKMAN:
-        case MIPMAP_FILTER_KAISER:
-            stbFilter = STBIR_FILTER_MITCHELL;
-            break;
-        default:
-            break;
-    }
+    // Normal maps keep an unrelated mask in alpha; it must not weight the RGB channels.
+    const vlBool independentAlpha = GetFlag(TEXTUREFLAGS_NORMAL);
 
     uint32_t srcWidth = mHeader->width;
     uint32_t srcHeight = mHeader->height;
@@ -2424,51 +2416,9 @@ vlBool CVTFFile::GenerateMipmaps(const uint32_t uiFace, const uint32_t uiFrame, 
                 1,
                 IMAGE_FORMAT_RGBA8888));
 
-        if (MipmapFilter == MIPMAP_FILTER_POINT) {
-            for (uint32_t y = 0; y < dstHeight; ++y) {
-                const uint32_t srcY =
-                        std::min(
-                            (2 * y + 1) * srcHeight / (2 * dstHeight),
-                            srcHeight - 1);
-
-                for (uint32_t x = 0; x < dstWidth; ++x) {
-                    const uint32_t srcX =
-                            std::min(
-                                (2 * x + 1) * srcWidth / (2 * dstWidth),
-                                srcWidth - 1);
-
-                    const uint8_t *s =
-                            src.data() + (srcY * srcWidth + srcX) * 4;
-
-                    uint8_t *d =
-                            dst.data() + (y * dstWidth + x) * 4;
-
-                    d[0] = s[0];
-                    d[1] = s[1];
-                    d[2] = s[2];
-                    d[3] = s[3];
-                }
-            }
-        } else {
-            if (!stbir_resize_uint8_generic(
-                src.data(),
-                static_cast<int>(srcWidth),
-                static_cast<int>(srcHeight),
-                0,
-                dst.data(),
-                static_cast<int>(dstWidth),
-                static_cast<int>(dstHeight),
-                0,
-                4,
-                STBIR_ALPHA_CHANNEL_NONE,
-                0,
-                STBIR_EDGE_CLAMP,
-                stbFilter,
-                STBIR_COLORSPACE_LINEAR,
-                nullptr)) {
-                VTFError_Set(error, "Failed to generate mipmap.");
-                return false;
-            }
+        if (!ResizeImage(src.data(), dst.data(), srcWidth, srcHeight, dstWidth, dstHeight, MipmapFilter,
+                         false, independentAlpha, error)) {
+            return false;
         }
 
         if (!ConvertFromRGBA8888(
@@ -4076,10 +4026,39 @@ static vlBool ResizeNice(const uint8_t *lpSourceRGBA8888, uint8_t *lpDestRGBA888
     return true;
 }
 
-vlBool CVTFFile::Resize(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888,
-                        const uint32_t sourceWidth, const uint32_t sourceHeight,
-                        const uint32_t destWidth, const uint32_t destHeight,
-                        const VTFMipmapFilter resizeFilter, const vlBool sRGB, Diagnostics::CError &error) {
+static stbir_filter ToStbFilter(const VTFMipmapFilter filter) {
+    switch (filter) {
+        case MIPMAP_FILTER_POINT:
+            return STBIR_FILTER_POINT_SAMPLE;
+        case MIPMAP_FILTER_BOX:
+            return STBIR_FILTER_BOX;
+        case MIPMAP_FILTER_TRIANGLE:
+            return STBIR_FILTER_TRIANGLE;
+        case MIPMAP_FILTER_QUADRATIC:
+        case MIPMAP_FILTER_CUBIC:
+        case MIPMAP_FILTER_GAUSSIAN:
+            return STBIR_FILTER_CUBICBSPLINE;
+        case MIPMAP_FILTER_CATROM:
+            return STBIR_FILTER_CATMULLROM;
+        case MIPMAP_FILTER_MITCHELL:
+        case MIPMAP_FILTER_SINC:
+        case MIPMAP_FILTER_BESSEL:
+        case MIPMAP_FILTER_HANNING:
+        case MIPMAP_FILTER_HAMMING:
+        case MIPMAP_FILTER_BLACKMAN:
+        case MIPMAP_FILTER_KAISER:
+            return STBIR_FILTER_MITCHELL;
+        default: // NICE when its integer-ratio path does not apply
+            return STBIR_FILTER_DEFAULT;
+    }
+}
+
+// independentAlpha: resample alpha as a plain fourth channel instead of weighting RGB by it.
+static vlBool ResizeImage(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888,
+                          const uint32_t sourceWidth, const uint32_t sourceHeight,
+                          const uint32_t destWidth, const uint32_t destHeight,
+                          const VTFMipmapFilter resizeFilter, const vlBool sRGB, const vlBool independentAlpha,
+                          Diagnostics::CError &error) {
     assert(resizeFilter >= 0 && resizeFilter < MIPMAP_FILTER_COUNT);
 
     // prevent too large of a kernel
@@ -4095,16 +4074,25 @@ vlBool CVTFFile::Resize(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888,
                           sRGB);
     }
 
-    if (!stbir_resize_uint8_generic(
-        sourceRGBA8888, sourceWidth, sourceHeight, 0,
-        destRGBA8888, destWidth, destHeight, 0,
-        4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, sRGB ? STBIR_COLORSPACE_SRGB : STBIR_COLORSPACE_LINEAR,
-        nullptr)) {
+    // _PM = alpha is alpha (stays linear under sRGB) but is not premultiplied into RGB.
+    if (!stbir_resize(
+        sourceRGBA8888, static_cast<int>(sourceWidth), static_cast<int>(sourceHeight), 0,
+        destRGBA8888, static_cast<int>(destWidth), static_cast<int>(destHeight), 0,
+        independentAlpha ? STBIR_RGBA_PM : STBIR_RGBA,
+        sRGB ? STBIR_TYPE_UINT8_SRGB : STBIR_TYPE_UINT8, STBIR_EDGE_CLAMP, ToStbFilter(resizeFilter))) {
         VTFError_Set(error, "Error resizing image.");
         return false;
     }
 
     return true;
+}
+
+vlBool CVTFFile::Resize(const uint8_t *sourceRGBA8888, uint8_t *destRGBA8888,
+                        const uint32_t sourceWidth, const uint32_t sourceHeight,
+                        const uint32_t destWidth, const uint32_t destHeight,
+                        const VTFMipmapFilter resizeFilter, const vlBool sRGB, Diagnostics::CError &error) {
+    return ResizeImage(sourceRGBA8888, destRGBA8888, sourceWidth, sourceHeight, destWidth, destHeight,
+                       resizeFilter, sRGB, false, error);
 }
 
 //
